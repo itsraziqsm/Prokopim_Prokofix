@@ -1,0 +1,47 @@
+{#- Komponen antarmuka yang dapat dipakai ulang.
+    Impor di template: {% from "komponen/ui.html" import lencana, kartu_modul, ... %} -#}
+{% from "komponen/ikon.html" import ikon %}
+
+{# Lencana status: "siap" atau "pengembangan" #}
+{% macro lencana(status, label) -%}
+<span class="lencana lencana--{{ status }}">{{ label }}</span>
+{%- endmacro %}
+
+{# Kartu modul di dashboard. Seluruh kartu adalah satu tautan. #}
+{% macro kartu_modul(m, status_label) -%}
+<a class="kartu-modul" href="{{ m.url or url_for('utama.modul', modul_id=m.id) }}">
+  <span class="kartu-modul__ikon">{{ ikon(m.ikon) }}</span>
+  <span class="kartu-modul__isi">
+    <span class="kartu-modul__judul">{{ m.nama }}</span>
+    <span class="kartu-modul__deskripsi">{{ m.deskripsi }}</span>
+  </span>
+  <span class="kartu-modul__kaki">
+    {{ lencana(m.status, status_label[m.status]) }}
+    <span class="kartu-modul__panah">{{ ikon("panah-kanan") }}</span>
+  </span>
+</a>
+{%- endmacro %}
+
+{# Kartu penutup bergaris putus-putus (bukan tautan) #}
+{% macro kartu_segera() -%}
+<div class="kartu-segera">
+  <span class="kartu-segera__ikon">{{ ikon("plus") }}</span>
+  <p>Fitur baru akan hadir di sini</p>
+</div>
+{%- endmacro %}
+
+{# Breadcrumb. items = daftar (label, url); item terakhir = halaman saat ini (url None) #}
+{% macro breadcrumb(items) -%}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <ol>
+    {% for label, url in items %}
+    <li>{% if url %}<a href="{{ url }}">{{ label }}</a>{% else %}<span aria-current="page">{{ label }}</span>{% endif %}</li>
+    {% endfor %}
+  </ol>
+</nav>
+{%- endmacro %}
+
+{# Tombol berbentuk tautan. varian: "primer" atau "sekunder" #}
+{% macro tombol(label, url, varian="primer", ikon_nama=None) -%}
+<a class="tombol tombol--{{ varian }}" href="{{ url }}">{% if ikon_nama %}{{ ikon(ikon_nama) }}{% endif %}<span>{{ label }}</span></a>
+{%- endmacro %}

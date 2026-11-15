@@ -1,0 +1,48 @@
+{#- Satu template "Under Development" untuk SEMUA modul; isinya dibaca dari registry. -#}
+{% extends "base.html" %}
+{% from "komponen/ui.html" import lencana, breadcrumb, tombol %}
+{% from "komponen/ikon.html" import ikon %}
+
+{% block judul %}{{ modul.nama }} · {{ nama_aplikasi }}{% endblock %}
+
+{% block konten %}
+<div class="atas-halaman">
+  {{ breadcrumb([("Beranda", url_for('utama.dashboard')), (modul.nama, None)]) }}
+  {{ tombol("Kembali ke beranda", url_for('utama.dashboard'), "sekunder", "panah-kiri") }}
+</div>
+
+<article class="panel modul-dev">
+  <div class="modul-dev__ilustrasi">{% include "komponen/ilustrasi_bangun.html" %}</div>
+
+  <div class="modul-dev__isi">
+    <div class="modul-dev__kepala">
+      <span class="modul-dev__ikon">{{ ikon(modul.ikon) }}</span>
+      <h1>{{ modul.nama }}</h1>
+    </div>
+    {{ lencana(modul.status, status_label[modul.status]) }}
+    <p class="modul-dev__tujuan">{{ modul.tujuan }}</p>
+
+    <section aria-labelledby="judul-rencana">
+      <h2 id="judul-rencana">Rencana fitur</h2>
+      <ul class="daftar-centang" role="list">
+        {% for butir in modul.rencana %}
+        <li>{{ ikon("centang") }}<span>{{ butir }}</span></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section aria-labelledby="judul-urutan">
+      <h2 id="judul-urutan">Urutan pengerjaan</h2>
+      <ol class="urutan" role="list">
+        {% for m in modul_list %}
+        <li class="urutan__item{% if m.id == modul.id %} urutan__item--aktif{% endif %}"
+            {% if m.id == modul.id %}aria-current="step"{% endif %}>
+          <span class="urutan__nomor">Fitur {{ m.urutan }}</span>
+          <span class="urutan__nama">{{ m.nama }}{% if m.id == modul.id %} <span class="urutan__tanda">(halaman ini)</span>{% endif %}</span>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+  </div>
+</article>
+{% endblock %}

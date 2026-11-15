@@ -1,0 +1,44 @@
+{% from "komponen/ikon.html" import ikon %}
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block judul %}{{ nama_aplikasi }}{% endblock %}</title>
+  <meta name="color-scheme" content="light dark">
+  <script>
+    // Dijalankan sebelum halaman tampil agar tidak "berkedip" saat memuat tema tersimpan
+    try { var t = localStorage.getItem("tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <a class="lewati" href="#konten">Lewati ke konten utama</a>
+
+  {# ===== Header / navbar ===== #}
+  <header class="header">
+    <div class="wadah header__isi">
+      <a class="header__merek" href="{{ url_for('utama.dashboard') }}">
+        <span class="header__logo">{{ ikon("logo") }}</span>
+        <span>{{ nama_aplikasi }}</span>
+      </a>
+      <button type="button" class="tombol-tema" id="tombol-tema" aria-label="Ganti ke mode gelap">
+        <span class="tombol-tema__terang">{{ ikon("bulan") }}</span>
+        <span class="tombol-tema__gelap">{{ ikon("matahari") }}</span>
+        <span class="tombol-tema__teks">Tema</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="konten" class="wadah konten" tabindex="-1">
+    {% block konten %}{% endblock %}
+  </main>
+
+  {# ===== Footer ===== #}
+  <footer class="footer">
+    <div class="wadah">{{ nama_aplikasi }} · Aplikasi lokal untuk kerja harian · Berjalan tanpa internet</div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

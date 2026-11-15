@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "komponen/ui.html" import kartu_modul, kartu_segera %}
+
+{% block konten %}
+<section class="sambutan" aria-labelledby="judul-sapaan">
+  {# data-sapaan & data-tanggal diperbarui app.js mengikuti jam di komputer pengguna #}
+  <h1 id="judul-sapaan" data-sapaan>{{ sapaan }}</h1>
+  <p class="sambutan__tanggal" data-tanggal>{{ tanggal }}</p>
+</section>
+
+<section aria-labelledby="judul-modul">
+  <h2 id="judul-modul" class="judul-bagian">Modul kerja</h2>
+  <ul class="grid-modul" role="list">
+    {% for m in modul_list %}
+    <li>{{ kartu_modul(m, status_label) }}</li>
+    {% endfor %}
+    <li>{{ kartu_segera() }}</li>
+  </ul>
+</section>
+{% endblock %}
