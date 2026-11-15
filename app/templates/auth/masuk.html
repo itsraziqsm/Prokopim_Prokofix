@@ -6,7 +6,6 @@
 <form method="post" action="{{ url_for('auth.masuk') }}" class="grid gap-5" novalidate>
   {{ csrf_field() }}
   {% if tujuan %}<input type="hidden" name="next" value="{{ tujuan }}">{% endif %}
-  {% if pesan_galat %}{{ alert(pesan_galat, "galat") }}{% endif %}
 
   {{ field("nama_pengguna", "Nama pengguna", nilai=nama_pengguna, autocomplete="username", autofocus=not nama_pengguna) }}
   {{ field("sandi", "Kata sandi", tipe="password", autocomplete="current-password", autofocus=nama_pengguna != "") }}
@@ -20,8 +19,6 @@
 </form>
 {% endblock %}
 {% block bawah_kartu %}
-<p class="mt-5 text-center text-sm text-redup">
-  Lupa kata sandi? Jalankan di terminal folder proyek:<br>
-  <code class="mt-1 inline-block rounded bg-permukaan-2 px-2 py-0.5 text-teks">flask --app run auth reset-sandi &lt;nama_pengguna&gt;</code>
-</p>
+<p>Lupa kata sandi? Jalankan di terminal folder proyek:</p>
+<code class="mt-1 inline-block rounded bg-permukaan-2 px-1.5 py-0.5 font-mono text-teks">flask --app run auth reset-sandi &lt;nama_pengguna&gt;</code>
 {% endblock %}

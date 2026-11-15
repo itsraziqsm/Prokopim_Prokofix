@@ -45,6 +45,26 @@ npm run build:css      # build sekali (minify) sebelum commit
   ```
 - Backup data cukup dengan menyalin folder `instance/`.
 
+## Fitur tampilan
+- **Sidebar** satu-satunya navigasi: Dashboard di atas; Pengaturan & Akun di bawah. Tombol bulat di tepi kanan
+  sidebar untuk menciutkan/melebarkan (diingat browser).
+- **Notifikasi pop-up** di kanan atas: melayang di atas halaman, menutup sendiri, berhenti saat disorot.
+  Dari server: `flash("Pesan", "sukses" | "info" | "galat")`. Dari JavaScript: `notifikasi("Pesan", "sukses")`.
+- **Halaman masuk**: formulir 60% kiri, gambar 40% kanan, satu layar tanpa scroll.
+  Ganti placeholder dengan menyimpan gambar di `app/static/img/masuk.jpg` (atau `.png` / `.webp`).
+
+## Log proses & lokasi simpan terakhir
+Dashboard menampilkan **Proses terakhir** dan **Lokasi simpan terakhir** (tombol *Buka folder* & *Salin lokasi*).
+Modul mencatat proses dengan satu baris:
+
+```python
+from app.log_proses import catat
+
+catat("pemecah-spt", "Memecah 12 SPT", lokasi=r"D:\Arsip\SPT\2026-11")
+catat("pemecah-spt", "Gagal membaca file", status="gagal", detail=str(galat))
+```
+Aktivitas akun (masuk, percobaan gagal, ganti sandi) sudah tercatat otomatis.
+
 ## Struktur folder
 ```
 run.py                      # titik masuk: python run.py
@@ -53,7 +73,8 @@ app/
   __init__.py               # app factory, konfigurasi, halaman galat
   auth.py                   # masuk, keluar, penyiapan akun, ganti sandi, perintah reset-sandi
   keamanan.py               # token CSRF & pembatasan percobaan login
-  db.py                     # koneksi & skema SQLite
+  db.py                     # koneksi & skema SQLite (pengguna, log_proses)
+  log_proses.py             # catat() riwayat proses & lokasi simpan, buka folder
   modules_registry.py       # DAFTAR MODUL — satu-satunya tempat menambah modul
   routes.py                 # dashboard, /modul/<id>, /pengaturan
   waktu.py                  # sapaan & tanggal Bahasa Indonesia

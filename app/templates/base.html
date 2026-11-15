@@ -1,4 +1,4 @@
-{% from "komponen/ui.html" import pesan_flash %}
+{% from "komponen/ui.html" import toast %}
 <!doctype html>
 <html lang="id">
 <head>
@@ -8,40 +8,48 @@
   <meta name="color-scheme" content="light dark">
   <script>
     // Dijalankan sebelum halaman tampil agar tidak "berkedip":
-    // pakai tema pilihan (Pengaturan), atau ikuti sistem bila memilih "Ikuti sistem".
+    // 1) tema pilihan (Pengaturan) atau ikuti sistem, 2) sidebar ringkas/lebar.
     (function () {
-      var t = null;
-      try { t = localStorage.getItem("tema"); } catch (e) {}
+      var akar = document.documentElement, t = null, sb = null;
+      try { t = localStorage.getItem("tema"); sb = localStorage.getItem("sidebar"); } catch (e) {}
       if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      document.documentElement.dataset.theme = t;
+      akar.dataset.theme = t;
+      akar.dataset.sidebar = sb === "ringkas" ? "ringkas" : "lebar";
     })();
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body>
-  <a href="#konten" class="tombol tombol-primer absolute left-4 -top-24 z-20 focus:top-4">Lewati ke konten utama</a>
+  <a href="#konten" class="tombol tombol-primer absolute left-4 -top-24 z-[60] focus:top-4">Lewati ke konten utama</a>
 
   {% if g.pengguna %}
   {# ===== Tata letak setelah masuk: sidebar + konten ===== #}
-  <div class="flex min-h-screen">
+  <div class="flex min-h-dvh">
     {% include "komponen/sidebar.html" %}
-    <div class="flex min-w-0 flex-1 flex-col">
-      <main id="konten" tabindex="-1" class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 focus:outline-none sm:px-6 sm:py-8 lg:px-8">
-        {{ pesan_flash() }}
+    <main id="konten" tabindex="-1" class="min-w-0 flex-1 focus:outline-none">
+      <div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         {% block konten %}{% endblock %}
-      </main>
-      <footer class="border-t border-garis py-5 text-sm text-redup">
-        <div class="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">{{ nama_aplikasi }} · Aplikasi lokal untuk kerja harian · Berjalan tanpa internet</div>
-      </footer>
-    </div>
+      </div>
+    </main>
   </div>
   {% else %}
-  {# ===== Tata letak sebelum masuk (halaman masuk/penyiapan): tanpa sidebar ===== #}
-  <main id="konten" tabindex="-1" class="flex min-h-screen flex-col justify-center px-4 py-8 focus:outline-none">
-    {{ pesan_flash() }}
-    {{ self.konten() }}
+  {# ===== Sebelum masuk: tanpa sidebar. Halaman auth mengganti blok ini dengan tata letak 60/40. ===== #}
+  {% block polos %}
+  <main id="konten" tabindex="-1" class="flex min-h-dvh items-center justify-center p-4 focus:outline-none">
+    <div class="w-full">{{ self.konten() }}</div>
   </main>
+  {% endblock %}
   {% endif %}
+
+  {# ===== Notifikasi pop-up (kanan atas). Melayang (fixed), tidak menggeser tata letak. ===== #}
+  <div id="wadah-notifikasi" aria-live="polite" aria-relevant="additions"
+       class="pointer-events-none fixed right-4 top-4 z-50 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3"></div>
+  {# Pesan dari server; dipindahkan app.js ke wadah di atas agar dibacakan pembaca layar #}
+  <template id="notifikasi-awal">
+    {% for kategori, pesan in get_flashed_messages(with_categories=true) %}{{ toast(pesan, kategori) }}{% endfor %}
+  </template>
+  {# Cetakan untuk notifikasi dari JavaScript: window.notifikasi("Pesan", "sukses") #}
+  {% for jenis in ("sukses", "info", "galat") %}<template id="cetakan-notifikasi-{{ jenis }}">{{ toast("", jenis) }}</template>{% endfor %}
 
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>

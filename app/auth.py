@@ -5,14 +5,15 @@ Alur:
   2. Sudah ada pengguna, belum masuk  -> diarahkan ke /masuk.
   3. Sudah masuk                      -> bebas membuka halaman.
 """
+import os
 import secrets
 from urllib.parse import urlparse
 
 import click
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import keamanan
+from . import keamanan, log_proses
 from .db import ambil_db
 
 bp = Blueprint("auth", __name__)
@@ -22,6 +23,21 @@ PANJANG_SANDI_MIN = 8
 ENDPOINT_PUBLIK = {"auth.masuk", "auth.siapkan", "static"}
 # Hash palsu untuk menyamakan waktu respons saat nama pengguna tidak ada
 _HASH_PALSU = generate_password_hash(secrets.token_hex(8))
+
+
+# ---------- Gambar sisi kanan halaman masuk ----------
+# Letakkan gambar di app/static/img/ dengan salah satu nama ini; bila tidak ada, tampil placeholder.
+NAMA_GAMBAR_AUTH = ("masuk.jpg", "masuk.jpeg", "masuk.png", "masuk.webp")
+
+
+@bp.app_context_processor
+def _gambar_auth():
+    def gambar_auth():
+        for nama in NAMA_GAMBAR_AUTH:
+            if os.path.exists(os.path.join(current_app.static_folder, "img", nama)):
+                return url_for("static", filename=f"img/{nama}")
+        return None
+    return {"gambar_auth": gambar_auth}
 
 
 # ---------- Fungsi bantu ----------
@@ -109,9 +125,12 @@ def siapkan():
             db.commit()
             pengguna = db.execute("SELECT * FROM pengguna WHERE id = ?", (cur.lastrowid,)).fetchone()
             masukkan_ke_sesi(pengguna)
+            log_proses.catat("akun", "Akun dibuat", pengguna_id=pengguna["id"])
             flash("Akun berhasil dibuat. Selamat datang!", "sukses")
             return redirect(url_for("utama.dashboard"))
 
+    if galat:
+        flash("Periksa kembali isian yang ditandai.", "galat")
     return render_template("auth/siapkan.html", galat=galat, isian=isian), (400 if galat else 200)
 
 
@@ -141,14 +160,19 @@ def masuk():
                            (pengguna["id"],))
                 db.commit()
                 masukkan_ke_sesi(pengguna, ingat=request.form.get("ingat") == "1")
+                log_proses.catat("akun", "Masuk ke aplikasi", pengguna_id=pengguna["id"])
                 return redirect(tujuan_aman(tujuan))
             keamanan.catat_gagal(nama_pengguna)
+            if pengguna:  # catat agar pemilik akun tahu ada percobaan salah sandi
+                log_proses.catat("akun", "Percobaan masuk gagal (kata sandi salah)",
+                                 status="gagal", pengguna_id=pengguna["id"])
             # Pesan sengaja umum, agar tidak membocorkan nama pengguna mana yang terdaftar
             pesan_galat = "Nama pengguna atau kata sandi salah."
 
-    status = 401 if pesan_galat else 200
-    return render_template("auth/masuk.html", nama_pengguna=nama_pengguna,
-                           pesan_galat=pesan_galat, tujuan=tujuan), status
+    if pesan_galat:
+        flash(pesan_galat, "galat")  # tampil sebagai notifikasi pop-up
+    return render_template("auth/masuk.html", nama_pengguna=nama_pengguna, tujuan=tujuan), \
+        (401 if pesan_galat else 200)
 
 
 @bp.route("/keluar", methods=["POST"])
@@ -168,13 +192,16 @@ def akun():
         pesan = cek_sandi_baru(request.form.get("sandi_baru", ""), request.form.get("konfirmasi", ""))
         if pesan:
             galat["sandi_baru"] = pesan
-        if not galat:
+        if galat:
+            flash("Kata sandi belum diganti. Periksa isian yang ditandai.", "galat")
+        else:
             token_baru = secrets.token_hex(16)  # sesi lain di browser/perangkat lain otomatis keluar
             db = ambil_db()
             db.execute("UPDATE pengguna SET sandi_hash = ?, sesi_token = ? WHERE id = ?",
                        (generate_password_hash(request.form["sandi_baru"]), token_baru, g.pengguna["id"]))
             db.commit()
             session["token"] = token_baru  # sesi ini tetap masuk
+            log_proses.catat("akun", "Kata sandi diganti")
             flash("Kata sandi berhasil diganti.", "sukses")
             return redirect(url_for("auth.akun"))
     return render_template("auth/akun.html", galat=galat), (400 if galat else 200)

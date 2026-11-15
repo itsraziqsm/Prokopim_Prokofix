@@ -1,15 +1,18 @@
 {% extends "auth/_kartu.html" %}
 {% block judul %}Penyiapan awal · {{ nama_aplikasi }}{% endblock %}
 {% block judul_kartu %}Buat akun pertama{% endblock %}
-{% block sub_kartu %}Belum ada akun di aplikasi ini. Buat akun Anda untuk mulai memakai {{ nama_aplikasi }}.{% endblock %}
+{% block sub_kartu %}Belum ada akun di aplikasi ini. Buat akun Anda untuk mulai.{% endblock %}
 {% block isi_kartu %}
-<form method="post" action="{{ url_for('auth.siapkan') }}" class="grid gap-5" novalidate>
+<form method="post" action="{{ url_for('auth.siapkan') }}" class="grid gap-4" novalidate>
   {{ csrf_field() }}
   {{ field("nama_lengkap", "Nama lengkap", nilai=isian.nama_lengkap or "", galat=galat.nama_lengkap, autocomplete="name", autofocus=true) }}
   {{ field("nama_pengguna", "Nama pengguna", nilai=isian.nama_pengguna or "", galat=galat.nama_pengguna,
-           petunjuk="Dipakai saat masuk. Huruf, angka, titik, atau garis bawah.", autocomplete="username") }}
-  {{ field("sandi", "Kata sandi", tipe="password", galat=galat.sandi, petunjuk="Minimal 8 karakter.", autocomplete="new-password") }}
-  {{ field("konfirmasi", "Ulangi kata sandi", tipe="password", autocomplete="new-password") }}
-  <button type="submit" class="tombol tombol-primer w-full">Buat akun &amp; masuk</button>
+           petunjuk="Huruf, angka, titik, atau garis bawah.", autocomplete="username") }}
+  <div class="grid gap-4 sm:grid-cols-2">
+    {{ field("sandi", "Kata sandi", tipe="password", galat=galat.sandi, petunjuk="Minimal 8 karakter.", autocomplete="new-password") }}
+    {{ field("konfirmasi", "Ulangi kata sandi", tipe="password", autocomplete="new-password") }}
+  </div>
+  <button type="submit" class="tombol tombol-primer mt-1 w-full">Buat akun &amp; masuk</button>
 </form>
 {% endblock %}
+{% block bawah_kartu %}Data akun disimpan hanya di komputer ini.{% endblock %}

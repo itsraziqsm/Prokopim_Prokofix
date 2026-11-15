@@ -52,17 +52,16 @@
 <a class="tombol tombol-{{ varian }} {{ kelas }}" href="{{ url }}">{% if ikon_nama %}{{ ikon(ikon_nama, "size-[1.1em]") }}{% endif %}<span>{{ label }}</span></a>
 {%- endmacro %}
 
-{# Pesan flash (notifikasi singkat setelah aksi). kategori: sukses | info | galat #}
-{% macro pesan_flash() -%}
-{% with daftar = get_flashed_messages(with_categories=true) %}
-{% if daftar %}
-<div class="mb-6 grid gap-3">
-  {% for kategori, pesan in daftar %}
-  {{ alert(pesan, kategori) }}
-  {% endfor %}
+{# Notifikasi pop-up. jenis: sukses | info | galat. Perilaku (tutup otomatis, jeda saat disorot) di app.js #}
+{% macro toast(pesan, jenis="info") -%}
+{% set gaya = {"sukses": "text-siap-teks", "galat": "text-bahaya-teks"}.get(jenis, "text-info-teks") %}
+<div class="toast pointer-events-auto flex items-start gap-3 rounded-xl border border-garis bg-permukaan p-4 shadow-angkat"
+     role="{{ 'alert' if jenis == 'galat' else 'status' }}" data-toast data-jenis="{{ jenis }}">
+  <span class="mt-0.5 {{ gaya }}">{{ ikon("peringatan" if jenis == "galat" else ("centang" if jenis == "sukses" else "info")) }}</span>
+  <p class="flex-1 text-[0.95rem] font-medium" data-toast-pesan>{{ pesan }}</p>
+  <button type="button" class="-m-1 grid size-8 shrink-0 cursor-pointer place-items-center rounded-md text-redup hover:bg-permukaan-2 hover:text-teks"
+          aria-label="Tutup notifikasi" data-toast-tutup>{{ ikon("silang", "size-4") }}</button>
 </div>
-{% endif %}
-{% endwith %}
 {%- endmacro %}
 
 {# Kotak pesan. jenis: sukses | info | galat #}

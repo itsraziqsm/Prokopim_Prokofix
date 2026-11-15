@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "komponen/ui.html" import kartu_modul, kartu_segera %}
+{% from "komponen/ikon.html" import ikon %}
 
 {% block konten %}
 <section aria-labelledby="judul-sapaan" class="mb-8">
@@ -8,7 +9,7 @@
   <p class="text-redup" data-tanggal>{{ tanggal }}</p>
 </section>
 
-<section aria-labelledby="judul-modul">
+<section aria-labelledby="judul-modul" class="mb-10">
   <h2 id="judul-modul" class="mb-4 text-sm font-semibold uppercase tracking-wider text-redup">Modul kerja</h2>
   <ul role="list" class="grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))]">
     {% for m in modul_list %}
@@ -17,4 +18,57 @@
     <li class="flex">{{ kartu_segera() }}</li>
   </ul>
 </section>
+
+<div class="grid items-start gap-5 lg:grid-cols-[1.6fr_1fr]">
+  {# ===== Log proses terakhir ===== #}
+  <section aria-labelledby="judul-log" class="panel !p-0">
+    <h2 id="judul-log" class="flex items-center gap-2 border-b border-garis px-5 py-4 text-base">
+      {{ ikon("riwayat", "text-redup") }} Proses terakhir
+    </h2>
+    {% if log_list %}
+    <ol role="list" class="divide-y divide-garis">
+      {% for log in log_list %}
+      {% set warna = {"sukses": "bg-siap-teks", "gagal": "bg-bahaya-teks"}.get(log.status, "bg-dev-teks") %}
+      {% set label_status = {"sukses": "Berhasil", "gagal": "Gagal", "proses": "Sedang berjalan"}[log.status] %}
+      <li class="flex items-start gap-3 px-5 py-3">
+        <span class="mt-2 size-2 shrink-0 rounded-full {{ warna }}" aria-hidden="true"></span>
+        <div class="min-w-0 flex-1">
+          <p class="font-medium">{{ log.aksi }} <span class="sr-only">({{ label_status }})</span></p>
+          <p class="text-sm text-redup">
+            {{ nama_sumber(log.modul) }} · <time datetime="{{ log.waktu|replace(' ', 'T') }}">{{ log.waktu|waktu_singkat }}</time>
+            {% if log.lokasi %} · <span class="break-all">{{ log.lokasi }}</span>{% endif %}
+          </p>
+        </div>
+        {% if log.status != "sukses" %}<span class="lencana {{ 'lencana-pengembangan' if log.status == 'proses' else 'bg-bahaya-latar text-bahaya-teks' }}">{{ label_status }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <p class="px-5 py-8 text-center text-redup">Belum ada proses yang tercatat.</p>
+    {% endif %}
+  </section>
+
+  {# ===== Lokasi simpan terakhir ===== #}
+  <section aria-labelledby="judul-lokasi" class="panel !p-0">
+    <h2 id="judul-lokasi" class="flex items-center gap-2 border-b border-garis px-5 py-4 text-base">
+      {{ ikon("folder", "text-redup") }} Lokasi simpan terakhir
+    </h2>
+    <div class="px-5 py-4">
+      {% if lokasi %}
+      <p class="mb-1 text-sm text-redup">{{ nama_sumber(lokasi.modul) }} · {{ lokasi.waktu|waktu_singkat }}</p>
+      <p class="mb-4 break-all rounded-lg bg-permukaan-2 px-3 py-2 font-mono text-sm" data-lokasi>{{ lokasi.lokasi }}</p>
+      <div class="flex flex-wrap gap-2">
+        <form method="post" action="{{ url_for('utama.buka_lokasi') }}">
+          {{ csrf_field() }}
+          <button type="submit" class="tombol tombol-primer">{{ ikon("folder", "size-[1.1em]") }}<span>Buka folder</span></button>
+        </form>
+        <button type="button" class="tombol tombol-sekunder" data-salin-lokasi>{{ ikon("salin", "size-[1.1em]") }}<span>Salin lokasi</span></button>
+      </div>
+      {% else %}
+      <p class="py-4 text-center text-redup">Belum ada file yang disimpan.<br>
+        <span class="text-sm">Lokasi hasil simpan dari modul akan muncul di sini.</span></p>
+      {% endif %}
+    </div>
+  </section>
+</div>
 {% endblock %}

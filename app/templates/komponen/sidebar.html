@@ -1,29 +1,37 @@
 {#- Sidebar navigasi (satu-satunya navigasi aplikasi).
-    Lebar penuh (ikon + label) mulai layar md; di ponsel/tablet kecil hanya ikon. -#}
+    - Layar md ke atas: lebar (ikon + label), bisa diciutkan jadi ikon saja (tombol di tepi kanan).
+    - Layar kecil: selalu ikon saja.
+    Status ringkas/lebar disimpan di localStorage dan dipasang di <html data-sidebar="...">. -#}
 {% from "komponen/ikon.html" import ikon %}
 
 {% macro item_nav(label, url, nama_ikon, aktif, sub=None) -%}
 <li>
   <a href="{{ url }}" title="{{ label }}" {% if aktif %}aria-current="page"{% endif %}
-     class="flex min-h-11 items-center justify-center gap-3 rounded-lg px-3 py-2 no-underline transition-colors md:justify-start
+     class="sidebar-item flex min-h-11 items-center justify-center gap-3 rounded-lg px-3 py-2 no-underline transition-colors md:justify-start
             {{ 'bg-aksen-lembut text-aksen font-semibold' if aktif else 'text-redup hover:bg-permukaan-2 hover:text-teks' }}">
     {{ ikon(nama_ikon) }}
-    <span class="sr-only md:not-sr-only md:flex md:min-w-0 md:flex-col md:leading-tight">
-      <span>{{ label }}</span>
+    <span class="sidebar-label sr-only md:not-sr-only md:flex md:min-w-0 md:flex-col md:leading-tight">
+      <span class="truncate">{{ label }}</span>
       {% if sub %}<span class="truncate text-xs font-normal text-redup">{{ sub }}</span>{% endif %}
     </span>
   </a>
 </li>
 {%- endmacro %}
 
-<aside class="sticky top-0 flex h-screen w-16 shrink-0 flex-col border-r border-garis bg-permukaan md:w-60">
+<aside id="sidebar" class="sidebar sticky top-0 z-30 flex h-dvh w-16 shrink-0 flex-col border-r border-garis bg-permukaan md:w-60">
   <a href="{{ url_for('utama.dashboard') }}" title="{{ nama_aplikasi }}"
-     class="flex h-16 shrink-0 items-center justify-center gap-2.5 border-b border-garis px-3 font-semibold text-teks no-underline md:justify-start md:px-4">
+     class="sidebar-item flex h-16 shrink-0 items-center justify-center gap-2.5 border-b border-garis px-3 font-semibold text-teks no-underline md:justify-start md:px-4">
     <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-aksen text-pada-aksen">{{ ikon("logo") }}</span>
-    <span class="sr-only md:not-sr-only md:truncate">{{ nama_aplikasi }}</span>
+    <span class="sidebar-label sr-only md:not-sr-only md:truncate">{{ nama_aplikasi }}</span>
   </a>
 
-  <nav aria-label="Navigasi utama" class="flex flex-1 flex-col p-2 md:p-3">
+  {# Tombol ciutkan/lebarkan (hanya md ke atas) #}
+  <button type="button" id="tombol-sidebar" aria-controls="sidebar" aria-expanded="true" aria-label="Ciutkan sidebar" title="Ciutkan sidebar"
+          class="absolute -right-3.5 top-[50px] hidden size-7 cursor-pointer place-items-center rounded-full border border-garis-kuat bg-permukaan text-redup shadow-kartu hover:text-teks md:grid">
+    <span class="sidebar-toggle-ikon inline-flex transition-transform">{{ ikon("panah-kiri", "size-4") }}</span>
+  </button>
+
+  <nav aria-label="Navigasi utama" class="sidebar-nav flex flex-1 flex-col p-2 md:p-3">
     {# Bagian atas #}
     <ul role="list" class="grid gap-1">
       {{ item_nav("Dashboard", url_for('utama.dashboard'), "jendela",

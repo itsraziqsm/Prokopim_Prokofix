@@ -17,6 +17,19 @@ CREATE TABLE IF NOT EXISTS pengguna (
     dibuat_pada     TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
     login_terakhir  TEXT
 );
+
+-- Riwayat proses: dicatat oleh modul lewat app/log_proses.py -> catat(...)
+CREATE TABLE IF NOT EXISTS log_proses (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    pengguna_id  INTEGER REFERENCES pengguna(id) ON DELETE CASCADE,
+    waktu        TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    modul        TEXT NOT NULL,              -- id modul di registry, atau "akun"/"sistem"
+    aksi         TEXT NOT NULL,              -- kalimat singkat, mis. "Memecah 12 SPT"
+    status       TEXT NOT NULL DEFAULT 'sukses',  -- sukses | gagal | proses
+    detail       TEXT,
+    lokasi       TEXT                         -- lokasi file/folder hasil simpan (bila ada)
+);
+CREATE INDEX IF NOT EXISTS idx_log_pengguna_waktu ON log_proses (pengguna_id, id DESC);
 """
 
 
