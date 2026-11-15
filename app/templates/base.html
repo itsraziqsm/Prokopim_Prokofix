@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body>
-  <a href="#konten" class="tombol tombol-primer absolute left-4 -top-24 z-[60] focus:top-4">Lewati ke konten utama</a>
+  <a href="#konten" class="tombol tombol-primer absolute left-4 -top-24 z-60 focus:top-4">Lewati ke konten utama</a>
 
   {% if g.pengguna %}
   {# ===== Tata letak setelah masuk: sidebar + konten ===== #}
@@ -43,7 +43,7 @@
 
   {# ===== Notifikasi pop-up (kanan atas). Melayang (fixed), tidak menggeser tata letak. ===== #}
   <div id="wadah-notifikasi" aria-live="polite" aria-relevant="additions"
-       class="pointer-events-none fixed right-4 top-4 z-50 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3"></div>
+       class="pointer-events-none fixed inset-x-4 top-4 z-50 flex flex-col gap-3 sm:left-auto sm:w-96"></div>
   {# Pesan dari server; dipindahkan app.js ke wadah di atas agar dibacakan pembaca layar #}
   <template id="notifikasi-awal">
     {% for kategori, pesan in get_flashed_messages(with_categories=true) %}{{ toast(pesan, kategori) }}{% endfor %}

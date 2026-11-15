@@ -37,7 +37,7 @@ npm run build:css      # build sekali (minify) sebelum commit
 
 ## Akun & keamanan
 - Kata sandi disimpan sebagai hash (scrypt), bukan teks asli. Database: `instance/superapp.db` (tidak ikut git).
-- Semua formulir dilindungi token CSRF; login dikunci 5 menit setelah 5 kali salah.
+- Semua formulir dilindungi token CSRF; percobaan masuk yang salah tercatat di Log.
 - Ganti kata sandi di halaman **Akun**; sesi di browser lain otomatis keluar.
 - **Lupa kata sandi:** dari folder proyek jalankan
   ```bash
@@ -51,7 +51,7 @@ npm run build:css      # build sekali (minify) sebelum commit
 - **Notifikasi pop-up** di kanan atas: melayang di atas halaman, menutup sendiri, berhenti saat disorot.
   Dari server: `flash("Pesan", "sukses" | "info" | "galat")`. Dari JavaScript: `notifikasi("Pesan", "sukses")`.
 - **Halaman masuk**: formulir 60% kiri, gambar 40% kanan, satu layar tanpa scroll.
-  Ganti placeholder dengan menyimpan gambar di `app/static/img/masuk.jpg` (atau `.png` / `.webp`).
+  Panel kanan memakai `app/static/img/masuk.jpg` (atau `.png` / `.webp`) bila ada; tanpa gambar tampil pola polos.
 
 ## Log proses & lokasi simpan terakhir
 Menu **Log** di sidebar berisi satu tabel: waktu, modul, proses, status, dan **lokasi simpan**.
@@ -64,6 +64,7 @@ from app.log_proses import catat
 catat("pemecah-spt", "Memecah 12 SPT", lokasi=r"D:\Arsip\SPT\2026-11")
 catat("pemecah-spt", "Gagal membaca file", status="gagal", detail=str(galat))
 ```
+Status hanya `"sukses"` atau `"gagal"`; di tabel Log hanya proses gagal yang diberi lencana.
 Aktivitas akun (masuk, percobaan gagal, ganti sandi) sudah tercatat otomatis.
 
 ## Struktur folder
@@ -73,7 +74,7 @@ package.json                # skrip build Tailwind
 app/
   __init__.py               # app factory, konfigurasi, halaman galat
   auth.py                   # masuk, keluar, penyiapan akun, ganti sandi, perintah reset-sandi
-  keamanan.py               # token CSRF & pembatasan percobaan login
+  keamanan.py               # token CSRF
   db.py                     # koneksi & skema SQLite (pengguna, log_proses)
   log_proses.py             # catat() riwayat proses & lokasi simpan, buka folder
   modules_registry.py       # DAFTAR MODUL — satu-satunya tempat menambah modul
@@ -83,12 +84,19 @@ app/
     base.html               # kerangka: sidebar + konten (atau tanpa sidebar sebelum masuk)
     dashboard.html, log.html, modul_dev.html, pengaturan.html, galat.html
     auth/                   # masuk, siapkan, akun
-    komponen/               # sidebar, ui (makro), ikon SVG, ilustrasi
+    komponen/               # sidebar, ui (makro), ikon SVG
   static/
     src/input.css           # SUMBER CSS Tailwind (edit ini)
     css/app.css             # hasil build (jangan diedit)
-    js/app.js               # tema & sapaan
+    js/app.js               # tema, sidebar ringkas, notifikasi, tombol salin
+tests/test_aplikasi.py      # uji otomatis: python -m unittest -v
 ```
+
+## Uji otomatis
+```bash
+python -m unittest -v
+```
+Memakai `unittest` bawaan Python dan folder data sementara (database asli tidak tersentuh).
 
 ## Menambah modul baru
 Tambahkan satu entri di `MODUL` pada `app/modules_registry.py`:

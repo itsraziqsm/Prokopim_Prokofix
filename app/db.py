@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS log_proses (
     waktu        TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
     modul        TEXT NOT NULL,              -- id modul di registry, atau "akun"/"sistem"
     aksi         TEXT NOT NULL,              -- kalimat singkat, mis. "Memecah 12 SPT"
-    status       TEXT NOT NULL DEFAULT 'sukses',  -- sukses | gagal | proses
+    status       TEXT NOT NULL DEFAULT 'sukses',  -- sukses | gagal
     detail       TEXT,
     lokasi       TEXT                         -- lokasi file/folder hasil simpan (bila ada)
 );

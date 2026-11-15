@@ -91,7 +91,7 @@
 /* ---------- 3. DASAR ---------- */
 @layer base {
   body { @apply bg-latar text-teks font-sans text-base leading-relaxed antialiased; }
-  h1 { @apply text-[clamp(1.6rem,1.2rem+1.4vw,2rem)] font-semibold leading-tight tracking-tight; }
+  h1 { @apply text-2xl font-semibold leading-tight tracking-tight sm:text-3xl; }
   h2 { @apply text-xl font-semibold leading-snug; }
   a { @apply text-aksen; }
   /* Fokus keyboard yang jelas */
@@ -103,8 +103,8 @@
   .ikon { @apply size-5 shrink-0; }
 
   .tombol {
-    @apply inline-flex min-h-[42px] items-center justify-center gap-2 rounded-lg border border-transparent
-           px-4 py-2 text-[0.95rem] leading-tight font-semibold no-underline cursor-pointer
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-transparent
+           px-4 py-2 text-sm leading-tight font-semibold no-underline cursor-pointer
            transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60;
   }
   .tombol-primer   { @apply bg-aksen text-pada-aksen hover:bg-aksen-hover; }
@@ -112,17 +112,17 @@
   .tombol-teks     { @apply bg-transparent text-teks hover:bg-permukaan-2; }
 
   .lencana {
-    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[0.8125rem] font-semibold;
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }
-  .lencana::before { content: ""; @apply size-[0.45rem] rounded-full bg-current; }
+  .lencana::before { content: ""; @apply size-1.5 rounded-full bg-current; }
   .lencana-siap          { @apply bg-siap-latar text-siap-teks; }
   .lencana-pengembangan  { @apply bg-dev-latar text-dev-teks; }
 
-  .panel { @apply rounded-xl border border-garis bg-permukaan shadow-kartu p-[clamp(1.25rem,3vw,2.25rem)]; }
+  .panel { @apply rounded-xl border border-garis bg-permukaan shadow-kartu p-5 sm:p-8; }
 
   .label { @apply mb-1.5 block text-sm font-semibold; }
   .input {
-    @apply block w-full min-h-[44px] rounded-lg border border-garis-kuat bg-permukaan px-3 py-2 text-base text-teks
+    @apply block w-full min-h-11 rounded-lg border border-garis-kuat bg-permukaan px-3 py-2 text-base text-teks
            placeholder:text-redup focus-visible:outline-3 focus-visible:outline-offset-1;
   }
   .input[aria-invalid="true"] { @apply border-bahaya-teks; }
@@ -131,14 +131,6 @@
 }
 
 /* ---------- 5. KHUSUS ---------- */
-/* Warna ilustrasi SVG mengikuti tema */
-.il-tanah, .il-isi-lembut { fill: var(--garis-kuat); }
-.il-garis { stroke: var(--teks-redup); }
-.il-isi-aksen { fill: var(--warna-aksen); }
-.il-gerigi-aksen { fill: none; stroke: var(--warna-aksen); }
-.il-gerigi-lembut { fill: none; stroke: var(--garis-kuat); }
-.il-lubang { fill: var(--permukaan-2); }
-
 /* Sidebar ringkas (md ke atas): hanya ikon. Diatur lewat <html data-sidebar="ringkas"> */
 .sidebar { transition: width .2s ease; }
 @media (width >= 48rem) {

@@ -1,21 +1,17 @@
 {% extends "base.html" %}
-{% from "komponen/ui.html" import kartu_modul, kartu_segera %}
+{% from "komponen/ui.html" import kartu_modul %}
 
 {% block konten %}
-<section aria-labelledby="judul-sapaan" class="mb-8">
-  {# data-sapaan & data-tanggal diperbarui app.js mengikuti jam di komputer pengguna #}
-  <h1 id="judul-sapaan" class="mb-1"><span data-sapaan>{{ sapaan }}</span>, {{ g.pengguna.nama_lengkap.split(' ')[0] }}</h1>
-  <p class="text-redup" data-tanggal>{{ tanggal }}</p>
-</section>
+<h1 class="mb-1">{{ sapaan }}, {{ g.pengguna.nama_lengkap.split(' ')[0] }}</h1>
+<p class="mb-8 text-redup">{{ tanggal }}</p>
 
 <section aria-labelledby="judul-modul">
-  <h2 id="judul-modul" class="mb-4 text-sm font-semibold uppercase tracking-wider text-redup">Modul kerja</h2>
-  <ul role="list" class="grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))]">
+  <h2 id="judul-modul" class="mb-4">Modul</h2>
+  <ul role="list" class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
     {% for m in modul_list %}
-    <li class="flex">{{ kartu_modul(m, status_label) }}</li>
+    {# Lencana hanya muncul bila status modul berbeda-beda, dan hanya pada modul yang belum siap #}
+    <li class="grid">{{ kartu_modul(m, status_label, status_campur and m.status != "siap") }}</li>
     {% endfor %}
-    <li class="flex">{{ kartu_segera() }}</li>
   </ul>
 </section>
-
 {% endblock %}

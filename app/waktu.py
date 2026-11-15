@@ -7,7 +7,7 @@ BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli",
 
 
 def sapaan(jam):
-    """Sapaan sesuai jam (0-23). Batas jam sama persis dengan versi JS di app.js."""
+    """Sapaan sesuai jam (0-23)."""
     if 4 <= jam < 11:
         return "Selamat pagi"
     if 11 <= jam < 15:

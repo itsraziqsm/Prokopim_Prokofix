@@ -1,7 +1,6 @@
 {% extends "auth/_kartu.html" %}
-{% block judul %}Penyiapan awal · {{ nama_aplikasi }}{% endblock %}
+{% block judul %}Buat akun · {{ nama_aplikasi }}{% endblock %}
 {% block judul_kartu %}Buat akun pertama{% endblock %}
-{% block sub_kartu %}Belum ada akun di aplikasi ini. Buat akun Anda untuk mulai.{% endblock %}
 {% block isi_kartu %}
 <form method="post" action="{{ url_for('auth.siapkan') }}" class="grid gap-4" novalidate>
   {{ csrf_field() }}

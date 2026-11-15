@@ -3,10 +3,10 @@
 {% from "komponen/ui.html" import tombol %}
 {% block judul %}{{ judul }} · {{ nama_aplikasi }}{% endblock %}
 {% block konten %}
-<section class="panel mx-auto my-8 max-w-xl text-center">
-  <p class="mb-2 text-6xl font-bold leading-none text-aksen" aria-hidden="true">{{ kode }}</p>
+<section class="mx-auto my-8 max-w-xl text-center">
+  <p class="mb-2 text-5xl font-bold text-aksen" aria-hidden="true">{{ kode }}</p>
   <h1 class="mb-3">{{ judul }}</h1>
   <p class="mb-6 text-redup">{{ pesan }}</p>
-  {{ tombol("Kembali ke dashboard", url_for('utama.dashboard'), "primer", "panah-kiri") }}
+  {{ tombol("Ke dashboard", url_for('utama.dashboard'), "primer") }}
 </section>
 {% endblock %}

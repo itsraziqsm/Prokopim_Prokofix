@@ -21,8 +21,6 @@ bp = Blueprint("auth", __name__)
 PANJANG_SANDI_MIN = 8
 # Halaman yang boleh dibuka tanpa masuk
 ENDPOINT_PUBLIK = {"auth.masuk", "auth.siapkan", "static"}
-# Hash palsu untuk menyamakan waktu respons saat nama pengguna tidak ada
-_HASH_PALSU = generate_password_hash(secrets.token_hex(8))
 
 
 # ---------- Gambar sisi kanan halaman masuk ----------
@@ -93,7 +91,6 @@ def jaga_halaman():
     return None
 
 
-# ---------- Route ----------
 @bp.route("/siapkan", methods=["GET", "POST"])
 def siapkan():
     """Membuat akun pertama. Hanya tersedia selama belum ada pengguna."""
@@ -147,27 +144,19 @@ def masuk():
     if request.method == "POST":
         nama_pengguna = request.form.get("nama_pengguna", "").strip()
         sandi = request.form.get("sandi", "")
-        sisa = keamanan.sisa_kunci(nama_pengguna)
-        if sisa:
-            pesan_galat = f"Terlalu banyak percobaan gagal. Coba lagi dalam {sisa // 60 + 1} menit."
-        else:
-            db = ambil_db()
-            pengguna = db.execute("SELECT * FROM pengguna WHERE nama_pengguna = ?", (nama_pengguna,)).fetchone()
-            cocok = check_password_hash(pengguna["sandi_hash"] if pengguna else _HASH_PALSU, sandi)
-            if pengguna and cocok:
-                keamanan.hapus_catatan(nama_pengguna)
-                db.execute("UPDATE pengguna SET login_terakhir = datetime('now', 'localtime') WHERE id = ?",
-                           (pengguna["id"],))
-                db.commit()
-                masukkan_ke_sesi(pengguna, ingat=request.form.get("ingat") == "1")
-                log_proses.catat("akun", "Masuk ke aplikasi", pengguna_id=pengguna["id"])
-                return redirect(tujuan_aman(tujuan))
-            keamanan.catat_gagal(nama_pengguna)
-            if pengguna:  # catat agar pemilik akun tahu ada percobaan salah sandi
-                log_proses.catat("akun", "Percobaan masuk gagal (kata sandi salah)",
-                                 status="gagal", pengguna_id=pengguna["id"])
-            # Pesan sengaja umum, agar tidak membocorkan nama pengguna mana yang terdaftar
-            pesan_galat = "Nama pengguna atau kata sandi salah."
+        db = ambil_db()
+        pengguna = db.execute("SELECT * FROM pengguna WHERE nama_pengguna = ?", (nama_pengguna,)).fetchone()
+        if pengguna and check_password_hash(pengguna["sandi_hash"], sandi):
+            db.execute("UPDATE pengguna SET login_terakhir = datetime('now', 'localtime') WHERE id = ?",
+                       (pengguna["id"],))
+            db.commit()
+            masukkan_ke_sesi(pengguna, ingat=request.form.get("ingat") == "1")
+            log_proses.catat("akun", "Masuk ke aplikasi", pengguna_id=pengguna["id"])
+            return redirect(tujuan_aman(tujuan))
+        if pengguna:  # dicatat agar pemilik akun tahu ada percobaan salah sandi
+            log_proses.catat("akun", "Percobaan masuk gagal (kata sandi salah)",
+                             status="gagal", pengguna_id=pengguna["id"])
+        pesan_galat = "Nama pengguna atau kata sandi salah."
 
     if pesan_galat:
         flash(pesan_galat, "galat")  # tampil sebagai notifikasi pop-up

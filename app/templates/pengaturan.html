@@ -1,35 +1,27 @@
 {% extends "base.html" %}
-{% from "komponen/ui.html" import breadcrumb %}
 {% from "komponen/ikon.html" import ikon %}
 {% block judul %}Pengaturan · {{ nama_aplikasi }}{% endblock %}
 
-{% macro opsi_tema(nilai, label, nama_ikon, keterangan) -%}
-<label class="flex cursor-pointer items-start gap-3 rounded-lg border border-garis bg-permukaan p-4 transition-colors
-              hover:border-garis-kuat has-[:checked]:border-aksen has-[:checked]:bg-aksen-lembut has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-aksen">
-  <input type="radio" name="tema" value="{{ nilai }}" class="mt-1 size-[18px] shrink-0 accent-aksen focus-visible:outline-none">
-  <span class="grid gap-0.5">
-    <span class="inline-flex items-center gap-2 font-semibold">{{ ikon(nama_ikon) }}{{ label }}</span>
-    <span class="text-sm text-redup">{{ keterangan }}</span>
-  </span>
+{% macro opsi_tema(nilai, label, nama_ikon) -%}
+<label class="flex cursor-pointer items-center gap-3 rounded-lg border border-garis bg-permukaan px-4 py-3 transition-colors
+              hover:border-garis-kuat has-checked:border-aksen has-checked:bg-aksen-lembut
+              has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-aksen">
+  <input type="radio" name="tema" value="{{ nilai }}" class="size-4 shrink-0 accent-aksen focus-visible:outline-none">
+  {{ ikon(nama_ikon) }}<span class="font-semibold">{{ label }}</span>
 </label>
 {%- endmacro %}
 
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Pengaturan", None)]) }}</div>
 <h1 class="mb-6">Pengaturan</h1>
 
-<section class="panel max-w-3xl" aria-labelledby="judul-tampilan">
-  <h2 id="judul-tampilan" class="mb-1">Tampilan</h2>
-  <p class="mb-5 text-[0.95rem] text-redup">Pilihan tema disimpan di browser ini dan langsung diterapkan.</p>
-
+<section class="panel max-w-2xl" aria-labelledby="judul-tampilan">
   <fieldset>
-    <legend class="label">Tema</legend>
+    <legend id="judul-tampilan" class="mb-3 text-xl font-semibold">Tema</legend>
     <div class="grid gap-3 sm:grid-cols-3" data-pilihan-tema>
-      {{ opsi_tema("light", "Terang", "matahari", "Latar terang, cocok untuk ruangan cerah.") }}
-      {{ opsi_tema("dark", "Gelap", "bulan", "Latar gelap, nyaman untuk mata di malam hari.") }}
-      {{ opsi_tema("sistem", "Ikuti sistem", "monitor", "Mengikuti pengaturan Windows/perangkat.") }}
+      {{ opsi_tema("light", "Terang", "matahari") }}
+      {{ opsi_tema("dark", "Gelap", "bulan") }}
+      {{ opsi_tema("sistem", "Ikuti sistem", "monitor") }}
     </div>
   </fieldset>
-  <p class="mt-3 min-h-6 text-sm text-siap-teks" role="status" aria-live="polite" data-status-tema></p>
 </section>
 {% endblock %}

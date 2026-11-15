@@ -1,13 +1,12 @@
 {% extends "base.html" %}
-{% from "komponen/ui.html" import breadcrumb, field %}
+{% from "komponen/ui.html" import field %}
 {% from "komponen/ikon.html" import ikon %}
 {% block judul %}Akun saya · {{ nama_aplikasi }}{% endblock %}
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Akun saya", None)]) }}</div>
 <h1 class="mb-6">Akun saya</h1>
 
-<div class="grid items-start gap-6 lg:grid-cols-[1fr_1.4fr]">
-  <section class="panel" aria-labelledby="judul-profil">
+<div class="grid items-start gap-6 lg:grid-cols-5">
+  <section class="panel lg:col-span-2" aria-labelledby="judul-profil">
     <h2 id="judul-profil" class="mb-4">Profil</h2>
     <dl class="grid gap-3">
       <div><dt class="text-sm text-redup">Nama lengkap</dt><dd class="font-semibold">{{ g.pengguna.nama_lengkap }}</dd></div>
@@ -16,13 +15,13 @@
     </dl>
     <form method="post" action="{{ url_for('auth.keluar') }}" class="mt-6 border-t border-garis pt-5">
       {{ csrf_field() }}
-      <button type="submit" class="tombol tombol-sekunder w-full sm:w-auto">{{ ikon("keluar") }}<span>Keluar</span></button>
+      <button type="submit" class="tombol tombol-sekunder w-full sm:w-auto">{{ ikon("keluar", "size-4") }}<span>Keluar</span></button>
     </form>
   </section>
 
-  <section class="panel" aria-labelledby="judul-sandi">
+  <section class="panel lg:col-span-3" aria-labelledby="judul-sandi">
     <h2 id="judul-sandi" class="mb-1">Ganti kata sandi</h2>
-    <p class="mb-5 text-[0.95rem] text-redup">Setelah diganti, sesi di browser atau perangkat lain akan otomatis keluar.</p>
+    <p class="mb-5 text-sm text-redup">Setelah diganti, sesi di browser atau perangkat lain akan otomatis keluar.</p>
     <form method="post" action="{{ url_for('auth.akun') }}" class="grid gap-5" novalidate>
       {{ csrf_field() }}
       {{ field("sandi_lama", "Kata sandi saat ini", tipe="password", galat=galat.sandi_lama, autocomplete="current-password") }}

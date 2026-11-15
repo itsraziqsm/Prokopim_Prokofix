@@ -1,64 +1,56 @@
 {#- Tabel log proses. Kolom "Lokasi simpan" berisi lokasi hasil setiap proses;
-    lokasi simpan TERAKHIR ditandai lencana "Terakhir". -#}
+    lokasi simpan TERAKHIR ditandai "Terakhir". Hanya proses gagal yang diberi lencana. -#}
 {% extends "base.html" %}
-{% from "komponen/ui.html" import breadcrumb %}
 {% from "komponen/ikon.html" import ikon %}
 {% block judul %}Log · {{ nama_aplikasi }}{% endblock %}
 
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Log", None)]) }}</div>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-2">
+<div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
   <h1>Log proses</h1>
   <p class="text-sm text-redup">{{ total }} catatan</p>
 </div>
 
-<section class="panel !p-0 overflow-hidden" aria-labelledby="judul-tabel">
-  <h2 id="judul-tabel" class="sr-only">Tabel log proses</h2>
-  {% if log_list %}
-  {# Tabel bisa digeser ke samping di layar kecil, tanpa melebarkan halaman #}
+{% if log_list %}
+<section class="panel overflow-hidden p-0!" aria-label="Tabel log proses">
+  {# Di layar kecil tabel digeser ke samping di dalam kotak ini, halaman tidak melebar #}
   <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Tabel log proses (geser untuk melihat semua kolom)">
-    <table class="w-full min-w-[760px] border-collapse text-left text-[0.95rem]">
-      <thead class="bg-permukaan-2 text-sm text-redup">
+    <table class="w-full min-w-2xl border-collapse text-left text-sm">
+      <thead class="bg-permukaan-2 text-redup">
         <tr>
           <th scope="col" class="whitespace-nowrap px-4 py-3 font-semibold">Waktu</th>
           <th scope="col" class="px-4 py-3 font-semibold">Modul</th>
           <th scope="col" class="px-4 py-3 font-semibold">Proses</th>
-          <th scope="col" class="px-4 py-3 font-semibold">Status</th>
           <th scope="col" class="px-4 py-3 font-semibold">Lokasi simpan</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-garis">
         {% for log in log_list %}
         {% set terakhir = log.id == id_lokasi_terakhir %}
-        <tr class="align-top {{ 'bg-aksen-lembut/60' if terakhir }}">
+        <tr class="align-top{{ ' bg-aksen-lembut' if terakhir }}">
           <td class="whitespace-nowrap px-4 py-3 text-redup">
             <time datetime="{{ log.waktu|replace(' ', 'T') }}" title="{{ log.waktu }}">{{ log.waktu|waktu_singkat }}</time>
           </td>
           <td class="whitespace-nowrap px-4 py-3">{{ nama_sumber(log.modul) }}</td>
           <td class="px-4 py-3">
             <span class="font-medium">{{ log.aksi }}</span>
-            {% if log.detail %}<p class="text-sm text-redup">{{ log.detail }}</p>{% endif %}
-          </td>
-          <td class="px-4 py-3">
-            {% if log.status == "sukses" %}<span class="lencana lencana-siap">Berhasil</span>
-            {% elif log.status == "gagal" %}<span class="lencana bg-bahaya-latar text-bahaya-teks">Gagal</span>
-            {% else %}<span class="lencana lencana-pengembangan">Berjalan</span>{% endif %}
+            {% if log.status == "gagal" %}<span class="lencana ml-1 bg-bahaya-latar text-bahaya-teks">Gagal</span>{% endif %}
+            {% if log.detail %}<p class="text-redup">{{ log.detail }}</p>{% endif %}
           </td>
           <td class="px-4 py-3">
             {% if log.lokasi %}
-            <div class="flex items-start gap-2">
+            <div class="flex items-start gap-1">
               <div class="min-w-0 flex-1">
-                {% if terakhir %}<span class="lencana mb-1 bg-info-latar text-info-teks">Terakhir</span>{% endif %}
-                <p class="font-mono text-sm [overflow-wrap:anywhere]">{{ log.lokasi|jalur }}</p>
+                {% if terakhir %}<p class="text-xs font-semibold text-aksen">Terakhir</p>{% endif %}
+                <p class="font-mono wrap-anywhere">{{ log.lokasi|jalur }}</p>
               </div>
-              <form method="post" action="{{ url_for('utama.buka_lokasi', log_id=log.id) }}" class="shrink-0">
+              <form method="post" action="{{ url_for('utama.buka_lokasi', log_id=log.id) }}">
                 {{ csrf_field() }}<input type="hidden" name="hal" value="{{ halaman }}">
-                <button type="submit" class="tombol tombol-teks !min-h-9 !px-2" title="Buka folder" aria-label="Buka folder: {{ log.lokasi }}">{{ ikon("folder", "size-[1.1em]") }}</button>
+                <button type="submit" class="tombol tombol-teks min-h-9 px-2" title="Buka folder" aria-label="Buka folder: {{ log.lokasi }}">{{ ikon("folder", "size-4") }}</button>
               </form>
-              <button type="button" class="tombol tombol-teks !min-h-9 !px-2 shrink-0" data-salin="{{ log.lokasi }}"
-                      title="Salin lokasi" aria-label="Salin lokasi: {{ log.lokasi }}">{{ ikon("salin", "size-[1.1em]") }}</button>
+              <button type="button" class="tombol tombol-teks min-h-9 px-2" data-salin="{{ log.lokasi }}"
+                      title="Salin lokasi" aria-label="Salin lokasi: {{ log.lokasi }}">{{ ikon("salin", "size-4") }}</button>
             </div>
-            {% else %}<span class="text-redup" aria-label="Tidak ada">—</span>{% endif %}
+            {% else %}<span class="text-redup">–</span>{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -68,13 +60,13 @@
 
   {% if jumlah_halaman > 1 %}
   <nav aria-label="Halaman log" class="flex items-center justify-between gap-3 border-t border-garis px-4 py-3 text-sm">
-    {% if halaman > 1 %}<a class="tombol tombol-sekunder" href="{{ url_for('utama.log', hal=halaman - 1) }}">{{ ikon("panah-kiri", "size-[1.1em]") }}<span>Sebelumnya</span></a>{% else %}<span></span>{% endif %}
+    {% if halaman > 1 %}<a class="tombol tombol-sekunder" href="{{ url_for('utama.log', hal=halaman - 1) }}">Sebelumnya</a>{% else %}<span></span>{% endif %}
     <span class="text-redup">Halaman {{ halaman }} dari {{ jumlah_halaman }}</span>
-    {% if halaman < jumlah_halaman %}<a class="tombol tombol-sekunder" href="{{ url_for('utama.log', hal=halaman + 1) }}"><span>Berikutnya</span>{{ ikon("panah-kanan", "size-[1.1em]") }}</a>{% else %}<span></span>{% endif %}
+    {% if halaman < jumlah_halaman %}<a class="tombol tombol-sekunder" href="{{ url_for('utama.log', hal=halaman + 1) }}">Berikutnya</a>{% else %}<span></span>{% endif %}
   </nav>
   {% endif %}
-  {% else %}
-  <p class="px-5 py-12 text-center text-redup">Belum ada proses yang tercatat.</p>
-  {% endif %}
 </section>
+{% else %}
+<p class="text-redup">Belum ada proses yang tercatat.</p>
+{% endif %}
 {% endblock %}

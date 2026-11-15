@@ -1,13 +1,12 @@
-{#- Tata letak halaman autentikasi: formulir 60% kiri, gambar 40% kanan.
-    Satu layar penuh tanpa scroll halaman (h-dvh + overflow-hidden).
-    Gambar: simpan di app/static/img/masuk.jpg (atau .png/.webp); bila tidak ada, tampil placeholder. -#}
+{#- Tata letak halaman autentikasi: formulir 60% kiri, gambar 40% kanan,
+    satu layar penuh tanpa scroll halaman (h-dvh + overflow-hidden).
+    Gambar diambil dari app/static/img/masuk.jpg (atau .png/.webp); bila tidak ada, tampil pola polos. -#}
 {% extends "base.html" %}
 {% from "komponen/ikon.html" import ikon %}
 {% from "komponen/ui.html" import field %}
 
 {% block polos %}
 <div class="flex h-dvh overflow-hidden bg-permukaan">
-  {# ===== Kiri 60%: formulir ===== #}
   <main id="konten" tabindex="-1"
         class="flex h-full w-full flex-col overflow-y-auto px-6 py-5 focus:outline-none sm:px-10 md:w-3/5 lg:px-16">
     <div class="inline-flex items-center gap-2.5 font-semibold">
@@ -17,8 +16,7 @@
 
     <div class="flex flex-1 items-center justify-center py-4">
       <div class="w-full max-w-md">
-        <h1 class="mb-1">{% block judul_kartu %}{% endblock %}</h1>
-        <p class="mb-6 text-redup">{% block sub_kartu %}{% endblock %}</p>
+        <h1 class="mb-6">{% block judul_kartu %}{% endblock %}</h1>
         {% block isi_kartu %}{% endblock %}
       </div>
     </div>
@@ -26,13 +24,13 @@
     <div class="text-sm text-redup">{% block bawah_kartu %}{% endblock %}</div>
   </main>
 
-  {# ===== Kanan 40%: gambar / placeholder (dekoratif) ===== #}
+  {# Panel kanan: dekoratif #}
   <div class="relative hidden h-full border-l border-garis bg-permukaan-2 md:block md:w-2/5" aria-hidden="true">
     {% set gambar = gambar_auth() %}
     {% if gambar %}
     <img src="{{ gambar }}" alt="" class="absolute inset-0 size-full object-cover">
     {% else %}
-    <svg class="absolute inset-0 size-full text-garis" aria-hidden="true">
+    <svg class="absolute inset-0 size-full text-garis">
       <defs>
         <pattern id="pola-titik" width="22" height="22" patternUnits="userSpaceOnUse">
           <circle cx="2" cy="2" r="1.4" fill="currentColor"/>
@@ -40,13 +38,6 @@
       </defs>
       <rect width="100%" height="100%" fill="url(#pola-titik)"/>
     </svg>
-    <div class="absolute inset-0 grid place-items-center p-8">
-      <div class="grid justify-items-center gap-3 rounded-xl border-2 border-dashed border-garis-kuat bg-permukaan/80 px-8 py-10 text-center text-redup backdrop-blur-sm">
-        <span class="grid size-14 place-items-center rounded-xl bg-aksen-lembut text-aksen">{{ ikon("gambar", "size-7") }}</span>
-        <p class="font-semibold text-teks">Tempat gambar</p>
-        <p class="text-sm">Simpan gambar di<br><code class="font-mono">app/static/img/masuk.jpg</code></p>
-      </div>
-    </div>
     {% endif %}
   </div>
 </div>

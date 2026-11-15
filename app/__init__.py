@@ -23,9 +23,10 @@ def _kunci_rahasia(folder):
         return f.read().strip()
 
 
-def create_app(konfigurasi=None):
-    # instance_relative_config: folder "instance/" (di samping folder app/) untuk data lokal
-    app = Flask(__name__, instance_relative_config=True)
+def create_app(konfigurasi=None, instance_path=None):
+    """konfigurasi: dict tambahan; instance_path: folder data lain (dipakai saat pengujian)."""
+    # Folder "instance/" (di samping folder app/) menyimpan database & kunci rahasia
+    app = Flask(__name__, instance_relative_config=True, instance_path=instance_path)
     os.makedirs(app.instance_path, exist_ok=True)
 
     app.config.update(
@@ -41,12 +42,11 @@ def create_app(konfigurasi=None):
     from . import db
     db.siapkan_db(app)
 
-    # Daftarkan route
     from . import auth, routes
     app.register_blueprint(auth.bp)
     app.register_blueprint(routes.bp)
 
-    # Variabel/fungsi yang otomatis tersedia di SEMUA template Jinja
+    # Tersedia otomatis di SEMUA template Jinja
     from .keamanan import csrf_field
 
     @app.context_processor

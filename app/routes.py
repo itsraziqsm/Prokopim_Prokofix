@@ -38,11 +38,14 @@ def _filter_jalur(teks):
 @bp.route("/")
 def dashboard():
     sekarang = datetime.now()
+    daftar = semua_modul()
     return render_template(
         "dashboard.html",
-        modul_list=semua_modul(),
+        modul_list=daftar,
         status_label=STATUS_LABEL,
-        # Nilai awal dari server; app.js akan menyesuaikan dengan jam di komputer pengguna
+        # Lencana hanya berguna bila status modul berbeda-beda
+        status_campur=len({m["status"] for m in daftar}) > 1,
+        # Server berjalan di komputer pengguna, jadi jam server = jam pengguna
         sapaan=sapaan(sekarang.hour),
         tanggal=tanggal_indonesia(sekarang),
     )
@@ -90,16 +93,11 @@ def buka_lokasi(log_id):
 def modul(modul_id):
     data = cari_modul(modul_id)
     if data is None:
-        abort(404)  # memicu halaman galat di app/__init__.py
-    return render_template(
-        "modul_dev.html",
-        modul=data,
-        modul_list=semua_modul(),
-        status_label=STATUS_LABEL,
-    )
+        abort(404)
+    return render_template("modul_dev.html", modul=data, status_label=STATUS_LABEL)
 
 
 @bp.route("/pengaturan")
 def pengaturan():
-    # Pilihan tema disimpan di browser (localStorage) oleh app.js, jadi tidak perlu formulir server
+    # Pilihan tema disimpan di browser (localStorage) oleh app.js
     return render_template("pengaturan.html")

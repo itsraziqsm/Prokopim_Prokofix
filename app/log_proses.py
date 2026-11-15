@@ -16,7 +16,7 @@ from flask import g
 
 from .db import ambil_db
 
-STATUS_SAH = {"sukses", "gagal", "proses"}
+STATUS_SAH = {"sukses", "gagal"}
 
 
 def catat(modul, aksi, status="sukses", detail=None, lokasi=None, pengguna_id=None):
@@ -49,12 +49,6 @@ def ambil(pengguna_id, log_id):
     return ambil_db().execute(
         "SELECT * FROM log_proses WHERE id = ? AND pengguna_id = ?", (log_id, pengguna_id)
     ).fetchone()
-
-
-def terbaru(pengguna_id, batas=8):
-    return ambil_db().execute(
-        "SELECT * FROM log_proses WHERE pengguna_id = ? ORDER BY id DESC LIMIT ?", (pengguna_id, batas)
-    ).fetchall()
 
 
 def lokasi_terakhir(pengguna_id):
