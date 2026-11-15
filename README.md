@@ -12,7 +12,15 @@ Butuh Python 3.10+.
 pip install -r requirements.txt
 python run.py
 ```
-Buka http://127.0.0.1:5000
+Buka alamat yang tercetak di terminal (misalnya http://127.0.0.1:5000).
+
+Aplikasi otomatis mencari port yang bisa dipakai (5000, 8000, 8080, ...).
+Untuk memakai port tertentu: `python run.py 8080`.
+
+> **Error "An attempt was made to access a socket in a way forbidden by its access permissions"?**
+> Di Windows, port tertentu dicadangkan oleh Hyper-V/WSL/Docker atau sedang dipakai aplikasi lain.
+> `run.py` sudah menangani ini dengan memilih port lain. Untuk melihat port yang dicadangkan:
+> `netsh interface ipv4 show excludedportrange protocol=tcp`
 
 ## Struktur folder
 ```
