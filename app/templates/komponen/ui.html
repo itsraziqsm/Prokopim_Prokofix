@@ -2,7 +2,7 @@
     Impor: {% from "komponen/ui.html" import lencana, kartu_modul, ... %} -#}
 {% from "komponen/ikon.html" import ikon %}
 
-{# Lencana status modul: "siap" atau "pengembangan" #}
+{# Lencana status: "siap", "pengembangan", "gagal", "peringatan" #}
 {% macro lencana(status, label) -%}
 <span class="lencana lencana-{{ status }}">{{ label }}</span>
 {%- endmacro %}
@@ -50,6 +50,15 @@
   <p class="flex-1 text-sm font-medium" data-toast-pesan>{{ pesan }}</p>
   <button type="button" class="-m-1 grid size-8 shrink-0 cursor-pointer place-items-center rounded-md text-redup hover:bg-permukaan-2 hover:text-teks"
           aria-label="Tutup notifikasi" data-toast-tutup>{{ ikon("silang", "size-4") }}</button>
+</div>
+{%- endmacro %}
+
+{# Kotak pesan inline yang menetap di halaman (mis. peringatan pratinjau). jenis: info | peringatan | galat #}
+{% macro alert(pesan, jenis="info") -%}
+{% set gaya = {"peringatan": "bg-dev-latar text-dev-teks", "galat": "bg-bahaya-latar text-bahaya-teks"}.get(jenis, "bg-info-latar text-info-teks") %}
+<div class="flex items-start gap-2.5 rounded-lg px-4 py-3 text-sm {{ gaya }}" {% if jenis == "galat" %}role="alert"{% endif %}>
+  {{ ikon("info" if jenis == "info" else "peringatan", "mt-0.5 size-4") }}
+  <p>{{ pesan }}</p>
 </div>
 {%- endmacro %}
 

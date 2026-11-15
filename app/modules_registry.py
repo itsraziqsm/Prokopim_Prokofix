@@ -4,7 +4,7 @@ Untuk menambah modul baru, cukup tambahkan satu dict ke dalam list MODUL di bawa
 Dashboard dan halaman "Under Development" akan otomatis menampilkannya.
 
 Keterangan kolom:
-    id         : kode unik, dipakai di URL (/modul/<id>). Huruf kecil & tanda hubung.
+    id         : kode unik (huruf kecil, tanda hubung/garis bawah). Juga dipakai di catat(id, ...).
     nama       : nama modul yang tampil di layar.
     deskripsi  : satu kalimat singkat untuk kartu di dashboard.
     tujuan     : paragraf singkat di halaman detail modul.
@@ -25,23 +25,22 @@ STATUS_LABEL = {
 
 MODUL = [
     {
-        "id": "pemecah-spt",
+        "id": "pemecah_spt",
         "nama": "Pemecah SPT",
         "deskripsi": "Memecah satu file Word berisi banyak SPT menjadi satu file per SPT.",
         "tujuan": (
-            "Mempercepat pengarsipan Surat Perintah Tugas. Satu dokumen Word yang memuat "
-            "banyak SPT dipecah otomatis menjadi file terpisah, masing-masing diberi nama "
-            "sesuai nomor suratnya, dalam format Word dan/atau PDF."
+            "Satu dokumen Word yang memuat banyak Surat Perintah Tugas dipecah menjadi "
+            "satu berkas per SPT, diberi nama sesuai nomor suratnya, dalam format Word, PDF, atau keduanya."
         ),
         "ikon": "dokumen-pecah",
-        "status": "pengembangan",
-        "url": None,
+        "status": "siap",
+        "url": "/spt",
         "urutan": 1,
         "rencana": [
-            "Deteksi judul SPT yang bercetak tebal dan bergaris bawah",
-            "Pratinjau hasil pecahan sebelum disimpan",
-            "Penamaan file otomatis dari nomor SPT",
-            "Keluaran dalam format Word dan/atau PDF",
+            "Deteksi judul SPT bercetak tebal dan bergaris bawah",
+            "Pratinjau dan pilih SPT sebelum diproses",
+            "Penamaan berkas dari nomor SPT",
+            "Keluaran Word dan/atau PDF, unduh per berkas atau ZIP",
         ],
     },
     {

@@ -35,6 +35,7 @@ def create_app(konfigurasi=None, instance_path=None):
         SESSION_COOKIE_HTTPONLY=True,          # cookie tidak bisa dibaca JavaScript
         SESSION_COOKIE_SAMESITE="Lax",
         PERMANENT_SESSION_LIFETIME=timedelta(days=30),  # berlaku bila "Ingat saya" dicentang
+        MAX_CONTENT_LENGTH=30 * 1024 * 1024,   # batas unggahan (berkas SPT maks. 25 MB + formulir)
     )
     if konfigurasi:
         app.config.update(konfigurasi)
@@ -43,8 +44,10 @@ def create_app(konfigurasi=None, instance_path=None):
     db.siapkan_db(app)
 
     from . import auth, routes
+    from .modul import pemecah_spt
     app.register_blueprint(auth.bp)
     app.register_blueprint(routes.bp)
+    app.register_blueprint(pemecah_spt.bp)
 
     # Tersedia otomatis di SEMUA template Jinja
     from .keamanan import csrf_field
@@ -57,9 +60,9 @@ def create_app(konfigurasi=None, instance_path=None):
     @app.errorhandler(HTTPException)
     def halaman_galat(e):
         judul = {404: "Halaman tidak ditemukan", 400: "Permintaan tidak valid",
-                 405: "Metode tidak diizinkan"}.get(e.code, e.name)
-        pesan = (e.description if e.code != 404
-                 else "Alamat yang Anda buka tidak tersedia, atau modul tersebut belum terdaftar.")
+                 405: "Metode tidak diizinkan", 413: "Berkas terlalu besar"}.get(e.code, e.name)
+        pesan = {404: "Alamat yang Anda buka tidak tersedia, atau modul tersebut belum terdaftar.",
+                 413: "Ukuran berkas maksimal 25 MB."}.get(e.code, e.description)
         return render_template("galat.html", kode=e.code, judul=judul, pesan=pesan), e.code
 
     return app

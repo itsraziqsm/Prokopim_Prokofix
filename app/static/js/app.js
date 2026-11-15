@@ -134,4 +134,60 @@
     var tombol = e.target.closest("[data-salin]");
     if (tombol) salin(tombol.getAttribute("data-salin"));
   });
+
+  /* ---------- 5. Formulir kirim sekali ----------
+     <form data-kirim-sekali data-teks-proses="Memproses...">: tombol kirim dinonaktifkan setelah diklik
+     agar tidak terkirim ganda saat proses berjalan. */
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (!form.matches || !form.matches("[data-kirim-sekali]")) return;
+    if (form.dataset.terkirim) { e.preventDefault(); return; }
+    form.dataset.terkirim = "1";
+    Array.prototype.forEach.call(form.querySelectorAll("button[type=submit]"), function (tombol) {
+      tombol.disabled = true;
+      tombol.setAttribute("aria-busy", "true");
+      var label = tombol.querySelector("span") || tombol;
+      label.textContent = form.dataset.teksProses || "Memproses...";
+    });
+  });
+  // Bila halaman dibuka lagi lewat tombol Kembali browser, aktifkan ulang tombolnya
+  window.addEventListener("pageshow", function (e) {
+    if (!e.persisted) return;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-kirim-sekali]"), function (form) {
+      delete form.dataset.terkirim;
+      Array.prototype.forEach.call(form.querySelectorAll("button[type=submit]"), function (t) {
+        t.disabled = false; t.removeAttribute("aria-busy");
+      });
+    });
+  });
+
+  /* ---------- 6. Pilih semua (tabel pratinjau) ---------- */
+  var induk = document.querySelector("[data-pilih-semua]");
+  if (induk) {
+    var anak = document.querySelectorAll("[data-pilih-item]");
+    var jumlahEl = document.querySelector("[data-jumlah-dipilih]");
+    var tombolProses = document.querySelector("[data-tombol-proses]");
+    var perbarui = function () {
+      var n = Array.prototype.filter.call(anak, function (c) { return c.checked; }).length;
+      induk.checked = n === anak.length;
+      induk.indeterminate = n > 0 && n < anak.length;
+      if (jumlahEl) jumlahEl.textContent = n;
+      if (tombolProses) tombolProses.disabled = n === 0;
+    };
+    induk.addEventListener("change", function () {
+      Array.prototype.forEach.call(anak, function (c) { c.checked = induk.checked; });
+      perbarui();
+    });
+    Array.prototype.forEach.call(anak, function (c) { c.addEventListener("change", perbarui); });
+    perbarui();
+  }
+
+  /* ---------- 7. Nama berkas terpilih (input file bergaya tombol) ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll("[data-pilih-berkas]"), function (input) {
+    var nama = input.parentNode.querySelector("[data-nama-berkas]");
+    var awal = nama ? nama.textContent : "";
+    input.addEventListener("change", function () {
+      if (nama) nama.textContent = input.files.length ? input.files[0].name : awal;
+    });
+  });
 })();

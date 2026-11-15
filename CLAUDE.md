@@ -5,6 +5,7 @@ Konteks untuk asisten AI yang bekerja di repo ini. Baca seluruhnya sebelum mengu
 ## Tentang proyek
 "Super App Kerja": kumpulan tools kerja pribadi untuk pegawai instansi pemerintah (Bagian Prokopim),
 berjalan **lokal** di komputer pengguna (Windows), dibuka lewat browser di `http://127.0.0.1:<port>`.
+Rencana: aplikasi akan dipindah ke **server Ubuntu** — lihat "Catatan pindah ke server".
 Setiap fitur = satu **modul** yang terdaftar di registry dan tampil sebagai kartu di dashboard.
 
 ## Pengguna & gaya kerja
@@ -19,12 +20,16 @@ Setiap fitur = satu **modul** yang terdaftar di registry dan tampil sebagai kart
   Bila ada poin kosong/terpotong, kerjakan sisanya lalu tanyakan.
 
 ## Stack & batasan
-- Python 3.10+, **Flask** (satu-satunya dependensi Python), Jinja2, SQLite (`sqlite3` bawaan).
+- Python 3.10+, Jinja2, SQLite (`sqlite3` bawaan). Dependensi Python yang **disetujui**: `flask`,
+  `python-docx` (membawa `lxml`). Tidak ada yang lain (lihat `requirements.txt`).
+- PDF dibuat **tanpa paket Python**: Windows → Microsoft Word lewat PowerShell/COM; Linux/Windows tanpa Word →
+  LibreOffice `soffice --headless`. Bila keduanya tidak ada, hasil tetap Word dan batch berstatus "sebagian".
 - **Tailwind CSS v4 lewat paket npm** (`@tailwindcss/cli` 4.3.2) — BUKAN CDN.
   Hasil build `app/static/css/app.css` **di-commit** agar aplikasi jalan tanpa Node & tanpa internet.
 - JS biasa (tanpa framework), satu file `app/static/js/app.js`.
 - Tanpa CDN / font / skrip eksternal. System font stack. Ikon & ilustrasi = SVG inline.
-- Jangan menambah dependensi Python selain Flask tanpa persetujuan pengguna.
+- Jangan menambah dependensi Python lain tanpa persetujuan pengguna.
+- `subprocess` selalu dengan daftar argumen, tanpa `shell=True`; jalur lewat `pathlib`.
 - Jangan mengubah/menghapus file di luar folder proyek.
 
 ## Menjalankan
@@ -48,9 +53,17 @@ app/modules_registry.py        DAFTAR MODUL (sumber tunggal) + STATUS_LABEL
 app/routes.py                  blueprint "utama": /, /log, /log/<id>/buka, /modul/<id>, /pengaturan
 app/auth.py                    blueprint "auth": /siapkan, /masuk, /keluar, /akun, CLI reset-sandi, penjaga login
 app/keamanan.py                CSRF (csrf_field)
-app/db.py                      koneksi SQLite per request + SKEMA (pengguna, log_proses)
+app/db.py                      koneksi SQLite per request + SKEMA (pengguna, log_proses, spt_batch, spt)
 app/log_proses.py              catat(), per_halaman(), lokasi_terakhir(), buka_di_penjelajah()
 app/waktu.py                   sapaan, tanggal_indonesia, waktu_singkat
+app/modul/pemecah_spt/         Fitur 1 — blueprint "pemecah_spt" di /spt:
+  pemecah.py                     logika murni tanpa Flask: validasi .docx, deteksi judul, nomor, pecah_satu()
+  penamaan.py                    nama berkas dari nomor (sanitasi, duplikat → (1),(2) untuk SEMUA anggota)
+  pdf.py                         konversi PDF (Word COM / LibreOffice), deteksi otomatis
+  layanan.py                     DB & berkas; daftar_spt(), ambil_spt(id) untuk modul lain (Arsip Liputan)
+  routes.py                      /spt, /spt/analisis, /spt/pratinjau/<token>, /spt/proses, /spt/batch/<id>,
+                                 /spt/batch/<id>/zip, /spt/batch/<id>/buka, /spt/unduh/<spt_id>/<docx|pdf>
+app/templates/pemecah_spt/     index (unggah + riwayat), pratinjau, batch (hasil)
 app/templates/base.html        kerangka: sidebar + konten; wadah notifikasi; skrip tema/sidebar di <head>
 app/templates/komponen/        sidebar.html, ui.html (makro), ikon.html (SVG)
 app/templates/auth/            _kartu.html (tata letak 60/40), masuk, siapkan, akun
@@ -59,23 +72,36 @@ app/static/src/input.css       SUMBER CSS (edit ini)
 app/static/css/app.css         HASIL BUILD (jangan diedit manual)
 app/static/img/                gambar halaman masuk opsional: masuk.jpg/.png/.webp
 instance/                      superapp.db + secret_key (tidak ikut git; backup = salin folder ini)
-tests/test_aplikasi.py         uji unittest (create_app(instance_path=folder_sementara))
+instance/data/spt/<id_batch>/  berkas hasil Pemecah SPT
+instance/tmp/                  unggahan sementara selama pratinjau (<token>.docx + .json), dihapus >24 jam
+tests/test_aplikasi.py         uji inti (create_app(instance_path=folder_sementara))
+tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .docx contoh (batch_contoh())
 ```
 
 ## Pola & konvensi penting
+- **Id modul**: huruf kecil dengan tanda hubung/garis bawah (mis. `pemecah_spt`); id yang sama dipakai di `catat()`
+  agar nama modul tampil di tabel Log. Modul siap: `status="siap"`, `url` diisi (mis. `/spt`).
 - **Menambah modul**: tambah satu dict di `MODUL` (`app/modules_registry.py`): id, nama, deskripsi,
   tujuan, ikon, status (`"siap"`/`"pengembangan"`), url (None → `/modul/<id>`), urutan, rencana.
   Modul "pengembangan" tetap bisa diklik → template tunggal `modul_dev.html`.
   Lencana status di dashboard hanya muncul bila status modul berbeda-beda, dan hanya pada modul yang belum siap.
   Logika modul nyata: buat blueprint sendiri (mis. `app/modul/pemecah_spt/`), daftarkan di `create_app`,
-  isi `url` di registry, ubah status jadi `"siap"`.
+  isi `url` di registry, ubah status jadi `"siap"`. Logika berat ditaruh di modul murni tanpa Flask agar mudah diuji.
+  Sidebar menandai "Dashboard" aktif untuk semua blueprint modul.
 - **Semua halaman wajib login** (penjaga `before_app_request` di `auth.py`); pengecualian di `ENDPOINT_PUBLIK`.
 - **Setiap `<form method="post">` wajib `{{ csrf_field() }}`.**
 - **Pencatatan proses**: modul memanggil `catat(modul_id, aksi, status="sukses"|"gagal", detail=..., lokasi=...)`.
   Lokasi tampil di tabel Log; buka folder hanya dari lokasi di DB milik pengguna (bukan input bebas).
+- **Berkas hasil & unduhan**: simpan di `instance/data/<modul>/<id>/` dengan nama dari data tepercaya
+  (nama berkas dari klien hanya untuk tampilan). Unduh HANYA dari rekaman database, lalu resolve dan pastikan
+  jalurnya di dalam folder data modul (lihat `layanan.jalur_berkas_aman`) → `send_file(as_attachment=True)`.
+  ZIP dibuat di memori. "Buka folder" hanya dari lokasi yang tercatat. Unggahan: validasi ekstensi, signature,
+  isi ZIP & batas ukuran; simpan dengan nama acak; token sementara terikat ke pengguna.
 - **Notifikasi**: server `flash(pesan, "sukses"|"info"|"galat")`; JS `window.notifikasi(pesan, jenis)`.
   Tampil pop-up kanan atas (fixed), jangan pakai alert inline untuk pesan umum. Galat per-field tetap inline (makro `field`).
-- **Komponen ulang-pakai** di `komponen/ui.html`: `lencana`, `kartu_modul`, `breadcrumb`, `tombol`, `toast`, `field`. Kelas komponen CSS: `.tombol(-primer|-sekunder|-teks)`, `.lencana(-siap|-pengembangan)`,
+- **Komponen ulang-pakai** di `komponen/ui.html`: `lencana`, `kartu_modul`, `breadcrumb`, `tombol`, `toast`, `field`,
+  `alert` (peringatan inline yang menetap, jenis info|peringatan|galat). Kelas komponen CSS: `.tombol(-primer|-sekunder|-teks)`,
+  `.lencana(-siap|-pengembangan|-peringatan|-gagal)`,
   `.panel`, `.input`, `.label`, `.petunjuk`, `.galat-field`, `.ikon`.
 - **Warna**: hanya lewat CSS variable di `input.css` (`--warna-aksen`, `--latar`, `--permukaan`, `--teks`, `--teks-redup`,
   `--garis`, ...) yang dipetakan ke kelas Tailwind (`bg-aksen`, `text-redup`, `border-garis`, `bg-siap-latar`, ...).
@@ -86,6 +112,12 @@ tests/test_aplikasi.py         uji unittest (create_app(instance_path=folder_sem
   Sapaan & tanggal dihitung di server saja (server = komputer pengguna); jangan duplikasi di JS.
 - **Ukuran**: pakai skala bawaan Tailwind (`text-sm`, `size-4`, `min-h-10`, ...). Hindari nilai sembarang `[...]`.
 - Ikon baru: tambahkan cabang di `komponen/ikon.html`, warna `currentColor`.
+- **Tabel lebar**: bungkus dengan `<div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="...">`.
+  `relative` WAJIB: tanpa itu teks `sr-only` (absolute) di dalam tabel lolos dan melebarkan halaman di ponsel.
+  Teks panjang berisi garis miring (nomor surat, jalur) pakai filter `|jalur` + `wrap-break-word`.
+- **Perilaku JS siap pakai** (app.js): `<form data-kirim-sekali data-teks-proses="Memproses...">` (cegah kirim ganda),
+  `data-pilih-semua` + `data-pilih-item` + `data-jumlah-dipilih` (centang semua), `data-pilih-berkas` +
+  `data-nama-berkas` (input berkas bergaya tombol), `data-salin="teks"` (salin ke clipboard).
 
 ## Standar UI/UX
 - Rapi, tenang, profesional (kantor pemerintahan); satu warna aksen biru tua + netral; tanpa gradasi mencolok.
@@ -100,6 +132,13 @@ tests/test_aplikasi.py         uji unittest (create_app(instance_path=folder_sem
   satu jalan kembali saja.
 - Keamanan secukupnya untuk aplikasi lokal satu pengguna: hash sandi, CSRF, wajib login, rotasi token sesi
   saat ganti sandi. Tanpa pembatas percobaan login.
+
+## Catatan pindah ke server (perlu ditinjau)
+Keputusan "hanya 127.0.0.1, satu pengguna" belum cocok untuk server Ubuntu. Sebelum pindah, tinjau:
+host/port & reverse proxy (nginx) + HTTPS, server WSGI (mis. gunicorn) menggantikan `python run.py` (debug=True),
+`SESSION_COOKIE_SECURE`, multi-pengguna (saat ini hanya /siapkan untuk akun pertama), pembatas percobaan login,
+tombol "Buka folder" (membuka folder di mesin SERVER, bukan di komputer pengguna — sembunyikan atau ganti dengan unduhan),
+proses PDF sinkron (pertimbangkan antrean bila batch besar), dan LibreOffice terpasang di server.
 
 ## Verifikasi sebelum selesai
 1. `npm run build:css` bila ada kelas Tailwind baru.

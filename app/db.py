@@ -30,6 +30,35 @@ CREATE TABLE IF NOT EXISTS log_proses (
     lokasi       TEXT                         -- lokasi file/folder hasil simpan (bila ada)
 );
 CREATE INDEX IF NOT EXISTS idx_log_pengguna_waktu ON log_proses (pengguna_id, id DESC);
+
+-- Pemecah SPT: satu batch = satu berkas .docx yang dipecah
+CREATE TABLE IF NOT EXISTS spt_batch (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    pengguna_id       INTEGER NOT NULL REFERENCES pengguna(id) ON DELETE CASCADE,
+    nama_berkas_asli  TEXT NOT NULL,            -- hanya untuk tampilan, tidak dipakai di disk
+    format_keluaran   TEXT NOT NULL,            -- word | pdf | keduanya
+    jumlah            INTEGER NOT NULL DEFAULT 0,
+    folder            TEXT NOT NULL DEFAULT '', -- instance/data/spt/<id>
+    status            TEXT NOT NULL DEFAULT 'sukses',  -- sukses | sebagian | gagal
+    catatan           TEXT,                     -- mis. alasan PDF tidak dibuat
+    dibuat            TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_spt_batch_pengguna ON spt_batch (pengguna_id, id DESC);
+
+-- Satu baris = satu SPT hasil pecahan (dipakai juga oleh modul Arsip Liputan nanti)
+CREATE TABLE IF NOT EXISTS spt (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_id   INTEGER NOT NULL REFERENCES spt_batch(id) ON DELETE CASCADE,
+    urutan     INTEGER NOT NULL,
+    nomor      TEXT NOT NULL,
+    nama_docx  TEXT,                            -- nama berkas di folder batch (NULL bila tidak ada)
+    nama_pdf   TEXT,
+    cuplikan   TEXT,
+    status     TEXT NOT NULL DEFAULT 'sukses',  -- sukses | sebagian | gagal
+    galat      TEXT,
+    dibuat     TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_spt_batch ON spt (batch_id, urutan);
 """
 
 

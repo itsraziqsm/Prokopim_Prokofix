@@ -1,9 +1,20 @@
 # Super App Kerja
 
 Kumpulan tools kerja pribadi yang berjalan **lokal** di komputer sendiri (tanpa internet).
-Python + Flask + Jinja2, tampilan dengan **Tailwind CSS v4** (paket npm), JS biasa.
+Python + Flask + python-docx + Jinja2, tampilan dengan **Tailwind CSS v4** (paket npm), JS biasa.
 
-> Status: **desain placeholder + sistem masuk (auth)**. Logika fitur modul belum ada.
+> Status: **Fitur 1 Pemecah SPT siap**. Arsip Liputan masih dalam pengembangan.
+
+## Pemecah SPT
+Memecah satu `.docx` berisi banyak Surat Perintah Tugas menjadi satu berkas per SPT (Word, PDF, atau keduanya).
+1. Buka **Pemecah SPT** di dashboard, pilih berkas dan keluaran, klik **Analisis berkas**.
+2. Periksa **pratinjau** (nomor kembar / tidak terbaca ditandai), hapus centang SPT yang tidak perlu, klik **Proses**.
+3. Unduh per berkas atau **ZIP**, atau **Buka folder** (`instance/data/spt/<id>/`).
+
+Judul tiap SPT harus paragraf tersendiri "SURAT PERINTAH TUGAS" yang **tebal dan bergaris bawah**.
+Nama berkas diambil dari baris "Nomor :"; nomor kembar diberi `(1)`, `(2)`, ...
+PDF memakai Microsoft Word (Windows) atau LibreOffice; tanpa keduanya hasil tetap berupa Word.
+Di Ubuntu: `sudo apt install libreoffice-writer`.
 
 ## Menjalankan
 Butuh Python 3.10+.
@@ -89,7 +100,8 @@ app/
     src/input.css           # SUMBER CSS Tailwind (edit ini)
     css/app.css             # hasil build (jangan diedit)
     js/app.js               # tema, sidebar ringkas, notifikasi, tombol salin
-tests/test_aplikasi.py      # uji otomatis: python -m unittest -v
+app/modul/pemecah_spt/      # Fitur 1: pemecah, penamaan, pdf, layanan, routes
+tests/                      # uji otomatis: python -m unittest -v
 ```
 
 ## Uji otomatis

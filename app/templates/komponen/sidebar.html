@@ -35,7 +35,8 @@
     {# Bagian atas #}
     <ul role="list" class="grid gap-1">
       {{ item_nav("Dashboard", url_for('utama.dashboard'), "jendela",
-                  request.endpoint in ("utama.dashboard", "utama.modul")) }}
+                  request.endpoint in ("utama.dashboard", "utama.modul")
+                  or request.blueprint not in (None, "utama", "auth")) }}
       {{ item_nav("Log", url_for('utama.log'), "riwayat", request.endpoint == "utama.log") }}
     </ul>
 

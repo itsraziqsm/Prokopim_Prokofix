@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "komponen/ui.html" import breadcrumb, alert %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}Pemecah SPT · {{ nama_aplikasi }}{% endblock %}
+
+{% macro opsi_format(nilai, label, terpilih) -%}
+<label class="flex cursor-pointer items-center gap-3 rounded-lg border border-garis bg-permukaan px-4 py-3 transition-colors
+              hover:border-garis-kuat has-checked:border-aksen has-checked:bg-aksen-lembut
+              has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-aksen">
+  <input type="radio" name="format" value="{{ nilai }}" class="size-4 shrink-0 accent-aksen focus-visible:outline-none" {% if terpilih %}checked{% endif %}>
+  <span class="font-semibold">{{ label }}</span>
+</label>
+{%- endmacro %}
+
+{% block konten %}
+<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Pemecah SPT", None)]) }}</div>
+<h1 class="mb-6">Pemecah SPT</h1>
+
+<section class="panel mb-10 max-w-3xl" aria-labelledby="judul-unggah">
+  <h2 id="judul-unggah" class="sr-only">Unggah berkas</h2>
+  <form method="post" action="{{ url_for('pemecah_spt.analisis_berkas') }}" enctype="multipart/form-data"
+        class="grid gap-6" data-kirim-sekali data-teks-proses="Menganalisis...">
+    {{ csrf_field() }}
+    <div>
+      <p class="label" id="l-berkas">Berkas Word berisi banyak SPT</p>
+      {# Input berkas asli disembunyikan secara visual (tetap bisa difokus keyboard); labelnya tampil sebagai tombol #}
+      <div class="flex flex-wrap items-center gap-3">
+        <input id="f-berkas" name="berkas" type="file" required class="peer sr-only"
+               aria-labelledby="l-berkas" aria-describedby="p-berkas n-berkas" data-pilih-berkas
+               accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        <label for="f-berkas" class="tombol tombol-sekunder peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-aksen">
+          {{ ikon("folder", "size-4") }}<span>Pilih berkas</span>
+        </label>
+        <span id="n-berkas" class="min-w-0 text-sm text-redup wrap-anywhere" data-nama-berkas>Belum ada berkas dipilih</span>
+      </div>
+      <p id="p-berkas" class="petunjuk">Format .docx, maksimal 25 MB. Judul tiap SPT harus "SURAT PERINTAH TUGAS" bercetak tebal dan bergaris bawah.</p>
+    </div>
+
+    <fieldset>
+      <legend class="label">Keluaran</legend>
+      <div class="grid gap-3 sm:grid-cols-3">
+        {{ opsi_format("word", "Word", true) }}
+        {{ opsi_format("pdf", "PDF", false) }}
+        {{ opsi_format("keduanya", "Word + PDF", false) }}
+      </div>
+      {% if not pengonversi %}
+      <div class="mt-3">{{ alert("Microsoft Word dan LibreOffice tidak ditemukan, jadi PDF belum bisa dibuat. Bila memilih PDF, hasilnya tetap berupa Word.", "peringatan") }}</div>
+      {% endif %}
+    </fieldset>
+
+    <div><button type="submit" class="tombol tombol-primer">{{ ikon("unggah", "size-4") }}<span>Analisis berkas</span></button></div>
+  </form>
+</section>
+
+<section aria-labelledby="judul-riwayat">
+  <h2 id="judul-riwayat" class="mb-4">Riwayat</h2>
+  {% if riwayat %}
+  <div class="panel overflow-hidden p-0!">
+    <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Riwayat batch (geser untuk melihat semua kolom)">
+      <table class="w-full min-w-xl border-collapse text-left text-sm">
+        <thead class="bg-permukaan-2 text-redup">
+          <tr>
+            <th scope="col" class="px-4 py-3 font-semibold">Waktu</th>
+            <th scope="col" class="px-4 py-3 font-semibold">Berkas asli</th>
+            <th scope="col" class="px-4 py-3 font-semibold">SPT</th>
+            <th scope="col" class="px-4 py-3 font-semibold">Keluaran</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-garis">
+          {% for b in riwayat %}
+          <tr class="align-top">
+            <td class="whitespace-nowrap px-4 py-3 text-redup">{{ b.dibuat|waktu_singkat }}</td>
+            <td class="px-4 py-3">
+              <a href="{{ url_for('pemecah_spt.batch', batch_id=b.id) }}" class="font-medium wrap-anywhere">{{ b.nama_berkas_asli }}</a>
+              {% if b.status == "gagal" %}<span class="lencana lencana-gagal ml-1">Gagal</span>
+              {% elif b.status == "sebagian" %}<span class="lencana lencana-peringatan ml-1">Sebagian</span>{% endif %}
+            </td>
+            <td class="px-4 py-3">{{ b.jumlah }}</td>
+            <td class="whitespace-nowrap px-4 py-3">{{ label_format(b.format_keluaran) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-redup">Belum ada berkas yang dipecah.</p>
+  {% endif %}
+</section>
+{% endblock %}

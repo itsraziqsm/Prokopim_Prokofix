@@ -10,6 +10,7 @@ import shutil
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 
 from app import create_app
 from app import log_proses
@@ -44,13 +45,13 @@ class DasarUji(unittest.TestCase):
         return klien.post("/keluar", data={"csrf_token": self.token(klien, "/akun")})
 
     def log_db(self):
-        db = sqlite3.connect(f"{self.folder}/superapp.db")
-        return db.execute("SELECT aksi, status FROM log_proses ORDER BY id").fetchall()
+        with closing(sqlite3.connect(f"{self.folder}/superapp.db")) as db:
+            return db.execute("SELECT aksi, status FROM log_proses ORDER BY id").fetchall()
 
 
 class UjiPenyiapan(DasarUji):
     def test_tanpa_akun_diarahkan_ke_siapkan(self):
-        for url in ("/", "/log", "/modul/pemecah-spt"):
+        for url in ("/", "/log", "/spt"):
             self.assertIn("/siapkan", self.klien.get(url).location)
 
     def test_csrf_salah_ditolak(self):
@@ -72,7 +73,8 @@ class UjiPenyiapan(DasarUji):
 
     def test_sandi_tersimpan_sebagai_hash(self):
         self.buat_akun()
-        h = sqlite3.connect(f"{self.folder}/superapp.db").execute("SELECT sandi_hash FROM pengguna").fetchone()[0]
+        with closing(sqlite3.connect(f"{self.folder}/superapp.db")) as db:
+            h = db.execute("SELECT sandi_hash FROM pengguna").fetchone()[0]
         self.assertTrue(h.startswith("scrypt:"))
         self.assertNotIn(SANDI, h)
 
@@ -124,7 +126,7 @@ class UjiHalaman(DasarUji):
         self.buat_akun()
 
     def test_halaman_utama_terbuka(self):
-        for url in ("/", "/log", "/pengaturan", "/akun", "/modul/pemecah-spt", "/modul/arsip-liputan"):
+        for url in ("/", "/log", "/pengaturan", "/akun", "/spt", "/modul/arsip-liputan"):
             self.assertEqual(self.klien.get(url).status_code, 200, url)
 
     def test_modul_tidak_ada_404(self):
@@ -134,7 +136,7 @@ class UjiHalaman(DasarUji):
 
     def test_log_tabel_dan_lokasi_terakhir(self):
         with self.app.test_request_context():
-            log_proses.catat("pemecah-spt", "Memecah 3 SPT", lokasi=self.folder, pengguna_id=1)
+            log_proses.catat("pemecah_spt", "Memecah 3 SPT", lokasi=self.folder, pengguna_id=1)
         html = self.klien.get("/log").get_data(as_text=True)
         self.assertIn("<table", html)
         self.assertIn("Memecah 3 SPT", html)
@@ -154,9 +156,9 @@ class UjiHalaman(DasarUji):
         with self.app.test_request_context(), self.assertRaises(ValueError):
             log_proses.catat("sistem", "x", status="proses", pengguna_id=1)
 
-    def test_lencana_modul_disembunyikan_bila_status_sama(self):
+    def test_lencana_hanya_pada_modul_belum_siap(self):
         html = self.klien.get("/").get_data(as_text=True)
-        self.assertNotIn("lencana-pengembangan", html)
+        self.assertEqual(html.count("lencana-pengembangan"), 1)   # Arsip Liputan saja
 
 
 class UjiFilter(DasarUji):

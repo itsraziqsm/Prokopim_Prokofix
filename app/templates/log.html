@@ -13,7 +13,7 @@
 {% if log_list %}
 <section class="panel overflow-hidden p-0!" aria-label="Tabel log proses">
   {# Di layar kecil tabel digeser ke samping di dalam kotak ini, halaman tidak melebar #}
-  <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Tabel log proses (geser untuk melihat semua kolom)">
+  <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Tabel log proses (geser untuk melihat semua kolom)">
     <table class="w-full min-w-2xl border-collapse text-left text-sm">
       <thead class="bg-permukaan-2 text-redup">
         <tr>
@@ -33,7 +33,7 @@
           <td class="whitespace-nowrap px-4 py-3">{{ nama_sumber(log.modul) }}</td>
           <td class="px-4 py-3">
             <span class="font-medium">{{ log.aksi }}</span>
-            {% if log.status == "gagal" %}<span class="lencana ml-1 bg-bahaya-latar text-bahaya-teks">Gagal</span>{% endif %}
+            {% if log.status == "gagal" %}<span class="lencana lencana-gagal ml-1">Gagal</span>{% endif %}
             {% if log.detail %}<p class="text-redup">{{ log.detail }}</p>{% endif %}
           </td>
           <td class="px-4 py-3">

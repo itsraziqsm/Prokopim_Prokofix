@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "komponen/ui.html" import breadcrumb, alert %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}Hasil pemecahan · Pemecah SPT · {{ nama_aplikasi }}{% endblock %}
+
+{% block konten %}
+<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Pemecah SPT", url_for('pemecah_spt.index')), ("Hasil", None)]) }}</div>
+<h1 class="mb-1">Hasil pemecahan</h1>
+<p class="mb-6 text-redup">
+  <span class="wrap-anywhere">{{ batch.nama_berkas_asli }}</span> · {{ batch.dibuat|waktu_singkat }} · {{ batch.jumlah }} SPT · Keluaran {{ label_format(batch.format_keluaran) }}
+</p>
+
+{% if batch.catatan %}
+<div class="mb-6 max-w-3xl">{{ alert(batch.catatan, "galat" if batch.status == "gagal" else "peringatan") }}</div>
+{% endif %}
+
+<div class="mb-6 flex flex-wrap items-center gap-3">
+  <a href="{{ url_for('pemecah_spt.unduh_zip', batch_id=batch.id) }}" class="tombol tombol-primer">{{ ikon("unduh", "size-4") }}<span>Unduh semua (ZIP)</span></a>
+  <form method="post" action="{{ url_for('pemecah_spt.buka_folder', batch_id=batch.id) }}">
+    {{ csrf_field() }}
+    <button type="submit" class="tombol tombol-sekunder">{{ ikon("folder", "size-4") }}<span>Buka folder</span></button>
+  </form>
+  <button type="button" class="tombol tombol-teks" data-salin="{{ batch.folder }}" title="Salin lokasi folder">{{ ikon("salin", "size-4") }}<span>Salin lokasi</span></button>
+</div>
+
+<div class="panel overflow-hidden p-0!">
+  <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Berkas hasil (geser untuk melihat semua kolom)">
+    <table class="w-full border-collapse text-left text-sm">
+      <thead class="bg-permukaan-2 text-redup">
+        <tr>
+          <th scope="col" class="px-4 py-3 font-semibold">No.</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Nomor SPT</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Unduh</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-garis">
+        {% for spt in daftar %}
+        <tr class="align-top">
+          <td class="px-4 py-3 text-redup">{{ spt.urutan }}</td>
+          <td class="px-4 py-3">
+            <span class="font-medium wrap-break-word">{{ spt.nomor|jalur }}</span>
+            {% if spt.status == "gagal" %}<span class="lencana lencana-gagal ml-1">Gagal</span>
+            {% elif spt.status == "sebagian" %}<span class="lencana lencana-peringatan ml-1">Sebagian</span>{% endif %}
+            {% if spt.galat %}<p class="mt-1 text-redup">{{ spt.galat }}</p>{% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <div class="flex flex-wrap gap-2">
+              {% if spt.nama_docx %}
+              <a href="{{ url_for('pemecah_spt.unduh', spt_id=spt.id, jenis='docx') }}" class="tombol tombol-sekunder min-h-9 px-3"
+                 title="{{ spt.nama_docx }}">{{ ikon("unduh", "size-4") }}<span>Word</span><span class="sr-only">: {{ spt.nama_docx }}</span></a>
+              {% endif %}
+              {% if spt.nama_pdf %}
+              <a href="{{ url_for('pemecah_spt.unduh', spt_id=spt.id, jenis='pdf') }}" class="tombol tombol-sekunder min-h-9 px-3"
+                 title="{{ spt.nama_pdf }}">{{ ikon("unduh", "size-4") }}<span>PDF</span><span class="sr-only">: {{ spt.nama_pdf }}</span></a>
+              {% endif %}
+              {% if not spt.nama_docx and not spt.nama_pdf %}<span class="text-redup">–</span>{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

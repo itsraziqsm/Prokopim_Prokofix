@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "komponen/ui.html" import breadcrumb, alert %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}Pratinjau · Pemecah SPT · {{ nama_aplikasi }}{% endblock %}
+
+{% block konten %}
+<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Pemecah SPT", url_for('pemecah_spt.index')), ("Pratinjau", None)]) }}</div>
+<h1 class="mb-1">Pratinjau</h1>
+<p class="mb-6 text-redup">
+  <span class="wrap-anywhere">{{ meta.nama_asli }}</span> · {{ hasil.daftar|length }} SPT ditemukan · Keluaran {{ label_format(meta.format) }}
+</p>
+
+{% set peringatan = hasil.peringatan + ([] if pengonversi or meta.format == "word" else ["PDF tidak dapat dibuat: Microsoft Word dan LibreOffice tidak ditemukan. Hasil tetap berupa Word."]) %}
+{% if peringatan %}
+<div class="mb-6 grid max-w-3xl gap-2">
+  {% for p in peringatan %}{{ alert(p, "peringatan") }}{% endfor %}
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('pemecah_spt.proses') }}" data-kirim-sekali data-teks-proses="Memproses...">
+  {{ csrf_field() }}
+  <input type="hidden" name="token" value="{{ token }}">
+
+  <div class="panel overflow-hidden p-0!">
+    <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Daftar SPT (geser untuk melihat semua kolom)">
+      <table class="w-full min-w-3xl border-collapse text-left text-sm">
+        <thead class="bg-permukaan-2 text-redup">
+          <tr>
+            <th scope="col" class="w-12 px-4 py-3">
+              <input type="checkbox" class="size-4 accent-aksen" checked data-pilih-semua aria-label="Pilih semua SPT">
+            </th>
+            <th scope="col" class="px-2 py-3 font-semibold">No.</th>
+            <th scope="col" class="px-4 py-3 font-semibold">Nomor SPT</th>
+            <th scope="col" class="px-4 py-3 font-semibold">Nama berkas</th>
+            <th scope="col" class="px-4 py-3 font-semibold">Cuplikan</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-garis">
+          {% for spt in hasil.daftar %}
+          <tr class="align-top">
+            <td class="px-4 py-3">
+              <input type="checkbox" name="pilih" value="{{ spt.urutan }}" checked data-pilih-item
+                     id="pilih-{{ spt.urutan }}" class="size-4 accent-aksen" aria-label="Proses SPT {{ spt.urutan }}">
+            </td>
+            <td class="px-2 py-3 text-redup">{{ spt.urutan }}</td>
+            <td class="px-4 py-3">
+              <label for="pilih-{{ spt.urutan }}" class="font-medium wrap-break-word {{ 'text-redup' if not spt.nomor_terbaca }}">{{ spt.nomor|jalur }}</label>
+              {% if spt.kembar %}<div class="mt-1"><span class="lencana lencana-peringatan">Nomor kembar</span></div>{% endif %}
+              {% if not spt.nomor_terbaca %}<div class="mt-1"><span class="lencana lencana-peringatan">Nomor tidak terbaca</span></div>{% endif %}
+            </td>
+            <td class="px-4 py-3 font-mono text-xs wrap-anywhere">{{ spt.nama }}</td>
+            <td class="px-4 py-3 text-redup">{{ spt.cuplikan or "–" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mt-5 flex flex-wrap items-center gap-3">
+    <button type="submit" class="tombol tombol-primer" data-tombol-proses>{{ ikon("dokumen-pecah", "size-4") }}<span>Proses SPT terpilih</span></button>
+    <a href="{{ url_for('pemecah_spt.index') }}" class="tombol tombol-teks">Batal</a>
+    <p class="text-sm text-redup" aria-live="polite"><span data-jumlah-dipilih>{{ hasil.daftar|length }}</span> dari {{ hasil.daftar|length }} dipilih</p>
+  </div>
+</form>
+{% endblock %}
