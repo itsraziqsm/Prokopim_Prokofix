@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Beranda</h1>
+<p>Aplikasi lokal untuk mengarsipkan berita dan membuat Surat Perintah Tugas (SPT), dengan keluaran file Word ukuran F4.</p>
+<div class="kartu-grid">
+  <a class="kartu" href="{{ url_for('berita') }}"><h2>Arsip Berita</h2><p>Catat & cari berita liputan.</p></a>
+  <a class="kartu" href="{{ url_for('spt') }}"><h2>SPT</h2><p>Buat surat perintah tugas.</p></a>
+</div>
+<p><a class="tombol" href="{{ url_for('contoh_word') }}">Unduh contoh Word F4</a></p>
+{% endblock %}

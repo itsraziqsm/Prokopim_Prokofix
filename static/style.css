@@ -1,0 +1,11 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, Arial, sans-serif; background: #f4f6f8; color: #222; }
+header { background: #1f4e79; color: #fff; padding: 12px 24px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+nav a { color: #dbe7f3; text-decoration: none; margin-right: 14px; }
+nav a.aktif, nav a:hover { color: #fff; font-weight: 600; }
+main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+.kartu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 20px 0; }
+.kartu { background: #fff; border-radius: 8px; padding: 16px; text-decoration: none; color: inherit; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.kartu h2 { margin-top: 0; color: #1f4e79; font-size: 1.1rem; }
+.tombol { display: inline-block; background: #1f4e79; color: #fff; padding: 8px 14px; border-radius: 6px; text-decoration: none; }
+.catatan { background: #fff8e1; border-left: 4px solid #f0b400; padding: 8px 12px; }

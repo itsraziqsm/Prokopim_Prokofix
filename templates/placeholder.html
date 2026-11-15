@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}{{ judul }}{% endblock %}
+{% block content %}
+<h1>{{ judul }}</h1>
+<p class="catatan">Halaman ini masih placeholder. Fitur yang direncanakan:</p>
+<ul>{% for r in rencana %}<li>{{ r }}</li>{% endfor %}</ul>
+{% endblock %}
