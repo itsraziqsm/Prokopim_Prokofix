@@ -1,0 +1,39 @@
+{#- Sidebar navigasi (satu-satunya navigasi aplikasi).
+    Lebar penuh (ikon + label) mulai layar md; di ponsel/tablet kecil hanya ikon. -#}
+{% from "komponen/ikon.html" import ikon %}
+
+{% macro item_nav(label, url, nama_ikon, aktif, sub=None) -%}
+<li>
+  <a href="{{ url }}" title="{{ label }}" {% if aktif %}aria-current="page"{% endif %}
+     class="flex min-h-11 items-center justify-center gap-3 rounded-lg px-3 py-2 no-underline transition-colors md:justify-start
+            {{ 'bg-aksen-lembut text-aksen font-semibold' if aktif else 'text-redup hover:bg-permukaan-2 hover:text-teks' }}">
+    {{ ikon(nama_ikon) }}
+    <span class="sr-only md:not-sr-only md:flex md:min-w-0 md:flex-col md:leading-tight">
+      <span>{{ label }}</span>
+      {% if sub %}<span class="truncate text-xs font-normal text-redup">{{ sub }}</span>{% endif %}
+    </span>
+  </a>
+</li>
+{%- endmacro %}
+
+<aside class="sticky top-0 flex h-screen w-16 shrink-0 flex-col border-r border-garis bg-permukaan md:w-60">
+  <a href="{{ url_for('utama.dashboard') }}" title="{{ nama_aplikasi }}"
+     class="flex h-16 shrink-0 items-center justify-center gap-2.5 border-b border-garis px-3 font-semibold text-teks no-underline md:justify-start md:px-4">
+    <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-aksen text-pada-aksen">{{ ikon("logo") }}</span>
+    <span class="sr-only md:not-sr-only md:truncate">{{ nama_aplikasi }}</span>
+  </a>
+
+  <nav aria-label="Navigasi utama" class="flex flex-1 flex-col p-2 md:p-3">
+    {# Bagian atas #}
+    <ul role="list" class="grid gap-1">
+      {{ item_nav("Dashboard", url_for('utama.dashboard'), "jendela",
+                  request.endpoint in ("utama.dashboard", "utama.modul")) }}
+    </ul>
+
+    {# Bagian bawah, dipisah garis #}
+    <ul role="list" class="mt-auto grid gap-1 border-t border-garis pt-2 md:pt-3">
+      {{ item_nav("Pengaturan", url_for('utama.pengaturan'), "pengaturan", request.endpoint == "utama.pengaturan") }}
+      {{ item_nav("Akun", url_for('auth.akun'), "pengguna", request.endpoint == "auth.akun", g.pengguna.nama_lengkap) }}
+    </ul>
+  </nav>
+</aside>

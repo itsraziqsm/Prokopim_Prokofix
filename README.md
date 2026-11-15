@@ -1,9 +1,9 @@
 # Super App Kerja
 
 Kumpulan tools kerja pribadi yang berjalan **lokal** di komputer sendiri (tanpa internet).
-Dibangun dengan Python + Flask + Jinja2, CSS dan JS biasa (tanpa framework/CDN).
+Python + Flask + Jinja2, tampilan dengan **Tailwind CSS v4** (paket npm), JS biasa.
 
-> Status: **desain placeholder**. Dashboard dan halaman "Dalam pengembangan" sudah ada; logika fitur belum.
+> Status: **desain placeholder + sistem masuk (auth)**. Logika fitur modul belum ada.
 
 ## Menjalankan
 Butuh Python 3.10+.
@@ -14,34 +14,58 @@ python run.py
 ```
 Buka alamat yang tercetak di terminal (misalnya http://127.0.0.1:5000).
 
-Aplikasi otomatis mencari port yang bisa dipakai (5000, 8000, 8080, ...).
-Untuk memakai port tertentu: `python run.py 8080`.
+Saat pertama kali dibuka, aplikasi meminta Anda **membuat akun pertama**. Setelah itu setiap halaman wajib masuk.
+
+Aplikasi otomatis mencari port yang bisa dipakai (5000, 8000, 8080, ...). Port tertentu: `python run.py 8080`.
 
 > **Error "An attempt was made to access a socket in a way forbidden by its access permissions"?**
-> Di Windows, port tertentu dicadangkan oleh Hyper-V/WSL/Docker atau sedang dipakai aplikasi lain.
-> `run.py` sudah menangani ini dengan memilih port lain. Untuk melihat port yang dicadangkan:
-> `netsh interface ipv4 show excludedportrange protocol=tcp`
+> Windows mencadangkan port tertentu (Hyper-V/WSL/Docker). `run.py` sudah memilih port lain otomatis.
+> Lihat port yang dicadangkan: `netsh interface ipv4 show excludedportrange protocol=tcp`
+
+## Tampilan (Tailwind)
+`app/static/css/app.css` adalah **hasil build** dan ikut di-commit, jadi aplikasi bisa jalan tanpa Node.
+Node.js hanya dibutuhkan bila Anda mengubah tampilan:
+
+```bash
+npm install            # sekali saja
+npm run watch:css      # build otomatis selama mengedit template / input.css
+npm run build:css      # build sekali (minify) sebelum commit
+```
+- Sumber CSS: `app/static/src/input.css` (variabel warna tema, kelas komponen `.tombol`, `.lencana`, `.panel`, `.input`).
+- Warna tema = CSS variable (`--warna-aksen`, `--latar`, ...) yang dipetakan ke kelas Tailwind (`bg-aksen`, `text-redup`, ...).
+- Tema terang/gelap dipilih di halaman **Pengaturan** (Terang / Gelap / Ikuti sistem), disimpan di browser.
+
+## Akun & keamanan
+- Kata sandi disimpan sebagai hash (scrypt), bukan teks asli. Database: `instance/superapp.db` (tidak ikut git).
+- Semua formulir dilindungi token CSRF; login dikunci 5 menit setelah 5 kali salah.
+- Ganti kata sandi di halaman **Akun**; sesi di browser lain otomatis keluar.
+- **Lupa kata sandi:** dari folder proyek jalankan
+  ```bash
+  flask --app run auth reset-sandi <nama_pengguna>
+  ```
+- Backup data cukup dengan menyalin folder `instance/`.
 
 ## Struktur folder
 ```
 run.py                      # titik masuk: python run.py
+package.json                # skrip build Tailwind
 app/
-  __init__.py               # app factory (create_app) + halaman 404
+  __init__.py               # app factory, konfigurasi, halaman galat
+  auth.py                   # masuk, keluar, penyiapan akun, ganti sandi, perintah reset-sandi
+  keamanan.py               # token CSRF & pembatasan percobaan login
+  db.py                     # koneksi & skema SQLite
   modules_registry.py       # DAFTAR MODUL — satu-satunya tempat menambah modul
-  routes.py                 # route: / dan /modul/<id>
+  routes.py                 # dashboard, /modul/<id>, /pengaturan
   waktu.py                  # sapaan & tanggal Bahasa Indonesia
   templates/
-    base.html               # kerangka halaman: header, footer, tombol tema
-    dashboard.html          # halaman utama
-    modul_dev.html          # template "Under Development" untuk semua modul
-    404.html
-    komponen/
-      ui.html               # makro: lencana, kartu_modul, kartu_segera, breadcrumb, tombol
-      ikon.html             # ikon SVG inline
-      ilustrasi_bangun.html # ilustrasi "sedang dibangun"
+    base.html               # kerangka: sidebar + konten (atau tanpa sidebar sebelum masuk)
+    dashboard.html, modul_dev.html, pengaturan.html, galat.html
+    auth/                   # masuk, siapkan, akun
+    komponen/               # sidebar, ui (makro), ikon SVG, ilustrasi
   static/
-    css/app.css             # semua gaya + variabel warna tema
-    js/app.js               # alih tema & sapaan
+    src/input.css           # SUMBER CSS Tailwind (edit ini)
+    css/app.css             # hasil build (jangan diedit)
+    js/app.js               # tema & sapaan
 ```
 
 ## Menambah modul baru
@@ -60,8 +84,5 @@ Tambahkan satu entri di `MODUL` pada `app/modules_registry.py`:
     "rencana": ["Butir 1", "Butir 2", "Butir 3"],
 },
 ```
-Simpan, muat ulang browser: kartu baru langsung muncul di dashboard, dan halamannya otomatis tersedia.
-
-## Mengganti warna tema
-Semua warna ada sebagai CSS variable di bagian atas `app/static/css/app.css`
-(`--warna-aksen`, `--latar`, `--teks`, dst.), untuk mode terang dan gelap.
+Muat ulang browser: kartu baru langsung muncul di dashboard dan halamannya otomatis tersedia (dan otomatis dilindungi login).
+Bila memakai kelas Tailwind baru di template, jalankan `npm run build:css`.

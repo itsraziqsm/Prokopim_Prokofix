@@ -36,3 +36,9 @@ def modul(modul_id):
         modul_list=semua_modul(),
         status_label=STATUS_LABEL,
     )
+
+
+@bp.route("/pengaturan")
+def pengaturan():
+    # Pilihan tema disimpan di browser (localStorage) oleh app.js, jadi tidak perlu formulir server
+    return render_template("pengaturan.html")

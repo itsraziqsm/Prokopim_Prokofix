@@ -1,0 +1,27 @@
+{% extends "auth/_kartu.html" %}
+{% block judul %}Masuk · {{ nama_aplikasi }}{% endblock %}
+{% block judul_kartu %}Masuk{% endblock %}
+{% block sub_kartu %}Silakan masuk untuk membuka {{ nama_aplikasi }}.{% endblock %}
+{% block isi_kartu %}
+<form method="post" action="{{ url_for('auth.masuk') }}" class="grid gap-5" novalidate>
+  {{ csrf_field() }}
+  {% if tujuan %}<input type="hidden" name="next" value="{{ tujuan }}">{% endif %}
+  {% if pesan_galat %}{{ alert(pesan_galat, "galat") }}{% endif %}
+
+  {{ field("nama_pengguna", "Nama pengguna", nilai=nama_pengguna, autocomplete="username", autofocus=not nama_pengguna) }}
+  {{ field("sandi", "Kata sandi", tipe="password", autocomplete="current-password", autofocus=nama_pengguna != "") }}
+
+  <label class="inline-flex items-center gap-2.5 text-[0.95rem]">
+    <input type="checkbox" name="ingat" value="1" class="size-[18px] accent-aksen">
+    Ingat saya selama 30 hari
+  </label>
+
+  <button type="submit" class="tombol tombol-primer w-full">Masuk</button>
+</form>
+{% endblock %}
+{% block bawah_kartu %}
+<p class="mt-5 text-center text-sm text-redup">
+  Lupa kata sandi? Jalankan di terminal folder proyek:<br>
+  <code class="mt-1 inline-block rounded bg-permukaan-2 px-2 py-0.5 text-teks">flask --app run auth reset-sandi &lt;nama_pengguna&gt;</code>
+</p>
+{% endblock %}

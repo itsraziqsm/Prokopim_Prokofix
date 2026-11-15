@@ -1,47 +1,91 @@
-{#- Komponen antarmuka yang dapat dipakai ulang.
-    Impor di template: {% from "komponen/ui.html" import lencana, kartu_modul, ... %} -#}
+{#- Komponen antarmuka yang dapat dipakai ulang (gaya: kelas Tailwind + kelas komponen di input.css).
+    Impor: {% from "komponen/ui.html" import lencana, kartu_modul, ... %} -#}
 {% from "komponen/ikon.html" import ikon %}
 
 {# Lencana status: "siap" atau "pengembangan" #}
 {% macro lencana(status, label) -%}
-<span class="lencana lencana--{{ status }}">{{ label }}</span>
+<span class="lencana lencana-{{ status }}">{{ label }}</span>
 {%- endmacro %}
 
 {# Kartu modul di dashboard. Seluruh kartu adalah satu tautan. #}
 {% macro kartu_modul(m, status_label) -%}
-<a class="kartu-modul" href="{{ m.url or url_for('utama.modul', modul_id=m.id) }}">
-  <span class="kartu-modul__ikon">{{ ikon(m.ikon) }}</span>
-  <span class="kartu-modul__isi">
-    <span class="kartu-modul__judul">{{ m.nama }}</span>
-    <span class="kartu-modul__deskripsi">{{ m.deskripsi }}</span>
+<a href="{{ m.url or url_for('utama.modul', modul_id=m.id) }}"
+   class="group flex flex-1 flex-col gap-4 min-h-[200px] rounded-xl border border-garis bg-permukaan p-5 text-teks no-underline shadow-kartu
+          transition duration-200 hover:-translate-y-0.5 hover:border-garis-kuat hover:shadow-angkat focus-visible:rounded-xl motion-reduce:hover:translate-y-0">
+  <span class="grid size-12 place-items-center rounded-lg bg-aksen-lembut text-aksen">{{ ikon(m.ikon, "size-[26px]") }}</span>
+  <span class="flex flex-1 flex-col gap-1.5">
+    <span class="text-lg font-semibold">{{ m.nama }}</span>
+    <span class="text-[0.95rem] text-redup">{{ m.deskripsi }}</span>
   </span>
-  <span class="kartu-modul__kaki">
+  <span class="flex items-center justify-between gap-2">
     {{ lencana(m.status, status_label[m.status]) }}
-    <span class="kartu-modul__panah">{{ ikon("panah-kanan") }}</span>
+    <span class="inline-flex text-aksen transition-transform duration-200 group-hover:translate-x-1">{{ ikon("panah-kanan") }}</span>
   </span>
 </a>
 {%- endmacro %}
 
 {# Kartu penutup bergaris putus-putus (bukan tautan) #}
 {% macro kartu_segera() -%}
-<div class="kartu-segera">
-  <span class="kartu-segera__ikon">{{ ikon("plus") }}</span>
-  <p>Fitur baru akan hadir di sini</p>
+<div class="flex flex-1 flex-col items-center justify-center gap-2.5 min-h-[200px] rounded-xl border-2 border-dashed border-garis-kuat p-5 text-center text-redup">
+  <span class="grid size-11 place-items-center rounded-full border-[1.5px] border-dashed border-garis-kuat">{{ ikon("plus") }}</span>
+  <p class="font-medium">Fitur baru akan hadir di sini</p>
 </div>
 {%- endmacro %}
 
 {# Breadcrumb. items = daftar (label, url); item terakhir = halaman saat ini (url None) #}
 {% macro breadcrumb(items) -%}
-<nav class="breadcrumb" aria-label="Breadcrumb">
-  <ol>
+<nav aria-label="Breadcrumb">
+  <ol class="flex flex-wrap items-center gap-1.5 text-[0.95rem] text-redup">
     {% for label, url in items %}
-    <li>{% if url %}<a href="{{ url }}">{{ label }}</a>{% else %}<span aria-current="page">{{ label }}</span>{% endif %}</li>
+    <li class="inline-flex items-center gap-1.5">
+      {% if not loop.first %}<span aria-hidden="true">›</span>{% endif %}
+      {% if url %}<a href="{{ url }}" class="underline underline-offset-4">{{ label }}</a>
+      {% else %}<span aria-current="page" class="font-semibold text-teks">{{ label }}</span>{% endif %}
+    </li>
     {% endfor %}
   </ol>
 </nav>
 {%- endmacro %}
 
-{# Tombol berbentuk tautan. varian: "primer" atau "sekunder" #}
-{% macro tombol(label, url, varian="primer", ikon_nama=None) -%}
-<a class="tombol tombol--{{ varian }}" href="{{ url }}">{% if ikon_nama %}{{ ikon(ikon_nama) }}{% endif %}<span>{{ label }}</span></a>
+{# Tombol berbentuk tautan. varian: "primer", "sekunder", "teks" #}
+{% macro tombol(label, url, varian="primer", ikon_nama=None, kelas="") -%}
+<a class="tombol tombol-{{ varian }} {{ kelas }}" href="{{ url }}">{% if ikon_nama %}{{ ikon(ikon_nama, "size-[1.1em]") }}{% endif %}<span>{{ label }}</span></a>
+{%- endmacro %}
+
+{# Pesan flash (notifikasi singkat setelah aksi). kategori: sukses | info | galat #}
+{% macro pesan_flash() -%}
+{% with daftar = get_flashed_messages(with_categories=true) %}
+{% if daftar %}
+<div class="mb-6 grid gap-3">
+  {% for kategori, pesan in daftar %}
+  {{ alert(pesan, kategori) }}
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+{%- endmacro %}
+
+{# Kotak pesan. jenis: sukses | info | galat #}
+{% macro alert(pesan, jenis="info") -%}
+{% set gaya = {"sukses": "bg-siap-latar text-siap-teks", "galat": "bg-bahaya-latar text-bahaya-teks"}.get(jenis, "bg-info-latar text-info-teks") %}
+<div class="flex items-start gap-2.5 rounded-lg px-4 py-3 text-[0.95rem] font-medium {{ gaya }}"
+     role="{{ 'alert' if jenis == 'galat' else 'status' }}">
+  {{ ikon("peringatan" if jenis == "galat" else ("centang" if jenis == "sukses" else "info"), "mt-0.5") }}
+  <span>{{ pesan }}</span>
+</div>
+{%- endmacro %}
+
+{# Isian formulir lengkap dengan label, petunjuk, dan pesan galat yang terhubung lewat ARIA #}
+{% macro field(nama, label, tipe="text", nilai="", galat=None, petunjuk=None, autocomplete=None, wajib=true, autofocus=false) -%}
+<div>
+  <label for="f-{{ nama }}" class="label">{{ label }}</label>
+  <input id="f-{{ nama }}" name="{{ nama }}" type="{{ tipe }}" class="input"
+         {% if tipe != "password" %}value="{{ nilai }}"{% endif %}
+         {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+         {% if wajib %}required{% endif %} {% if autofocus %}autofocus{% endif %}
+         {% if galat %}aria-invalid="true"{% endif %}
+         {% if galat or petunjuk %}aria-describedby="{% if petunjuk %}p-{{ nama }}{% endif %} {% if galat %}g-{{ nama }}{% endif %}"{% endif %}>
+  {% if petunjuk %}<p id="p-{{ nama }}" class="petunjuk">{{ petunjuk }}</p>{% endif %}
+  {% if galat %}<p id="g-{{ nama }}" class="galat-field">{{ galat }}</p>{% endif %}
+</div>
 {%- endmacro %}

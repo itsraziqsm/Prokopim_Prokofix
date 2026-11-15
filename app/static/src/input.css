@@ -1,0 +1,148 @@
+/* =====================================================================
+   SUMBER CSS (Tailwind v4). JANGAN edit app/static/css/app.css — file itu hasil build.
+   Setelah mengubah file ini atau kelas di template, jalankan:
+       npm run build:css      (sekali)    atau    npm run watch:css   (otomatis)
+   ===================================================================== */
+@import "tailwindcss";
+
+/* Tailwind memindai kelas yang dipakai di template Jinja */
+@source "../../templates";
+
+/* Varian dark: aktif bila <html data-theme="dark"> (diatur oleh app.js) */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------- 1. VARIABEL TEMA (ganti warna cukup di sini) ---------- */
+:root {
+  --warna-aksen: #1d4e7e;          /* biru tua: tautan, tombol primer, ikon */
+  --warna-aksen-hover: #163d63;
+  --warna-aksen-lembut: #e6eef6;   /* latar ikon & sorotan */
+  --teks-pada-aksen: #ffffff;
+
+  --latar: #f5f7fa;
+  --permukaan: #ffffff;
+  --permukaan-2: #eef2f6;
+  --teks: #1b2430;
+  --teks-redup: #4f5b69;
+  --garis: #d8dee6;
+  --garis-kuat: #a9b4c2;
+
+  --siap-latar: #e3f3e8;   --siap-teks: #1d5c34;
+  --dev-latar: #fbf0d4;    --dev-teks: #6e4a00;
+  --bahaya-latar: #fde8e8; --bahaya-teks: #9b1c1c;
+  --info-latar: #e6eef6;   --info-teks: #163d63;
+
+  --bayangan: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
+  --bayangan-angkat: 0 6px 16px rgba(16, 24, 40, .10);
+  color-scheme: light;
+}
+
+/* Mode gelap (dipilih manual, atau mengikuti sistem bila belum ada pilihan) */
+:root[data-theme="dark"] {
+  --warna-aksen: #8cbcef;
+  --warna-aksen-hover: #b0d1f5;
+  --warna-aksen-lembut: #1c2d40;
+  --teks-pada-aksen: #0d1622;
+
+  --latar: #0f141b;
+  --permukaan: #171e27;
+  --permukaan-2: #1f2834;
+  --teks: #e6ebf1;
+  --teks-redup: #a7b2bf;
+  --garis: #2c3745;
+  --garis-kuat: #4a5868;
+
+  --siap-latar: #173524;   --siap-teks: #9edcb3;
+  --dev-latar: #3b2f12;    --dev-teks: #f2cf7d;
+  --bahaya-latar: #3d1a1a; --bahaya-teks: #f5b4b4;
+  --info-latar: #1c2d40;   --info-teks: #b0d1f5;
+
+  --bayangan: 0 1px 2px rgba(0, 0, 0, .4);
+  --bayangan-angkat: 0 6px 16px rgba(0, 0, 0, .45);
+  color-scheme: dark;
+}
+
+/* ---------- 2. PETAKAN VARIABEL KE KELAS TAILWIND ----------
+   Contoh: --color-aksen  ->  bg-aksen, text-aksen, border-aksen  */
+@theme inline {
+  --color-aksen: var(--warna-aksen);
+  --color-aksen-hover: var(--warna-aksen-hover);
+  --color-aksen-lembut: var(--warna-aksen-lembut);
+  --color-pada-aksen: var(--teks-pada-aksen);
+  --color-latar: var(--latar);
+  --color-permukaan: var(--permukaan);
+  --color-permukaan-2: var(--permukaan-2);
+  --color-teks: var(--teks);
+  --color-redup: var(--teks-redup);
+  --color-garis: var(--garis);
+  --color-garis-kuat: var(--garis-kuat);
+  --color-siap-latar: var(--siap-latar);
+  --color-siap-teks: var(--siap-teks);
+  --color-dev-latar: var(--dev-latar);
+  --color-dev-teks: var(--dev-teks);
+  --color-bahaya-latar: var(--bahaya-latar);
+  --color-bahaya-teks: var(--bahaya-teks);
+  --color-info-latar: var(--info-latar);
+  --color-info-teks: var(--info-teks);
+  --shadow-kartu: var(--bayangan);
+  --shadow-angkat: var(--bayangan-angkat);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+/* ---------- 3. DASAR ---------- */
+@layer base {
+  body { @apply bg-latar text-teks font-sans text-base leading-relaxed antialiased; }
+  h1 { @apply text-[clamp(1.6rem,1.2rem+1.4vw,2rem)] font-semibold leading-tight tracking-tight; }
+  h2 { @apply text-xl font-semibold leading-snug; }
+  a { @apply text-aksen; }
+  /* Fokus keyboard yang jelas */
+  :focus-visible { @apply outline-3 outline-offset-3 outline-aksen rounded; }
+}
+
+/* ---------- 4. KOMPONEN (kelas ulang-pakai) ---------- */
+@layer components {
+  .ikon { @apply size-5 shrink-0; }
+
+  .tombol {
+    @apply inline-flex min-h-[42px] items-center justify-center gap-2 rounded-lg border border-transparent
+           px-4 py-2 text-[0.95rem] leading-tight font-semibold no-underline cursor-pointer
+           transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .tombol-primer   { @apply bg-aksen text-pada-aksen hover:bg-aksen-hover; }
+  .tombol-sekunder { @apply bg-permukaan text-teks border-garis-kuat hover:bg-permukaan-2; }
+  .tombol-teks     { @apply bg-transparent text-teks hover:bg-permukaan-2; }
+
+  .lencana {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[0.8125rem] font-semibold;
+  }
+  .lencana::before { content: ""; @apply size-[0.45rem] rounded-full bg-current; }
+  .lencana-siap          { @apply bg-siap-latar text-siap-teks; }
+  .lencana-pengembangan  { @apply bg-dev-latar text-dev-teks; }
+
+  .panel { @apply rounded-xl border border-garis bg-permukaan shadow-kartu p-[clamp(1.25rem,3vw,2.25rem)]; }
+
+  .label { @apply mb-1.5 block text-sm font-semibold; }
+  .input {
+    @apply block w-full min-h-[44px] rounded-lg border border-garis-kuat bg-permukaan px-3 py-2 text-base text-teks
+           placeholder:text-redup focus-visible:outline-3 focus-visible:outline-offset-1;
+  }
+  .input[aria-invalid="true"] { @apply border-bahaya-teks; }
+  .petunjuk { @apply mt-1 text-sm text-redup; }
+  .galat-field { @apply mt-1 text-sm font-medium text-bahaya-teks; }
+}
+
+/* ---------- 5. KHUSUS ---------- */
+/* Warna ilustrasi SVG mengikuti tema */
+.il-tanah, .il-isi-lembut { fill: var(--garis-kuat); }
+.il-garis { stroke: var(--teks-redup); }
+.il-isi-aksen { fill: var(--warna-aksen); }
+.il-gerigi-aksen { fill: none; stroke: var(--warna-aksen); }
+.il-gerigi-lembut { fill: none; stroke: var(--garis-kuat); }
+.il-lubang { fill: var(--permukaan-2); }
+
+/* Saat tema berganti (app.js), matikan transisi agar warna berubah serentak */
+.ganti-tema *, .ganti-tema *::before, .ganti-tema *::after { transition: none !important; }
+
+/* Hormati pengguna yang meminta animasi minimal */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}

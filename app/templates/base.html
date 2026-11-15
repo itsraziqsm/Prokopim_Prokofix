@@ -1,4 +1,4 @@
-{% from "komponen/ikon.html" import ikon %}
+{% from "komponen/ui.html" import pesan_flash %}
 <!doctype html>
 <html lang="id">
 <head>
@@ -7,37 +7,41 @@
   <title>{% block judul %}{{ nama_aplikasi }}{% endblock %}</title>
   <meta name="color-scheme" content="light dark">
   <script>
-    // Dijalankan sebelum halaman tampil agar tidak "berkedip" saat memuat tema tersimpan
-    try { var t = localStorage.getItem("tema"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+    // Dijalankan sebelum halaman tampil agar tidak "berkedip":
+    // pakai tema pilihan (Pengaturan), atau ikuti sistem bila memilih "Ikuti sistem".
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem("tema"); } catch (e) {}
+      if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme = t;
+    })();
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body>
-  <a class="lewati" href="#konten">Lewati ke konten utama</a>
+  <a href="#konten" class="tombol tombol-primer absolute left-4 -top-24 z-20 focus:top-4">Lewati ke konten utama</a>
 
-  {# ===== Header / navbar ===== #}
-  <header class="header">
-    <div class="wadah header__isi">
-      <a class="header__merek" href="{{ url_for('utama.dashboard') }}">
-        <span class="header__logo">{{ ikon("logo") }}</span>
-        <span>{{ nama_aplikasi }}</span>
-      </a>
-      <button type="button" class="tombol-tema" id="tombol-tema" aria-label="Ganti ke mode gelap">
-        <span class="tombol-tema__terang">{{ ikon("bulan") }}</span>
-        <span class="tombol-tema__gelap">{{ ikon("matahari") }}</span>
-        <span class="tombol-tema__teks">Tema</span>
-      </button>
+  {% if g.pengguna %}
+  {# ===== Tata letak setelah masuk: sidebar + konten ===== #}
+  <div class="flex min-h-screen">
+    {% include "komponen/sidebar.html" %}
+    <div class="flex min-w-0 flex-1 flex-col">
+      <main id="konten" tabindex="-1" class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 focus:outline-none sm:px-6 sm:py-8 lg:px-8">
+        {{ pesan_flash() }}
+        {% block konten %}{% endblock %}
+      </main>
+      <footer class="border-t border-garis py-5 text-sm text-redup">
+        <div class="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">{{ nama_aplikasi }} · Aplikasi lokal untuk kerja harian · Berjalan tanpa internet</div>
+      </footer>
     </div>
-  </header>
-
-  <main id="konten" class="wadah konten" tabindex="-1">
-    {% block konten %}{% endblock %}
+  </div>
+  {% else %}
+  {# ===== Tata letak sebelum masuk (halaman masuk/penyiapan): tanpa sidebar ===== #}
+  <main id="konten" tabindex="-1" class="flex min-h-screen flex-col justify-center px-4 py-8 focus:outline-none">
+    {{ pesan_flash() }}
+    {{ self.konten() }}
   </main>
-
-  {# ===== Footer ===== #}
-  <footer class="footer">
-    <div class="wadah">{{ nama_aplikasi }} · Aplikasi lokal untuk kerja harian · Berjalan tanpa internet</div>
-  </footer>
+  {% endif %}
 
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>

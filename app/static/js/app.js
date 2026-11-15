@@ -2,33 +2,47 @@
 (function () {
   "use strict";
 
-  /* ---------- 1. Alih tema terang/gelap ---------- */
+  /* ---------- 1. Tema (pilihan ada di halaman Pengaturan) ----------
+     Nilai di localStorage "tema": "light" | "dark" | (kosong = ikuti sistem).
+     Tema awal sudah dipasang skrip kecil di <head> base.html. */
   var akar = document.documentElement;
-  var tombol = document.getElementById("tombol-tema");
   var mediaGelap = window.matchMedia("(prefers-color-scheme: dark)");
 
-  // Tema yang sedang tampil: pilihan manual (data-theme) atau ikut sistem
-  function temaAktif() {
-    return akar.dataset.theme || (mediaGelap.matches ? "dark" : "light");
+  function bacaPilihan() {
+    try { return localStorage.getItem("tema"); } catch (e) { return null; }
+  }
+  function simpanPilihan(nilai) {
+    try {
+      if (nilai === "sistem") localStorage.removeItem("tema");
+      else localStorage.setItem("tema", nilai);
+    } catch (e) { /* localStorage bisa diblokir; abaikan */ }
+  }
+  function terapkanTema() {
+    var p = bacaPilihan();
+    // Matikan animasi warna sesaat agar pergantian tema langsung & serentak
+    akar.classList.add("ganti-tema");
+    akar.dataset.theme = (p === "light" || p === "dark") ? p : (mediaGelap.matches ? "dark" : "light");
+    void akar.offsetWidth; // paksa browser menerapkan gaya baru dulu
+    requestAnimationFrame(function () { akar.classList.remove("ganti-tema"); });
   }
 
-  // Perbarui label tombol agar pembaca layar tahu aksi berikutnya
-  function perbaruiTombol() {
-    if (!tombol) return;
-    var gelap = temaAktif() === "dark";
-    tombol.setAttribute("aria-label", gelap ? "Ganti ke mode terang" : "Ganti ke mode gelap");
-    tombol.title = tombol.getAttribute("aria-label");
-  }
+  // Bila memilih "Ikuti sistem", ikut berubah saat tema Windows/perangkat berubah
+  mediaGelap.addEventListener("change", terapkanTema);
 
-  if (tombol) {
-    tombol.addEventListener("click", function () {
-      var baru = temaAktif() === "dark" ? "light" : "dark";
-      akar.dataset.theme = baru;
-      try { localStorage.setItem("tema", baru); } catch (e) { /* localStorage bisa diblokir; abaikan */ }
-      perbaruiTombol();
+  var grupTema = document.querySelector("[data-pilihan-tema]");
+  if (grupTema) {
+    var status = document.querySelector("[data-status-tema]");
+    var pilihan = bacaPilihan();
+    var nilaiAwal = (pilihan === "light" || pilihan === "dark") ? pilihan : "sistem";
+    var radioAwal = grupTema.querySelector('input[value="' + nilaiAwal + '"]');
+    if (radioAwal) radioAwal.checked = true;
+
+    grupTema.addEventListener("change", function (e) {
+      if (e.target.name !== "tema") return;
+      simpanPilihan(e.target.value);
+      terapkanTema();
+      if (status) status.textContent = "Tema disimpan.";
     });
-    mediaGelap.addEventListener("change", perbaruiTombol);
-    perbaruiTombol();
   }
 
   /* ---------- 2. Sapaan & tanggal (batas jam sama dengan app/waktu.py) ---------- */

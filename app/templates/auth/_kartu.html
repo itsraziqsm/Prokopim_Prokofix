@@ -1,0 +1,15 @@
+{#- Kerangka halaman autentikasi: kartu di tengah layar. -#}
+{% extends "base.html" %}
+{% from "komponen/ikon.html" import ikon %}
+{% from "komponen/ui.html" import field, alert %}
+{% block konten %}
+<div class="mx-auto my-4 w-full max-w-md sm:my-10">
+  <div class="mb-6 text-center">
+    <span class="mx-auto mb-4 grid size-12 place-items-center rounded-xl bg-aksen-lembut text-aksen">{{ ikon("gembok", "size-6") }}</span>
+    <h1 class="mb-1.5">{% block judul_kartu %}{% endblock %}</h1>
+    <p class="text-redup">{% block sub_kartu %}{% endblock %}</p>
+  </div>
+  <div class="panel">{% block isi_kartu %}{% endblock %}</div>
+  {% block bawah_kartu %}{% endblock %}
+</div>
+{% endblock %}

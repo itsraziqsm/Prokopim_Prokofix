@@ -6,39 +6,44 @@
 {% block judul %}{{ modul.nama }} · {{ nama_aplikasi }}{% endblock %}
 
 {% block konten %}
-<div class="atas-halaman">
-  {{ breadcrumb([("Beranda", url_for('utama.dashboard')), (modul.nama, None)]) }}
-  {{ tombol("Kembali ke beranda", url_for('utama.dashboard'), "sekunder", "panah-kiri") }}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+  {{ breadcrumb([("Dashboard", url_for('utama.dashboard')), (modul.nama, None)]) }}
+  {{ tombol("Kembali ke dashboard", url_for('utama.dashboard'), "sekunder", "panah-kiri", "w-full sm:w-auto") }}
 </div>
 
-<article class="panel modul-dev">
-  <div class="modul-dev__ilustrasi">{% include "komponen/ilustrasi_bangun.html" %}</div>
+<article class="panel grid items-start gap-[clamp(1.5rem,4vw,3rem)] md:grid-cols-[minmax(200px,300px)_1fr]">
+  <div class="mx-auto w-full max-w-[260px] rounded-xl bg-permukaan-2 p-5 md:max-w-none">{% include "komponen/ilustrasi_bangun.html" %}</div>
 
-  <div class="modul-dev__isi">
-    <div class="modul-dev__kepala">
-      <span class="modul-dev__ikon">{{ ikon(modul.ikon) }}</span>
+  <div>
+    <div class="mb-2.5 flex items-center gap-3">
+      <span class="grid size-11 place-items-center rounded-lg bg-aksen-lembut text-aksen">{{ ikon(modul.ikon) }}</span>
       <h1>{{ modul.nama }}</h1>
     </div>
     {{ lencana(modul.status, status_label[modul.status]) }}
-    <p class="modul-dev__tujuan">{{ modul.tujuan }}</p>
+    <p class="mt-4 max-w-[62ch]">{{ modul.tujuan }}</p>
 
-    <section aria-labelledby="judul-rencana">
-      <h2 id="judul-rencana">Rencana fitur</h2>
-      <ul class="daftar-centang" role="list">
+    <section aria-labelledby="judul-rencana" class="mt-7">
+      <h2 id="judul-rencana" class="mb-3">Rencana fitur</h2>
+      <ul role="list" class="grid gap-2.5">
         {% for butir in modul.rencana %}
-        <li>{{ ikon("centang") }}<span>{{ butir }}</span></li>
+        <li class="flex items-start gap-2.5">
+          <span class="mt-0.5 grid size-[22px] shrink-0 place-items-center rounded-md bg-aksen-lembut text-aksen">{{ ikon("centang", "size-4") }}</span>
+          <span>{{ butir }}</span>
+        </li>
         {% endfor %}
       </ul>
     </section>
 
-    <section aria-labelledby="judul-urutan">
-      <h2 id="judul-urutan">Urutan pengerjaan</h2>
-      <ol class="urutan" role="list">
+    <section aria-labelledby="judul-urutan" class="mt-7">
+      <h2 id="judul-urutan" class="mb-3">Urutan pengerjaan</h2>
+      <ol role="list" class="flex flex-wrap gap-3">
         {% for m in modul_list %}
-        <li class="urutan__item{% if m.id == modul.id %} urutan__item--aktif{% endif %}"
-            {% if m.id == modul.id %}aria-current="step"{% endif %}>
-          <span class="urutan__nomor">Fitur {{ m.urutan }}</span>
-          <span class="urutan__nama">{{ m.nama }}{% if m.id == modul.id %} <span class="urutan__tanda">(halaman ini)</span>{% endif %}</span>
+        {% set aktif = m.id == modul.id %}
+        <li {% if aktif %}aria-current="step"{% endif %}
+            class="flex min-w-[170px] flex-col gap-0.5 rounded-lg border bg-permukaan px-4 py-3
+                   {{ 'border-aksen shadow-[inset_3px_0_0_var(--warna-aksen)]' if aktif else 'border-garis' }}">
+          <span class="text-[0.8125rem] font-semibold uppercase tracking-wide {{ 'text-aksen' if aktif else 'text-redup' }}">Fitur {{ m.urutan }}</span>
+          <span class="font-semibold">{{ m.nama }}{% if aktif %} <span class="text-[0.9rem] font-normal text-redup">(halaman ini)</span>{% endif %}</span>
         </li>
         {% endfor %}
       </ol>
