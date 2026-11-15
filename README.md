@@ -46,7 +46,7 @@ npm run build:css      # build sekali (minify) sebelum commit
 - Backup data cukup dengan menyalin folder `instance/`.
 
 ## Fitur tampilan
-- **Sidebar** satu-satunya navigasi: Dashboard di atas; Pengaturan & Akun di bawah. Tombol bulat di tepi kanan
+- **Sidebar** satu-satunya navigasi: Dashboard & Log di atas; Pengaturan & Akun di bawah. Tombol bulat di tepi kanan
   sidebar untuk menciutkan/melebarkan (diingat browser).
 - **Notifikasi pop-up** di kanan atas: melayang di atas halaman, menutup sendiri, berhenti saat disorot.
   Dari server: `flash("Pesan", "sukses" | "info" | "galat")`. Dari JavaScript: `notifikasi("Pesan", "sukses")`.
@@ -54,7 +54,8 @@ npm run build:css      # build sekali (minify) sebelum commit
   Ganti placeholder dengan menyimpan gambar di `app/static/img/masuk.jpg` (atau `.png` / `.webp`).
 
 ## Log proses & lokasi simpan terakhir
-Dashboard menampilkan **Proses terakhir** dan **Lokasi simpan terakhir** (tombol *Buka folder* & *Salin lokasi*).
+Menu **Log** di sidebar berisi satu tabel: waktu, modul, proses, status, dan **lokasi simpan**.
+Lokasi simpan terakhir ditandai lencana *Terakhir*; setiap lokasi punya tombol *Buka folder* & *Salin lokasi*.
 Modul mencatat proses dengan satu baris:
 
 ```python
@@ -76,11 +77,11 @@ app/
   db.py                     # koneksi & skema SQLite (pengguna, log_proses)
   log_proses.py             # catat() riwayat proses & lokasi simpan, buka folder
   modules_registry.py       # DAFTAR MODUL — satu-satunya tempat menambah modul
-  routes.py                 # dashboard, /modul/<id>, /pengaturan
+  routes.py                 # dashboard, /log, /modul/<id>, /pengaturan
   waktu.py                  # sapaan & tanggal Bahasa Indonesia
   templates/
     base.html               # kerangka: sidebar + konten (atau tanpa sidebar sebelum masuk)
-    dashboard.html, modul_dev.html, pengaturan.html, galat.html
+    dashboard.html, log.html, modul_dev.html, pengaturan.html, galat.html
     auth/                   # masuk, siapkan, akun
     komponen/               # sidebar, ui (makro), ikon SVG, ilustrasi
   static/

@@ -33,6 +33,24 @@ def catat(modul, aksi, status="sukses", detail=None, lokasi=None, pengguna_id=No
     db.commit()
 
 
+def per_halaman(pengguna_id, halaman=1, per_halaman=20):
+    """Mengembalikan (daftar_baris, total_baris) untuk tabel log, terbaru di atas."""
+    db = ambil_db()
+    total = db.execute("SELECT COUNT(*) FROM log_proses WHERE pengguna_id = ?", (pengguna_id,)).fetchone()[0]
+    baris = db.execute(
+        "SELECT * FROM log_proses WHERE pengguna_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
+        (pengguna_id, per_halaman, (halaman - 1) * per_halaman),
+    ).fetchall()
+    return baris, total
+
+
+def ambil(pengguna_id, log_id):
+    """Satu baris log milik pengguna (None bila bukan miliknya / tidak ada)."""
+    return ambil_db().execute(
+        "SELECT * FROM log_proses WHERE id = ? AND pengguna_id = ?", (log_id, pengguna_id)
+    ).fetchone()
+
+
 def terbaru(pengguna_id, batas=8):
     return ambil_db().execute(
         "SELECT * FROM log_proses WHERE pengguna_id = ? ORDER BY id DESC LIMIT ?", (pengguna_id, batas)

@@ -111,24 +111,31 @@
     }, 150);
   }
 
-  /* ---------- 4. Salin lokasi simpan terakhir ---------- */
-  var tombolSalin = document.querySelector("[data-salin-lokasi]");
-  if (tombolSalin) {
-    tombolSalin.addEventListener("click", function () {
-      var teks = document.querySelector("[data-lokasi]").textContent.trim();
-      var berhasil = function () { window.notifikasi("Lokasi disalin ke clipboard.", "sukses"); };
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(teks).then(berhasil, function () { window.notifikasi("Gagal menyalin lokasi.", "galat"); });
-      } else {
-        // Cadangan untuk browser lama
-        var area = document.createElement("textarea");
-        area.value = teks; area.style.position = "fixed"; area.style.opacity = "0";
-        document.body.appendChild(area); area.select();
-        try { document.execCommand("copy"); berhasil(); } catch (e) { window.notifikasi("Gagal menyalin lokasi.", "galat"); }
-        document.body.removeChild(area);
-      }
-    });
+  /* ---------- 4. Tombol salin: <button data-salin="teks yang disalin"> ---------- */
+  function salinCadangan(teks) {
+    // Cara lama (execCommand) — dipakai bila Clipboard API tidak tersedia / ditolak
+    var area = document.createElement("textarea");
+    area.value = teks; area.setAttribute("readonly", ""); area.style.position = "fixed"; area.style.opacity = "0";
+    document.body.appendChild(area); area.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(area);
+    return ok;
   }
+  function salin(teks) {
+    var lapor = function (ok) {
+      window.notifikasi(ok ? "Lokasi disalin ke clipboard." : "Gagal menyalin lokasi.", ok ? "sukses" : "galat");
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(teks).then(function () { lapor(true); }, function () { lapor(salinCadangan(teks)); });
+    } else {
+      lapor(salinCadangan(teks));
+    }
+  }
+  document.addEventListener("click", function (e) {
+    var tombol = e.target.closest("[data-salin]");
+    if (tombol) salin(tombol.getAttribute("data-salin"));
+  });
 
   /* ---------- 5. Sapaan & tanggal (batas jam sama dengan app/waktu.py) ---------- */
   var HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];

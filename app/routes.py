@@ -2,9 +2,11 @@
 
 Blueprint = kumpulan route yang dikelompokkan, lalu didaftarkan di create_app().
 """
+import math
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, g, redirect, render_template, url_for
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
+from markupsafe import Markup, escape
 
 from . import log_proses
 from .modules_registry import STATUS_LABEL, cari_modul, semua_modul
@@ -26,10 +28,16 @@ def _filter_waktu(teks):
     return waktu_singkat(teks)
 
 
+@bp.app_template_filter("jalur")
+def _filter_jalur(teks):
+    """Sisipkan titik patah baris (<wbr>) setelah \\ dan / agar lokasi panjang patah di tempat yang wajar."""
+    aman = escape(teks or "")
+    return Markup(aman.replace("\\", Markup("\\<wbr>")).replace("/", Markup("/<wbr>")))
+
+
 @bp.route("/")
 def dashboard():
     sekarang = datetime.now()
-    uid = g.pengguna["id"]
     return render_template(
         "dashboard.html",
         modul_list=semua_modul(),
@@ -37,28 +45,45 @@ def dashboard():
         # Nilai awal dari server; app.js akan menyesuaikan dengan jam di komputer pengguna
         sapaan=sapaan(sekarang.hour),
         tanggal=tanggal_indonesia(sekarang),
-        log_list=log_proses.terbaru(uid),
-        lokasi=log_proses.lokasi_terakhir(uid),
+    )
+
+
+PER_HALAMAN_LOG = 20
+
+
+@bp.route("/log")
+def log():
+    """Tabel riwayat proses, termasuk lokasi simpan setiap proses."""
+    uid = g.pengguna["id"]
+    halaman = max(request.args.get("hal", 1, type=int), 1)
+    baris, total = log_proses.per_halaman(uid, halaman, PER_HALAMAN_LOG)
+    terakhir = log_proses.lokasi_terakhir(uid)
+    return render_template(
+        "log.html",
+        log_list=baris,
+        total=total,
+        halaman=halaman,
+        jumlah_halaman=max(math.ceil(total / PER_HALAMAN_LOG), 1),
+        id_lokasi_terakhir=terakhir["id"] if terakhir else None,
         nama_sumber=nama_sumber,
     )
 
 
-@bp.route("/buka-lokasi", methods=["POST"])
-def buka_lokasi():
-    """Membuka lokasi simpan terakhir di penjelajah file komputer ini.
-    Lokasi diambil dari database (bukan dari isian pengguna), jadi aman."""
-    baris = log_proses.lokasi_terakhir(g.pengguna["id"])
-    if baris is None:
-        flash("Belum ada lokasi simpan.", "info")
-    else:
-        try:
-            log_proses.buka_di_penjelajah(baris["lokasi"])
-            flash("Lokasi dibuka di penjelajah file.", "sukses")
-        except FileNotFoundError:
-            flash("Lokasi tidak ditemukan. File mungkin sudah dipindah atau dihapus.", "galat")
-        except OSError:
-            flash("Lokasi tidak dapat dibuka di komputer ini.", "galat")
-    return redirect(url_for("utama.dashboard"))
+@bp.route("/log/<int:log_id>/buka", methods=["POST"])
+def buka_lokasi(log_id):
+    """Membuka lokasi simpan sebuah log di penjelajah file komputer ini.
+    Lokasi diambil dari database milik pengguna (bukan isian bebas), jadi aman."""
+    baris = log_proses.ambil(g.pengguna["id"], log_id)
+    if baris is None or not baris["lokasi"]:
+        abort(404)
+    try:
+        log_proses.buka_di_penjelajah(baris["lokasi"])
+        flash("Lokasi dibuka di penjelajah file.", "sukses")
+    except FileNotFoundError:
+        flash("Lokasi tidak ditemukan. File mungkin sudah dipindah atau dihapus.", "galat")
+    except OSError:
+        flash("Lokasi tidak dapat dibuka di komputer ini.", "galat")
+    return redirect(url_for("utama.log", hal=request.form.get("hal", 1, type=int)))
 
 
 @bp.route("/modul/<modul_id>")

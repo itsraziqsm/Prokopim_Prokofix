@@ -22,6 +22,10 @@ PORT_CADANGAN = [5000, 8000, 8080, 8765, 5050, 3000]
 def port_bisa_dipakai(port):
     """Coba 'pinjam' port sebentar. True jika berhasil (port bebas & diizinkan)."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        # Samakan dengan server Flask: di Linux/macOS port yang baru saja ditutup (TIME_WAIT)
+        # tetap boleh dipakai. Tidak dipasang di Windows karena artinya berbeda di sana.
+        if os.name != "nt":
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             s.bind((HOST, port))
             return True
