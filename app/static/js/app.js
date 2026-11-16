@@ -447,7 +447,8 @@
       li.dataset.lengkap = lengkap ? "1" : "0";
       li.querySelector("[data-tanda-lengkap]").hidden = !lengkap;
       li.querySelector("[data-tanda-belum]").hidden = lengkap;
-      li.querySelector("[data-teks-status]").textContent = lengkap ? ": lengkap" : ": belum";
+      li.querySelector("[data-teks-status]").textContent = lengkap ? ": lengkap"
+        : (li.hasAttribute("data-wajib") ? ": belum" : ": belum diisi (opsional)");
       var elDetail = li.querySelector("[data-detail]");
       if (detail !== null && elDetail) { elDetail.textContent = detail; elDetail.hidden = !detail; }
     };
@@ -580,6 +581,7 @@
       kotakSelesai.disabled = !boleh;
       if (!boleh) kotakSelesai.checked = false;
       infoSelesai.textContent = "Aktif bila semua pertanyaan sudah berjawaban (" + terjawab + " dari " + baris.length + " terjawab).";
+      infoSelesai.hidden = boleh;   // petunjuk hanya perlu selama kotak belum bisa dicentang
     };
 
     var perbaruiNomor = function () {

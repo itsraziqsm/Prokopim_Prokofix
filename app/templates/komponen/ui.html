@@ -36,6 +36,12 @@
 </nav>
 {%- endmacro %}
 
+{# Satu tautan kembali ke halaman induk (untuk halaman yang lebih dalam dari tingkat kedua) #}
+{% macro kembali(label, url) -%}
+<a href="{{ url }}" class="inline-flex items-center gap-1 text-sm text-redup underline underline-offset-4 hover:text-teks">
+  {{ ikon("caret-kiri", "size-4") }}<span>{{ label }}</span></a>
+{%- endmacro %}
+
 {# Tombol berbentuk tautan. varian: "primer", "sekunder", "teks" #}
 {% macro tombol(label, url, varian="primer", ikon_nama=None) -%}
 <a class="tombol tombol-{{ varian }}" href="{{ url }}">{% if ikon_nama %}{{ ikon(ikon_nama, "size-4") }}{% endif %}<span>{{ label }}</span></a>
@@ -82,12 +88,13 @@
 {%- endmacro %}
 
 {# Isian formulir: label, petunjuk, dan pesan galat yang terhubung lewat ARIA #}
-{% macro field(nama, label, tipe="text", nilai="", galat=None, petunjuk=None, autocomplete=None, wajib=true, autofocus=false) -%}
+{% macro field(nama, label, tipe="text", nilai="", galat=None, petunjuk=None, autocomplete=None, wajib=true, autofocus=false, placeholder=None) -%}
 <div>
   <label for="f-{{ nama }}" class="label">{{ label }}</label>
   <input id="f-{{ nama }}" name="{{ nama }}" type="{{ tipe }}" class="input"
          {% if tipe != "password" %}value="{{ nilai }}"{% endif %}
          {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+         {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
          {% if wajib %}required{% endif %} {% if autofocus %}autofocus{% endif %}
          {% if galat %}aria-invalid="true"{% endif %}
          {% if galat or petunjuk %}aria-describedby="{% if petunjuk %}p-{{ nama }}{% endif %} {% if galat %}g-{{ nama }}{% endif %}"{% endif %}>

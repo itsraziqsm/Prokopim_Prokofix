@@ -42,7 +42,6 @@
     {% endif %}
     <p id="syarat-word" class="text-xs font-medium text-bahaya-teks" data-syarat-word {% if not wajib_kurang %}hidden{% endif %}>
       Lengkapi semua butir wajib di Kelengkapan untuk membuat Word.</p>
-    <p class="text-xs text-redup">Berisi berita lalu lembar foto (F4). "Buat Word" juga menyimpan isian formulir.</p>
     <form method="post" action="{{ url_for('arsip_liputan.hapus', liputan_id=liputan.id) }}" class="border-t border-garis pt-3"
           data-konfirmasi="Hapus kegiatan ini beserta {{ foto|length }} foto dan berkas Word-nya? Tindakan ini tidak dapat dibatalkan."
           data-konfirmasi-judul="Hapus kegiatan" data-konfirmasi-tombol="Hapus">
@@ -69,10 +68,11 @@
           data-lengkap="{{ 1 if k.lengkap else 0 }}">
         <a href="#{{ k.target }}" class="-mx-2 flex items-start gap-2.5 rounded-md px-2 py-1.5 text-sm text-teks no-underline hover:bg-permukaan-2">
           <span class="mt-0.5 text-siap-teks" data-tanda-lengkap {% if not k.lengkap %}hidden{% endif %}>{{ ikon("centang", "size-4") }}</span>
-          <span class="mt-0.5 text-bahaya-teks" data-tanda-belum {% if k.lengkap %}hidden{% endif %}>{{ ikon("silang", "size-4") }}</span>
+          {# Wajib belum = silang merah; pelengkap belum = garis netral (opsional, bukan galat) #}
+          <span class="mt-0.5 {{ 'text-bahaya-teks' if k.wajib else 'text-redup' }}" data-tanda-belum {% if k.lengkap %}hidden{% endif %}>{{ ikon("silang" if k.wajib else "strip", "size-4") }}</span>
           <span class="min-w-0 flex-1">
             <span>{{ k.label }}</span>
-            <span class="sr-only" data-teks-status>{{ ": lengkap" if k.lengkap else ": belum" }}</span>
+            <span class="sr-only" data-teks-status>{{ ": lengkap" if k.lengkap else (": belum" if k.wajib else ": belum diisi (opsional)") }}</span>
             <span class="block text-xs text-redup" data-detail {% if not k.detail %}hidden{% endif %}>{{ k.detail }}</span>
           </span>
         </a>
@@ -94,8 +94,8 @@
     <h2 id="judul-data">Data kegiatan</h2>
     <div class="grid gap-5 sm:grid-cols-3">
       {{ field("tanggal", "Tanggal", tipe="date", nilai=isian.tanggal or "", galat=galat.tanggal) }}
-      {{ field("tokoh", "Tokoh", nilai=isian.tokoh or "", wajib=false, petunjuk="Mis. Wali, Wakil Wali, Sekda.") }}
-      {{ field("kegiatan", "Kegiatan", nilai=isian.kegiatan or "", wajib=false, petunjuk="Mis. Zoom Meeting.") }}
+      {{ field("tokoh", "Tokoh", nilai=isian.tokoh or "", wajib=false, placeholder="Mis. Wali") }}
+      {{ field("kegiatan", "Kegiatan", nilai=isian.kegiatan or "", wajib=false, placeholder="Mis. Zoom Meeting") }}
     </div>
     {{ field("judul", "Judul berita", nilai=isian.judul or "", galat=galat.judul) }}
 
@@ -183,14 +183,12 @@
     {{ csrf_field() }}
     <div data-zona-unggah data-maks-berkas="{{ ukuran_maks_mb * 1024 * 1024 }}" data-sisa="{{ foto_maks - foto|length }}"
          class="grid justify-items-center gap-3 rounded-xl border-2 border-dashed border-garis-kuat px-4 py-8 text-center transition-colors data-seret:border-aksen data-seret:bg-aksen-lembut">
-      <span class="text-redup">{{ ikon("gambar", "size-8") }}</span>
       <input id="f-foto" name="foto" type="file" multiple class="peer sr-only" aria-describedby="p-foto"
              accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,image/jpeg,image/png,image/webp,image/gif,image/bmp">
       <label for="f-foto" class="tombol tombol-sekunder peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-aksen">
         {{ ikon("folder", "size-4") }}<span>Pilih foto</span>
       </label>
-      <p id="p-foto" class="text-sm text-redup">atau seret foto ke sini, atau tempel dengan Ctrl+V setelah menyalin gambar di browser.<br>
-        JPG, PNG, WebP, GIF, BMP · maks. {{ ukuran_maks_mb }} MB per foto. Foto di atas 800 KB dikompres otomatis.</p>
+      <p id="p-foto" class="text-sm text-redup">atau seret / tempel (Ctrl+V) foto ke sini · JPG, PNG, WebP, GIF, BMP, maks. {{ ukuran_maks_mb }} MB</p>
     </div>
     <ul role="list" class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6" data-pratinjau-unggah aria-live="polite"></ul>
     <div><button type="submit" class="tombol tombol-primer" data-tombol-unggah disabled>{{ ikon("unggah", "size-4") }}<span>Unggah foto</span></button></div>

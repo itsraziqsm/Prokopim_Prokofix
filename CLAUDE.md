@@ -153,7 +153,7 @@ tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD,
   agar nama modul tampil di tabel Log. Modul siap: `status="siap"`, `url` diisi (mis. `/spt`).
 - **Menambah modul**: tambah satu dict di `MODUL` (`app/modules_registry.py`): id, nama, deskripsi,
   tujuan, ikon, status (`"siap"`/`"pengembangan"`), url (None → `/modul/<id>`), urutan, rencana.
-  Modul "pengembangan" tetap bisa diklik → template tunggal `modul_dev.html`.
+  Modul "pengembangan" tetap bisa diklik → template tunggal `modul_dev.html`; `/modul/<id>` untuk modul "siap" dialihkan ke `url`-nya.
   Lencana status di halaman Alat hanya muncul bila status modul berbeda-beda, dan hanya pada modul yang belum siap.
   Logika modul nyata: buat blueprint sendiri (mis. `app/modul/pemecah_spt/`), daftarkan di `create_app`,
   isi `url` di registry, ubah status jadi `"siap"`. Logika berat ditaruh di modul murni tanpa Flask agar mudah diuji.
@@ -210,7 +210,8 @@ tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD,
   Kolom baru pada tabel lama: tambahkan ke `KOLOM_SUSULAN` di `db.py` (ALTER TABLE otomatis).
 - **Notifikasi**: server `flash(pesan, "sukses"|"info"|"galat")`; JS `window.notifikasi(pesan, jenis)`.
   Tampil pop-up kanan atas (fixed), jangan pakai alert inline untuk pesan umum. Galat per-field tetap inline (makro `field`).
-- **Komponen ulang-pakai** di `komponen/ui.html`: `lencana`, `kartu_modul`, `breadcrumb`, `tombol`, `toast`, `field`,
+- **Komponen ulang-pakai** di `komponen/ui.html`: `lencana`, `kartu_modul`, `breadcrumb`, `kembali(label, url)` (satu tautan
+  kembali untuk halaman yang lebih dalam dari tingkat kedua, mis. halaman materi/instansi), `tombol`, `toast`, `field` (+ `placeholder`),
   `alert` (peringatan inline yang menetap, jenis info|peringatan|galat). Kelas komponen CSS: `.tombol(-primer|-sekunder|-teks|-bahaya)`,
   `.lencana(-siap|-pengembangan|-peringatan|-gagal)`,
   `.panel`, `.input`, `.label`, `.petunjuk`, `.galat-field`, `.ikon`.
@@ -256,7 +257,9 @@ tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD,
 - Jangan membuat form/tombol palsu yang seolah berfungsi.
 - **Hindari AI-slop**: tanpa ilustrasi/kartu pengisi, tanpa teks pengisi, tanpa instruksi developer di UI,
   tanpa ikon centang untuk hal yang belum selesai, tanpa lencana yang nilainya sama di semua item,
-  tanpa judul kecil huruf kapital berjarak. Breadcrumb hanya untuk halaman tingkat kedua (mis. halaman modul);
+  tanpa judul kecil huruf kapital berjarak, tanpa kalimat penjelas di bawah tombol, contoh pengisian ditaruh di
+  placeholder (bukan petunjuk), petunjuk syarat hanya tampil selama syaratnya belum terpenuhi, butir opsional yang belum
+  diisi bertanda netral (bukan silang merah). Breadcrumb maks. 3 tingkat; halaman lebih dalam memakai `kembali()`;
   satu jalan kembali saja.
 - Keamanan secukupnya untuk aplikasi lokal satu pengguna: hash sandi, CSRF, wajib login, rotasi token sesi
   saat ganti sandi. Tanpa pembatas percobaan login.

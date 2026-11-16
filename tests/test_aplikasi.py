@@ -130,6 +130,11 @@ class UjiHalaman(DasarUji):
         for url in ("/", "/alat", "/log", "/pengaturan", "/akun", "/spt", "/liputan", "/liputan/baru"):
             self.assertEqual(self.klien.get(url).status_code, 200, url)
 
+    def test_modul_siap_dialihkan_ke_halamannya(self):
+        r = self.klien.get("/modul/pemecah_spt")
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(r.location.endswith("/spt"))
+
     def test_modul_tidak_ada_404(self):
         r = self.klien.get("/modul/tidak-ada")
         self.assertEqual(r.status_code, 404)

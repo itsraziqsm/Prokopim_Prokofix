@@ -39,7 +39,7 @@
   <div class="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-6">
     <button type="submit" class="tombol tombol-sekunder">{{ ikon("cari", "size-4") }}<span>Cari</span></button>
     {% if q or tahun or bulan or status_pilih %}<a href="{{ url_for('arsip_liputan.index') }}" class="tombol tombol-teks">Atur ulang</a>{% endif %}
-    <p class="text-sm text-redup">{{ total }} kegiatan</p>
+    {% if q or tahun or bulan or status_pilih %}<p class="text-sm text-redup">{{ total }} kegiatan cocok</p>{% endif %}
   </div>
 </form>
 

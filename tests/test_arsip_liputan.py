@@ -537,6 +537,11 @@ class UjiWeb(unittest.TestCase):
             self.assertIn(teks, panel)
         self.assertRegex(panel, r">4</span> dari 5 wajib")   # tanggal, judul, isi, kegiatan; foto belum
         self.assertNotIn("Unduh Word", panel)
+        # butir pelengkap yang belum diisi bertanda netral (opsional), bukan silang merah seperti butir wajib
+        self.assertIn(": belum diisi (opsional)", panel)
+        pelengkap = panel[panel.index('data-kelengkapan="spt"'):]
+        pelengkap = pelengkap[:pelengkap.index("</li>")]
+        self.assertIn("text-redup", pelengkap.split("data-tanda-belum")[0].rsplit("<span", 1)[1])
         self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
         self.ekspor(lid)
         html = self.klien.get(f"/liputan/{lid}").get_data(as_text=True)

@@ -1,7 +1,7 @@
 {#- Mode baca: daftar isi instansi (menempel saat digulir; di layar sempit bisa dilipat), nomor 1.1, 1.2, ...
     Filter status, pencarian dengan sorotan, ukuran huruf, dan cetak berjalan di browser (app.js, bagian 18). -#}
 {% extends "base.html" %}
-{% from "komponen/ui.html" import breadcrumb %}
+{% from "komponen/ui.html" import kembali %}
 {% from "komponen/ikon.html" import ikon %}
 {% block judul %}Mode baca · {{ materi.judul }} · {{ nama_aplikasi }}{% endblock %}
 
@@ -22,7 +22,7 @@
 {%- endmacro %}
 
 {% block konten %}
-<div class="mb-6" data-tidak-dicetak>{{ breadcrumb([("Alat", url_for('utama.alat')), ("Data Podcast", url_for('data_podcast.index')), ("Materi Podcast", url_for('materi_podcast.index')), (materi.judul, url_for('materi_podcast.detail', materi_id=materi.id)), ("Mode baca", None)]) }}</div>
+<div class="mb-6" data-tidak-dicetak>{{ kembali(materi.judul, url_for('materi_podcast.detail', materi_id=materi.id)) }}</div>
 
 <header class="mb-6">
   <h1 class="wrap-break-word">{{ materi.judul }}</h1>

@@ -2,7 +2,7 @@
     Tambah / hapus / urut ulang pertanyaan dilakukan di browser (app.js, bagian 17), lalu SATU tombol Simpan
     mengirim seluruh daftar sesuai urutan di layar (pid[], teks[], jawaban[]). -#}
 {% extends "base.html" %}
-{% from "komponen/ui.html" import breadcrumb, field, alert %}
+{% from "komponen/ui.html" import kembali, field, alert %}
 {% from "komponen/ikon.html" import ikon %}
 {% block judul %}{{ ins.nama }} · {{ materi.judul }} · {{ nama_aplikasi }}{% endblock %}
 
@@ -21,7 +21,7 @@
   </div>
   <input type="hidden" name="pid" value="{{ p.id or '' }}">
   <div>
-    <label for="tanya-{{ kunci }}" class="label">Teks pertanyaan</label>
+    <label for="tanya-{{ kunci }}" class="sr-only">Teks pertanyaan</label>
     <textarea id="tanya-{{ kunci }}" name="teks" rows="2" class="input" maxlength="{{ panjang.pertanyaan }}"
               {% if galat_teks %}aria-invalid="true" aria-describedby="g-tanya-{{ kunci }}"{% endif %}>{{ p.teks or "" }}</textarea>
     {% if galat_teks %}<p id="g-tanya-{{ kunci }}" class="galat-field">{{ galat_teks }}</p>{% endif %}
@@ -47,7 +47,7 @@
 {%- endmacro %}
 
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Data Podcast", url_for('data_podcast.index')), ("Materi Podcast", url_for('materi_podcast.index')), (materi.judul, url_for('materi_podcast.detail', materi_id=materi.id)), (ins.nama, None)]) }}</div>
+<div class="mb-6">{{ kembali(materi.judul, url_for('materi_podcast.detail', materi_id=materi.id)) }}</div>
 
 <div class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
   <h1 class="wrap-break-word">{{ nomor }}. {{ ins.nama }}</h1>
@@ -70,7 +70,8 @@
                {% if not pertanyaan or terjawab < pertanyaan|length %}disabled{% endif %}>
         <span>
           <span class="font-semibold">Tandai selesai</span>
-          <span id="p-selesai" class="block text-sm text-redup" data-info-selesai>
+          <span id="p-selesai" class="block text-sm text-redup" data-info-selesai
+                {% if pertanyaan and terjawab == pertanyaan|length %}hidden{% endif %}>
             Aktif bila semua pertanyaan sudah berjawaban ({{ terjawab }} dari {{ pertanyaan|length }} terjawab).
           </span>
         </span>

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% from "komponen/ui.html" import breadcrumb, field %}
+{% from "komponen/ui.html" import kembali, field %}
 {% block judul %}Materi baru · Materi Podcast · {{ nama_aplikasi }}{% endblock %}
 
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Data Podcast", url_for('data_podcast.index')), ("Materi Podcast", url_for('materi_podcast.index')), ("Materi baru", None)]) }}</div>
+<div class="mb-6">{{ kembali("Materi Podcast", url_for('materi_podcast.index')) }}</div>
 <h1 class="mb-6">Materi baru</h1>
 <form method="post" action="{{ url_for('materi_podcast.buat') }}" class="panel grid max-w-2xl gap-5" novalidate data-kirim-sekali>
   {{ csrf_field() }}

@@ -1,7 +1,6 @@
 {#- Halaman induk Data Podcast: kartu fitur anak (dari registry, induk = "data_podcast"). -#}
 {% extends "base.html" %}
 {% from "komponen/ui.html" import breadcrumb, kartu_modul %}
-{% from "komponen/ikon.html" import ikon %}
 {% block judul %}{{ induk.nama }} · {{ nama_aplikasi }}{% endblock %}
 
 {% block konten %}
@@ -11,9 +10,5 @@
   {% for m in anak %}
   <li class="grid">{{ kartu_modul(m, status_label, status_campur and m.status != "siap") }}</li>
   {% endfor %}
-  {# Tempat fitur anak berikutnya; bukan tautan dan tidak bisa diklik #}
-  <li class="flex min-h-36 items-center justify-center rounded-xl border-2 border-dashed border-garis p-5 text-center text-redup">
-    Fitur baru akan hadir di sini
-  </li>
 </ul>
 {% endblock %}

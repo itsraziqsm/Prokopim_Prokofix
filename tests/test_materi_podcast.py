@@ -227,7 +227,13 @@ class UjiHalaman(DasarWeb):
         self.assertIn("Arsip Liputan", alat)
         induk = self.klien.get("/podcast").get_data(as_text=True)
         self.assertIn('href="/podcast/materi"', induk)
-        self.assertIn("Fitur baru akan hadir di sini", induk)
+        self.assertNotIn("Fitur baru akan hadir di sini", induk)       # tanpa kartu pengisi
+        # halaman di bawah daftar materi memakai satu tautan kembali, bukan breadcrumb panjang
+        detail = self.klien.get(f"/podcast/materi/{mid}").get_data(as_text=True)
+        self.assertNotIn('aria-label="Breadcrumb"', detail)
+        self.assertIn('href="/podcast/materi"', detail)
+        instansi = self.klien.get(f"/podcast/materi/{mid}/instansi/1").get_data(as_text=True)
+        self.assertIn(f'href="/podcast/materi/{mid}"', instansi)
 
     def test_pencarian_judul(self):
         self.contoh()

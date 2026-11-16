@@ -1,12 +1,12 @@
 {#- Halaman kerja satu materi: ringkasan instansi (urut ulang naik/turun), tambah instansi,
     ubah judul/keterangan, Word (ekspor & unduh), duplikat, hapus. -#}
 {% extends "base.html" %}
-{% from "komponen/ui.html" import breadcrumb, field, alert %}
+{% from "komponen/ui.html" import kembali, field, alert %}
 {% from "komponen/ikon.html" import ikon %}
 {% block judul %}{{ materi.judul }} · Materi Podcast · {{ nama_aplikasi }}{% endblock %}
 
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Data Podcast", url_for('data_podcast.index')), ("Materi Podcast", url_for('materi_podcast.index')), (materi.judul, None)]) }}</div>
+<div class="mb-6">{{ kembali("Materi Podcast", url_for('materi_podcast.index')) }}</div>
 
 <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
   <div class="min-w-0">
@@ -101,7 +101,6 @@
       {% if ada_ekspor %}
       <a href="{{ url_for('materi_podcast.unduh', materi_id=materi.id) }}" class="tombol w-full {{ 'tombol-sekunder' if perlu_ekspor_ulang else 'tombol-primer' }}">{{ ikon("unduh", "size-4") }}<span>Unduh Word</span></a>
       {% endif %}
-      <p class="text-xs text-redup">A4, berisi ringkasan instansi lalu pertanyaan dan jawaban.</p>
     </section>
 
     <form method="post" action="{{ url_for('materi_podcast.simpan', materi_id=materi.id) }}" class="panel grid gap-4 p-5!" novalidate
@@ -118,7 +117,6 @@
         {{ csrf_field() }}
         <button type="submit" class="tombol tombol-teks w-full justify-start">{{ ikon("salin", "size-4") }}<span>Duplikat materi</span></button>
       </form>
-      <p class="-mt-1 mb-1 px-4 text-xs text-redup">Salinan berisi semua instansi, pertanyaan, dan jawaban, untuk rekap versi berikutnya.</p>
       <form method="post" action="{{ url_for('materi_podcast.hapus', materi_id=materi.id) }}" class="border-t border-garis pt-2"
             data-konfirmasi="Hapus materi ini beserta {{ instansi|length }} instansi, {{ materi.jumlah_pertanyaan }} pertanyaan, dan berkas Word-nya? Tindakan ini tidak dapat dibatalkan."
             data-konfirmasi-judul="Hapus materi" data-konfirmasi-tombol="Hapus">

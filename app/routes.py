@@ -107,6 +107,9 @@ def modul(modul_id):
     data = cari_modul(modul_id)
     if data is None:
         abort(404)
+    # Modul yang sudah siap punya halamannya sendiri; halaman "rencana fitur" hanya untuk yang belum siap
+    if data["status"] == "siap" and data.get("url"):
+        return redirect(data["url"])
     return render_template("modul_dev.html", modul=data, status_label=STATUS_LABEL)
 
 
