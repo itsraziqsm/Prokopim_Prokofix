@@ -88,8 +88,8 @@ app/modul/arsip_liputan/       Fitur 2 — blueprint "arsip_liputan" di /liputan
                                  bagi_lembar() menghormati "Mulai lembar baru". Lembar baru = "Page break before"
                                  di baris pertama tabel, JANGAN page break manual (di Word memicu halaman kosong);
                                  CADANGAN_CM 1,5 di bawah tabel; paragraf pemisah/penutup 1 pt
-  kelengkapan.py                 daftar_kelengkapan(): butir wajib (tanggal, judul, isi, foto, nama kegiatan) &
-                                 pelengkap (keterangan foto, SPT, sumber foto, status final, Word terbaru) untuk panel samping;
+  kelengkapan.py                 daftar_kelengkapan(): butir URUT SESUAI FORMULIR — wajib (tanggal, nama kegiatan, judul,
+                                 isi, foto) & pelengkap (status final, SPT, keterangan foto, sumber foto, Word terbaru);
                                  wajib_belum() = PENGAMAN: rute /ekspor menolak membuat Word bila ada butir wajib kurang
                                  (isian tetap disimpan); tombol [data-butuh-wajib] nonaktif langsung via app.js
   layanan.py                     DB, folder PER BULAN KEGIATAN instance/data/liputan/<tahun>/<MM-Bulan>/<id>/{foto,ekspor}

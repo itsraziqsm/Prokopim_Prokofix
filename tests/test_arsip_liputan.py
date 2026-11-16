@@ -71,7 +71,14 @@ class UjiKelengkapan(unittest.TestCase):
         butir = {b["kunci"]: b for b in daftar_kelengkapan({"tanggal": "2026-10-13"}, foto)}
         self.assertEqual(butir["keterangan"]["target"], "ket-9")
         self.assertEqual(butir["sumber"]["target"], "sum-7")
-        self.assertEqual(daftar_kelengkapan({})[3]["target"], "bagian-foto")
+        foto_butir = next(b for b in daftar_kelengkapan({}) if b["kunci"] == "foto")
+        self.assertEqual(foto_butir["target"], "bagian-foto")
+
+    def test_urutan_mengikuti_formulir(self):
+        daftar = daftar_kelengkapan({})
+        self.assertEqual([b["kunci"] for b in daftar if b["wajib"]], ["tanggal", "kegiatan", "judul", "isi", "foto"])
+        self.assertEqual([b["kunci"] for b in daftar if not b["wajib"]],
+                         ["status", "spt", "keterangan", "sumber", "word"])
 
     def test_word_perlu_dibuat_ulang(self):
         hasil = daftar_kelengkapan({"tanggal": "2026-10-13"}, ada_ekspor=True, perlu_ekspor_ulang=True)
@@ -341,7 +348,7 @@ class UjiWeb(unittest.TestCase):
         r = self.ekspor(lid, siapkan_foto=False)
         self.assertIn("#panel-laporan", r.location)
         html = self.klien.get(f"/liputan/{lid}").get_data(as_text=True)
-        self.assertIn("Word belum dapat dibuat. Lengkapi dulu: foto dokumentasi, nama kegiatan.", html)
+        self.assertIn("Word belum dapat dibuat. Lengkapi dulu: nama kegiatan, foto dokumentasi.", html)
         self.assertIsNone(self.db().execute("SELECT berkas_ekspor FROM liputan").fetchone()[0])
         self.assertFalse((self.folder_kegiatan(lid) / "ekspor").exists())
         # Isian yang dikirim bersama tombol tetap tersimpan walau Word ditolak

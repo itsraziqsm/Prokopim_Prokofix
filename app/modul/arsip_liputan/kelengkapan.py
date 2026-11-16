@@ -24,29 +24,29 @@ def daftar_kelengkapan(isian, foto=(), ada_ekspor=False, perlu_ekspor_ulang=Fals
     paragraf = len(paragraf_berita(isian.get("isi") or ""))
 
     return [
-        # ---------- Wajib ----------
+        # ---------- Wajib (urut sesuai posisi isian di formulir) ----------
         {"kunci": "tanggal", "label": "Tanggal kegiatan", "lengkap": ada("tanggal"), "detail": "",
          "wajib": True, "target": "f-tanggal", "cek": "isi:f-tanggal"},
+        {"kunci": "kegiatan", "label": "Nama kegiatan", "lengkap": ada("kegiatan"),
+         "detail": "untuk nama berkas", "wajib": True, "target": "f-kegiatan", "cek": "isi:f-kegiatan"},
         {"kunci": "judul", "label": "Judul berita", "lengkap": ada("judul"), "detail": "",
          "wajib": True, "target": "f-judul", "cek": "isi:f-judul"},
         {"kunci": "isi", "label": "Isi berita", "lengkap": paragraf > 0,
          "detail": f"{paragraf} paragraf" if paragraf else "", "wajib": True, "target": "f-isi", "cek": "isi:f-isi"},
         {"kunci": "foto", "label": "Foto dokumentasi", "lengkap": jumlah_foto > 0,
          "detail": f"{jumlah_foto} foto" if jumlah_foto else "", "wajib": True, "target": "bagian-foto", "cek": None},
-        {"kunci": "kegiatan", "label": "Nama kegiatan", "lengkap": ada("kegiatan"),
-         "detail": "untuk nama berkas", "wajib": True, "target": "f-kegiatan", "cek": "isi:f-kegiatan"},
-        # ---------- Pelengkap ----------
+        # ---------- Pelengkap (urut sesuai formulir; Word terbaru paling akhir) ----------
+        {"kunci": "status", "label": "Status final", "lengkap": isian.get("status") == "final", "detail": "",
+         "wajib": False, "target": "judul-data", "cek": "nilai:status=final"},
+        {"kunci": "spt", "label": "SPT terkait", "lengkap": bool(isian.get("spt_id")), "detail": "",
+         "wajib": False, "target": "pilihan-spt", "cek": "pilih:spt_id"},
         {"kunci": "keterangan", "label": "Keterangan foto",
          "lengkap": jumlah_foto > 0 and berketerangan == jumlah_foto,
          "detail": f"{berketerangan} dari {jumlah_foto} foto" if jumlah_foto else "",
          "wajib": False, "target": kosong_pertama("keterangan", "ket"), "cek": None},
-        {"kunci": "spt", "label": "SPT terkait", "lengkap": bool(isian.get("spt_id")), "detail": "",
-         "wajib": False, "target": "pilihan-spt", "cek": "pilih:spt_id"},
         {"kunci": "sumber", "label": "Sumber foto", "lengkap": jumlah_foto > 0 and bersumber == jumlah_foto,
          "detail": f"{bersumber} dari {jumlah_foto} foto" if jumlah_foto else "",
          "wajib": False, "target": kosong_pertama("sumber", "sum"), "cek": None},
-        {"kunci": "status", "label": "Status final", "lengkap": isian.get("status") == "final", "detail": "",
-         "wajib": False, "target": "judul-data", "cek": "nilai:status=final"},
         {"kunci": "word", "label": "Word terbaru", "lengkap": ada_ekspor and not perlu_ekspor_ulang,
          "detail": "perlu dibuat ulang" if ada_ekspor and perlu_ekspor_ulang else "",
          "wajib": False, "target": "panel-laporan", "cek": None},
