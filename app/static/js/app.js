@@ -150,7 +150,7 @@
      agar tidak terkirim ganda saat proses berjalan. */
   document.addEventListener("submit", function (e) {
     var form = e.target;
-    if (!form.matches || !form.matches("[data-kirim-sekali]")) return;
+    if (e.defaultPrevented || !form.matches || !form.matches("[data-kirim-sekali]")) return;
     if (form.dataset.terkirim) { e.preventDefault(); return; }
     form.dataset.terkirim = "1";
     Array.prototype.forEach.call(form.querySelectorAll("button[type=submit]"), function (tombol) {
@@ -171,24 +171,27 @@
     });
   });
 
-  /* ---------- 6. Pilih semua (tabel pratinjau) ---------- */
+  /* ---------- 6. Pilih semua (tabel dengan kolom centang) ----------
+     data-pilih-semua (kotak di kepala tabel), data-pilih-item (kotak per baris; yang disabled diabaikan),
+     data-jumlah-dipilih (teks jumlah), data-perlu-pilihan (tombol yang nonaktif bila belum ada pilihan). */
   var induk = document.querySelector("[data-pilih-semua]");
   if (induk) {
-    var anak = document.querySelectorAll("[data-pilih-item]");
+    var anak = Array.prototype.filter.call(document.querySelectorAll("[data-pilih-item]"), function (c) { return !c.disabled; });
     var jumlahEl = document.querySelector("[data-jumlah-dipilih]");
-    var tombolProses = document.querySelector("[data-tombol-proses]");
+    var tombolProses = document.querySelector("[data-perlu-pilihan]");
     var perbarui = function () {
-      var n = Array.prototype.filter.call(anak, function (c) { return c.checked; }).length;
-      induk.checked = n === anak.length;
+      var n = anak.filter(function (c) { return c.checked; }).length;
+      induk.checked = anak.length > 0 && n === anak.length;
       induk.indeterminate = n > 0 && n < anak.length;
+      induk.disabled = anak.length === 0;
       if (jumlahEl) jumlahEl.textContent = n;
       if (tombolProses) tombolProses.disabled = n === 0;
     };
     induk.addEventListener("change", function () {
-      Array.prototype.forEach.call(anak, function (c) { c.checked = induk.checked; });
+      anak.forEach(function (c) { c.checked = induk.checked; });
       perbarui();
     });
-    Array.prototype.forEach.call(anak, function (c) { c.addEventListener("change", perbarui); });
+    anak.forEach(function (c) { c.addEventListener("change", perbarui); });
     perbarui();
   }
 
@@ -245,5 +248,39 @@
         });
     };
     setTimeout(tanya, 500);
+  }
+
+  /* ---------- 9. Konfirmasi sebelum tindakan yang tidak bisa dibatalkan ----------
+     <form data-konfirmasi="Hapus {n} riwayat?" data-konfirmasi-judul="Hapus riwayat" data-konfirmasi-tombol="Hapus">
+     {n} diganti jumlah [data-pilih-item] yang dicentang di dalam form. Dialog memakai <dialog> bawaan browser:
+     fokus terkunci di dalam dialog, Esc = batal. */
+  var dialog = document.getElementById("dialog-konfirmasi");
+  if (dialog && dialog.showModal) {
+    var formMenunggu = null, tombolPengirim = null;
+    document.addEventListener("submit", function (e) {
+      var form = e.target;
+      if (!form.matches || !form.matches("[data-konfirmasi]")) return;
+      if (form.dataset.dikonfirmasi === "1") { delete form.dataset.dikonfirmasi; return; }
+      e.preventDefault();
+      var n = form.querySelectorAll("[data-pilih-item]:checked").length;
+      document.getElementById("dk-judul").textContent = form.dataset.konfirmasiJudul || "Konfirmasi";
+      document.getElementById("dk-pesan").textContent = form.dataset.konfirmasi.replace("{n}", n);
+      document.getElementById("dk-ya").textContent = form.dataset.konfirmasiTombol || "Ya";
+      formMenunggu = form;
+      tombolPengirim = e.submitter || null;
+      dialog.returnValue = "";
+      dialog.showModal();
+    }, true);   // fase capture: berjalan sebelum handler lain
+    dialog.addEventListener("close", function () {
+      if (dialog.returnValue === "ya" && formMenunggu) {
+        formMenunggu.dataset.dikonfirmasi = "1";
+        if (formMenunggu.requestSubmit) formMenunggu.requestSubmit(tombolPengirim || undefined);
+        else formMenunggu.submit();
+      } else if (tombolPengirim) {
+        tombolPengirim.focus();
+      }
+      formMenunggu = null;
+      tombolPengirim = null;
+    });
   }
 })();

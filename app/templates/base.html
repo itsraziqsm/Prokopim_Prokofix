@@ -41,6 +41,22 @@
   {% endblock %}
   {% endif %}
 
+  {% if g.pengguna %}
+  {# ===== Dialog konfirmasi untuk tindakan yang tidak bisa dibatalkan =====
+     Dipakai oleh <form data-konfirmasi="Pesan..." data-konfirmasi-tombol="Hapus">; lihat app.js #}
+  <dialog id="dialog-konfirmasi" aria-labelledby="dk-judul" aria-describedby="dk-pesan"
+          class="m-auto w-11/12 max-w-md rounded-xl border border-garis bg-permukaan p-0 text-teks shadow-angkat backdrop:bg-tirai">
+    <form method="dialog" class="grid gap-4 p-6">
+      <h2 id="dk-judul" class="text-lg">Konfirmasi</h2>
+      <p id="dk-pesan" class="text-redup"></p>
+      <div class="flex flex-wrap justify-end gap-3">
+        <button type="submit" value="batal" class="tombol tombol-sekunder" autofocus>Batal</button>
+        <button type="submit" value="ya" class="tombol tombol-bahaya" id="dk-ya">Hapus</button>
+      </div>
+    </form>
+  </dialog>
+  {% endif %}
+
   {# ===== Notifikasi pop-up (kanan atas). Melayang (fixed), tidak menggeser tata letak. ===== #}
   <div id="wadah-notifikasi" aria-live="polite" aria-relevant="additions"
        class="pointer-events-none fixed inset-x-4 top-4 z-50 flex flex-col gap-3 sm:left-auto sm:w-96"></div>

@@ -124,7 +124,8 @@ def _batch_milik_pengguna(batch_id):
 @bp.route("/batch/<int:batch_id>")
 def batch(batch_id):
     data = _batch_milik_pengguna(batch_id)
-    return render_template("pemecah_spt/batch.html", batch=data, daftar=layanan.spt_dalam_batch(batch_id))
+    return render_template("pemecah_spt/batch.html", batch=data, daftar=layanan.spt_dalam_batch(batch_id),
+                           jumlah_berkas=layanan.jumlah_berkas(data))
 
 
 @bp.route("/batch/<int:batch_id>/status")
@@ -176,6 +177,38 @@ def unduh_zip(batch_id):
     penyangga.seek(0)
     return send_file(penyangga, as_attachment=True, download_name=f"SPT_batch_{batch_id}.zip",
                      mimetype="application/zip")
+
+
+@bp.route("/hapus", methods=["POST"])
+def hapus():
+    """Hapus satu atau beberapa batch beserta berkas hasilnya (id dari kolom centang / tombol Hapus)."""
+    ids = sorted({int(i) for i in request.form.getlist("batch") if i.isdigit()})
+    if not ids:
+        flash("Pilih minimal satu riwayat untuk dihapus.", "galat")
+        return redirect(url_for(".index"))
+
+    terhapus, berkas, galat = 0, 0, []
+    for batch_id in ids:
+        data = layanan.ambil_batch(g.pengguna["id"], batch_id)
+        if data is None:   # bukan milik pengguna atau sudah terhapus
+            continue
+        try:
+            jumlah = layanan.hapus_batch(data)
+        except layanan.GalatHapus as e:
+            galat.append(f"{data['nama_berkas_asli']}: {e}")
+            continue
+        terhapus += 1
+        berkas += jumlah
+        log_proses.catat(ID_MODUL, "Hapus batch",
+                         detail=f"{data['nama_berkas_asli']}: {data['jumlah']} SPT, {jumlah} berkas dihapus")
+
+    if terhapus:
+        flash(f"{terhapus} riwayat dan {berkas} berkas hasil dihapus.", "sukses")
+    for pesan in galat:
+        flash(pesan, "galat")
+    if not terhapus and not galat:
+        flash("Riwayat tidak ditemukan.", "galat")
+    return redirect(url_for(".index"))
 
 
 @bp.route("/batch/<int:batch_id>/buka", methods=["POST"])

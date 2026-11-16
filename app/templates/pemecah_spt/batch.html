@@ -30,6 +30,12 @@
     <button type="submit" class="tombol tombol-sekunder">{{ ikon("folder", "size-4") }}<span>Buka folder</span></button>
   </form>
   <button type="button" class="tombol tombol-teks" data-salin="{{ batch.folder }}" title="Salin lokasi folder">{{ ikon("salin", "size-4") }}<span>Salin lokasi</span></button>
+  <form method="post" action="{{ url_for('pemecah_spt.hapus') }}" class="sm:ml-auto"
+        data-konfirmasi="Hapus riwayat ini beserta {{ jumlah_berkas }} berkas hasilnya? Tindakan ini tidak dapat dibatalkan."
+        data-konfirmasi-judul="Hapus riwayat" data-konfirmasi-tombol="Hapus">
+    {{ csrf_field() }}<input type="hidden" name="batch" value="{{ batch.id }}">
+    <button type="submit" class="tombol tombol-teks text-bahaya-teks">{{ ikon("hapus", "size-4") }}<span>Hapus</span></button>
+  </form>
 </div>
 
 <div class="panel overflow-hidden p-0!">

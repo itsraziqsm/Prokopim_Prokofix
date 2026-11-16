@@ -392,6 +392,88 @@ class UjiAlurWeb(DasarBerkas):
         create_app({"TESTING": True}, instance_path=str(self.folder / "instance"))
         self.assertEqual(self.db().execute("SELECT status FROM spt_batch").fetchone()[0], "gagal")
 
+    # ---------- Hapus riwayat ----------
+    def hapus(self, *ids, klien=None):
+        klien = klien or self.klien
+        return klien.post("/spt/hapus", data={"csrf_token": self.token("/spt", klien), "batch": [str(i) for i in ids]})
+
+    def batch_jadi(self, pilih=(1, 2)):
+        r = self.proses(self.unggah().location, list(pilih))
+        batch_id = int(r.location.rsplit("/", 1)[1])
+        return batch_id, self.folder / "instance" / "data" / "spt" / str(batch_id)
+
+    def test_hapus_satu_batch_beserta_berkasnya(self):
+        batch_id, folder = self.batch_jadi()
+        self.assertEqual(len(list(folder.iterdir())), 2)
+        r = self.hapus(batch_id)
+        self.assertTrue(r.location.endswith("/spt"))
+        self.assertFalse(folder.exists())
+        self.assertEqual(self.db().execute("SELECT COUNT(*) FROM spt_batch").fetchone()[0], 0)
+        self.assertEqual(self.db().execute("SELECT COUNT(*) FROM spt").fetchone()[0], 0)
+        self.assertIn("1 riwayat dan 2 berkas hasil dihapus", self.klien.get("/spt").get_data(as_text=True))
+        self.assertEqual(self.db().execute("SELECT aksi FROM log_proses ORDER BY id DESC").fetchone()[0], "Hapus batch")
+        self.assertEqual(self.klien.get(f"/spt/batch/{batch_id}").status_code, 404)
+
+    def test_hapus_banyak_batch(self):
+        satu, folder1 = self.batch_jadi([1])
+        dua, folder2 = self.batch_jadi([2, 3])
+        tiga, folder3 = self.batch_jadi([4])
+        self.hapus(satu, tiga)
+        self.assertFalse(folder1.exists() or folder3.exists())
+        self.assertTrue(folder2.exists())
+        sisa = [b[0] for b in self.db().execute("SELECT id FROM spt_batch").fetchall()]
+        self.assertEqual(sisa, [dua])
+
+    def test_hapus_tanpa_pilihan(self):
+        r = self.hapus()
+        self.assertTrue(r.location.endswith("/spt"))
+        self.assertIn("Pilih minimal satu", self.klien.get("/spt").get_data(as_text=True))
+
+    def test_batch_milik_orang_lain_tidak_terhapus(self):
+        batch_id, folder = self.batch_jadi()
+        db = self.db()
+        db.execute("INSERT INTO pengguna (nama_lengkap, nama_pengguna, sandi_hash, sesi_token) "
+                   "VALUES ('Lain', 'lain', (SELECT sandi_hash FROM pengguna WHERE id = 1), 'x')")
+        db.commit()
+        lain = self.app.test_client()
+        lain.post("/masuk", data={"csrf_token": self.token("/masuk", lain), "nama_pengguna": "lain", "sandi": "rahasia123"})
+        self.hapus(batch_id, klien=lain)
+        self.assertTrue(folder.exists())
+        self.assertEqual(self.db().execute("SELECT COUNT(*) FROM spt_batch").fetchone()[0], 1)
+
+    def test_batch_yang_diproses_tidak_bisa_dihapus(self):
+        batch_id, folder = self.batch_jadi()
+        db = self.db()
+        db.execute("UPDATE spt_batch SET status = 'proses'")
+        db.commit()
+        self.hapus(batch_id)
+        self.assertTrue(folder.exists())
+        self.assertIn("masih diproses", self.klien.get("/spt").get_data(as_text=True))
+
+    def test_folder_dimanipulasi_tidak_ikut_terhapus(self):
+        batch_id, folder = self.batch_jadi()
+        korban = self.folder / "instance" / "data"           # folder lain yang TIDAK boleh terhapus
+        db = self.db()
+        db.execute("UPDATE spt_batch SET folder = ?", (str(korban),))
+        db.commit()
+        self.hapus(batch_id)
+        self.assertTrue(korban.exists())
+        self.assertTrue(folder.exists())                     # folder asli tidak disentuh
+        self.assertEqual(self.db().execute("SELECT COUNT(*) FROM spt_batch").fetchone()[0], 0)
+
+    def test_berkas_terkunci_rekaman_dipertahankan(self):
+        batch_id, folder = self.batch_jadi()
+        with mock.patch("app.modul.pemecah_spt.layanan.shutil.rmtree", side_effect=PermissionError("terkunci")):
+            self.hapus(batch_id)
+        self.assertEqual(self.db().execute("SELECT COUNT(*) FROM spt_batch").fetchone()[0], 1)
+        self.assertIn("sedang dibuka", self.klien.get("/spt").get_data(as_text=True))
+
+    def test_halaman_hasil_punya_tombol_hapus_dengan_konfirmasi(self):
+        batch_id, _ = self.batch_jadi()
+        html = self.klien.get(f"/spt/batch/{batch_id}").get_data(as_text=True)
+        self.assertIn('data-konfirmasi="Hapus riwayat ini beserta 2 berkas', html)
+        self.assertIn('id="dialog-konfirmasi"', html)
+
     def test_tanpa_centang_ditolak(self):
         lokasi = self.unggah().location
         r = self.proses(lokasi, [])

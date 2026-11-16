@@ -55,35 +55,51 @@
 <section aria-labelledby="judul-riwayat">
   <h2 id="judul-riwayat" class="mb-4">Riwayat</h2>
   {% if riwayat %}
-  <div class="panel overflow-hidden p-0!">
-    <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Riwayat batch (geser untuk melihat semua kolom)">
-      <table class="w-full min-w-xl border-collapse text-left text-sm">
-        <thead class="bg-permukaan-2 text-redup">
-          <tr>
-            <th scope="col" class="px-4 py-3 font-semibold">Waktu</th>
-            <th scope="col" class="px-4 py-3 font-semibold">Berkas asli</th>
-            <th scope="col" class="px-4 py-3 font-semibold">SPT</th>
-            <th scope="col" class="px-4 py-3 font-semibold">Keluaran</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-garis">
-          {% for b in riwayat %}
-          <tr class="align-top">
-            <td class="whitespace-nowrap px-4 py-3 text-redup">{{ b.dibuat|waktu_singkat }}</td>
-            <td class="px-4 py-3">
-              <a href="{{ url_for('pemecah_spt.batch', batch_id=b.id) }}" class="font-medium wrap-anywhere">{{ b.nama_berkas_asli }}</a>
-              {% if b.status == "gagal" %}<span class="lencana lencana-gagal ml-1">Gagal</span>
-              {% elif b.status == "sebagian" %}<span class="lencana lencana-peringatan ml-1">Sebagian</span>
-              {% elif b.status == "proses" %}<span class="lencana lencana-pengembangan ml-1">Diproses</span>{% endif %}
-            </td>
-            <td class="px-4 py-3">{{ b.jumlah }}</td>
-            <td class="whitespace-nowrap px-4 py-3">{{ label_format(b.format_keluaran) }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <form method="post" action="{{ url_for('pemecah_spt.hapus') }}"
+        data-konfirmasi="Hapus {n} riwayat terpilih beserta semua berkas hasilnya (Word, PDF)? Tindakan ini tidak dapat dibatalkan."
+        data-konfirmasi-judul="Hapus riwayat" data-konfirmasi-tombol="Hapus">
+    {{ csrf_field() }}
+    <div class="panel overflow-hidden p-0!">
+      <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Riwayat batch (geser untuk melihat semua kolom)">
+        <table class="w-full min-w-xl border-collapse text-left text-sm">
+          <thead class="bg-permukaan-2 text-redup">
+            <tr>
+              <th scope="col" class="w-12 px-4 py-3">
+                <input type="checkbox" class="size-4 accent-aksen" data-pilih-semua aria-label="Pilih semua riwayat">
+              </th>
+              <th scope="col" class="px-4 py-3 font-semibold">Waktu</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Berkas asli</th>
+              <th scope="col" class="px-4 py-3 font-semibold">SPT</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Keluaran</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-garis">
+            {% for b in riwayat %}
+            <tr class="align-top">
+              <td class="px-4 py-3">
+                <input type="checkbox" name="batch" value="{{ b.id }}" class="size-4 accent-aksen" data-pilih-item
+                       aria-label="Pilih {{ b.nama_berkas_asli }}" {% if b.status == "proses" %}disabled{% endif %}>
+              </td>
+              <td class="whitespace-nowrap px-4 py-3 text-redup">{{ b.dibuat|waktu_singkat }}</td>
+              <td class="px-4 py-3">
+                <a href="{{ url_for('pemecah_spt.batch', batch_id=b.id) }}" class="font-medium wrap-anywhere">{{ b.nama_berkas_asli }}</a>
+                {% if b.status == "gagal" %}<span class="lencana lencana-gagal ml-1">Gagal</span>
+                {% elif b.status == "sebagian" %}<span class="lencana lencana-peringatan ml-1">Sebagian</span>
+                {% elif b.status == "proses" %}<span class="lencana lencana-pengembangan ml-1">Diproses</span>{% endif %}
+              </td>
+              <td class="px-4 py-3">{{ b.jumlah }}</td>
+              <td class="whitespace-nowrap px-4 py-3">{{ label_format(b.format_keluaran) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <button type="submit" class="tombol tombol-sekunder" data-perlu-pilihan>{{ ikon("hapus", "size-4") }}<span>Hapus terpilih</span></button>
+      <p class="text-sm text-redup" aria-live="polite"><span data-jumlah-dipilih>0</span> dipilih</p>
+    </div>
+  </form>
   {% else %}
   <p class="text-redup">Belum ada berkas yang dipecah.</p>
   {% endif %}

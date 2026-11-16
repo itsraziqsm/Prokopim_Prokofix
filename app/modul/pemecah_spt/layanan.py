@@ -7,6 +7,7 @@ Fungsi publik untuk modul lain (mis. Arsip Liputan):
 import json
 import re
 import secrets
+import shutil
 import time
 from pathlib import Path
 
@@ -169,6 +170,51 @@ def ambil_batch(pengguna_id, batch_id):
 
 def spt_dalam_batch(batch_id):
     return ambil_db().execute("SELECT * FROM spt WHERE batch_id = ? ORDER BY urutan", (batch_id,)).fetchall()
+
+
+class GalatHapus(Exception):
+    """Pesan aman untuk pengguna saat batch tidak dapat dihapus."""
+
+
+def folder_batch_aman(batch):
+    """Folder hasil batch HANYA bila persis instance/data/spt/<id_batch>; selain itu None.
+    Mencegah penghapusan folder lain walau isi kolom `folder` di database berubah."""
+    if not batch["folder"]:
+        return None
+    folder = Path(batch["folder"]).resolve()
+    if folder.parent != folder_data().resolve() or folder.name != str(batch["id"]):
+        return None
+    return folder
+
+
+def hapus_batch(batch):
+    """Hapus berkas hasil (folder batch) lalu rekamannya di database (baris spt ikut terhapus).
+    Mengembalikan jumlah berkas yang dihapus. Bila berkas gagal dihapus (mis. sedang dibuka di Word),
+    rekaman TIDAK dihapus agar bisa dicoba lagi."""
+    if batch["status"] == "proses":
+        raise GalatHapus("Batch masih diproses. Tunggu sampai selesai, lalu hapus.")
+    folder = folder_batch_aman(batch)
+    jumlah = 0
+    if folder is not None and folder.is_dir():
+        jumlah = sum(1 for f in folder.iterdir() if f.is_file())
+        try:
+            shutil.rmtree(folder)
+        except OSError:
+            raise GalatHapus("Sebagian berkas tidak dapat dihapus, mungkin sedang dibuka. "
+                             "Tutup berkasnya lalu coba lagi.")
+    db = ambil_db()
+    db.execute("DELETE FROM spt WHERE batch_id = ?", (batch["id"],))
+    db.execute("DELETE FROM spt_batch WHERE id = ?", (batch["id"],))
+    db.commit()
+    return jumlah
+
+
+def jumlah_berkas(batch):
+    """Jumlah berkas hasil di folder batch (untuk teks konfirmasi)."""
+    folder = folder_batch_aman(batch)
+    if folder is None or not folder.is_dir():
+        return 0
+    return sum(1 for f in folder.iterdir() if f.is_file())
 
 
 # ---------- Untuk modul lain ----------

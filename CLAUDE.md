@@ -64,7 +64,8 @@ app/modul/pemecah_spt/         Fitur 1 — blueprint "pemecah_spt" di /spt:
   pekerja.py                     pemrosesan batch di thread latar + laporan progres ke DB
   routes.py                      /spt, /spt/analisis, /spt/pratinjau/<token>, /spt/proses, /spt/batch/<id>,
                                  /spt/batch/<id>/status (JSON progres), /spt/batch/<id>/zip,
-                                 /spt/batch/<id>/buka, /spt/unduh/<spt_id>/<docx|pdf>
+                                 /spt/batch/<id>/buka, /spt/unduh/<spt_id>/<docx|pdf>,
+                                 POST /spt/hapus (satu/banyak batch + berkas hasilnya)
 app/templates/pemecah_spt/     index (unggah + riwayat), pratinjau, batch (hasil)
 app/templates/base.html        kerangka: sidebar + konten; wadah notifikasi; skrip tema/sidebar di <head>
 app/templates/komponen/        sidebar.html, ui.html (makro), ikon.html (SVG)
@@ -99,6 +100,12 @@ tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .
   jalurnya di dalam folder data modul (lihat `layanan.jalur_berkas_aman`) → `send_file(as_attachment=True)`.
   ZIP dibuat di memori. "Buka folder" hanya dari lokasi yang tercatat. Unggahan: validasi ekstensi, signature,
   isi ZIP & batas ukuran; simpan dengan nama acak; token sementara terikat ke pengguna.
+- **Hapus data + berkas**: selalu lewat `<form data-konfirmasi="... {n} ..." data-konfirmasi-judul="..."
+  data-konfirmasi-tombol="Hapus">` (dialog `#dialog-konfirmasi` di base.html; `{n}` = jumlah `data-pilih-item` tercentang),
+  tombol `.tombol-bahaya` di dialog. Server: hanya milik pengguna, tolak yang masih "proses", hapus folder HANYA
+  bila jalurnya persis `instance/data/<modul>/<id>` (lihat `layanan.folder_batch_aman`), hapus berkas dulu baru
+  rekaman DB (bila berkas terkunci, rekaman dipertahankan), lalu `catat(..., "Hapus batch", ...)`.
+  Catatan: SPT yang dihapus juga hilang dari `daftar_spt()` (Arsip Liputan nanti harus siap menghadapi ini).
 - **Proses lama + progres**: kerjakan di thread latar (`threading.Thread(daemon=True)` dengan
   `app.app_context()`, kirim `current_app._get_current_object()`), simpan progres di DB (kolom `status="proses"`,
   `progres`, `total_langkah`, `tahap`), sediakan endpoint JSON `{selesai, progres, total, persen, tahap, pesan, jenis}`,
@@ -109,7 +116,7 @@ tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .
 - **Notifikasi**: server `flash(pesan, "sukses"|"info"|"galat")`; JS `window.notifikasi(pesan, jenis)`.
   Tampil pop-up kanan atas (fixed), jangan pakai alert inline untuk pesan umum. Galat per-field tetap inline (makro `field`).
 - **Komponen ulang-pakai** di `komponen/ui.html`: `lencana`, `kartu_modul`, `breadcrumb`, `tombol`, `toast`, `field`,
-  `alert` (peringatan inline yang menetap, jenis info|peringatan|galat). Kelas komponen CSS: `.tombol(-primer|-sekunder|-teks)`,
+  `alert` (peringatan inline yang menetap, jenis info|peringatan|galat). Kelas komponen CSS: `.tombol(-primer|-sekunder|-teks|-bahaya)`,
   `.lencana(-siap|-pengembangan|-peringatan|-gagal)`,
   `.panel`, `.input`, `.label`, `.petunjuk`, `.galat-field`, `.ikon`.
 - **Warna**: hanya lewat CSS variable di `input.css` (`--warna-aksen`, `--latar`, `--permukaan`, `--teks`, `--teks-redup`,
@@ -127,7 +134,8 @@ tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .
 - **Perilaku JS siap pakai** (app.js): `<form data-kirim-sekali data-teks-proses="Memproses...">` (cegah kirim ganda),
   `data-pilih-semua` + `data-pilih-item` + `data-jumlah-dipilih` (centang semua), `data-pilih-berkas` +
   `data-nama-berkas` (input berkas bergaya tombol), `data-salin="teks"` (salin ke clipboard),
-  `data-pantau-progres="url"` (dipasang makro `progres`), notifikasi titipan lewat
+  `data-pantau-progres="url"` (dipasang makro `progres`), `data-konfirmasi` (dialog konfirmasi),
+  `data-perlu-pilihan` (tombol nonaktif bila belum ada `data-pilih-item` tercentang), notifikasi titipan lewat
   `sessionStorage["notifikasi-tertunda"]` agar tetap tampil setelah halaman dimuat ulang.
 
 ## Standar UI/UX

@@ -31,6 +31,7 @@
   --bahaya-latar: #fde8e8; --bahaya-teks: #9b1c1c;
   --info-latar: #e6eef6;   --info-teks: #163d63;
 
+  --tirai: rgba(15, 20, 27, .55);   /* latar gelap di belakang dialog */
   --bayangan: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
   --bayangan-angkat: 0 6px 16px rgba(16, 24, 40, .10);
   color-scheme: light;
@@ -56,6 +57,7 @@
   --bahaya-latar: #3d1a1a; --bahaya-teks: #f5b4b4;
   --info-latar: #1c2d40;   --info-teks: #b0d1f5;
 
+  --tirai: rgba(0, 0, 0, .65);
   --bayangan: 0 1px 2px rgba(0, 0, 0, .4);
   --bayangan-angkat: 0 6px 16px rgba(0, 0, 0, .45);
   color-scheme: dark;
@@ -83,6 +85,7 @@
   --color-bahaya-teks: var(--bahaya-teks);
   --color-info-latar: var(--info-latar);
   --color-info-teks: var(--info-teks);
+  --color-tirai: var(--tirai);
   --shadow-kartu: var(--bayangan);
   --shadow-angkat: var(--bayangan-angkat);
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
@@ -110,6 +113,7 @@
   .tombol-primer   { @apply bg-aksen text-pada-aksen hover:bg-aksen-hover; }
   .tombol-sekunder { @apply bg-permukaan text-teks border-garis-kuat hover:bg-permukaan-2; }
   .tombol-teks     { @apply bg-transparent text-teks hover:bg-permukaan-2; }
+  .tombol-bahaya   { @apply bg-bahaya-teks text-permukaan hover:opacity-90; }
 
   .lencana {
     @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold;
