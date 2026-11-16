@@ -118,38 +118,39 @@
       <legend class="label">SPT terkait</legend>
       <p id="p-spt" class="petunjuk mb-2 mt-0">Dari hasil Pemecah SPT. SPT tidak dimasukkan ke Word, tetapi ikut di paket ZIP.</p>
       {% if galat.spt_id %}<p id="g-spt" class="galat-field mb-2">{{ galat.spt_id }}</p>{% endif %}
-      {% if daftar_spt %}
-      <label for="f-cari-spt" class="sr-only">Cari nomor SPT</label>
-      <input id="f-cari-spt" type="search" class="input mb-2" placeholder="Cari nomor SPT" data-saring="#daftar-spt">
-      <div id="daftar-spt" class="max-h-72 overflow-y-auto rounded-lg border border-garis">
-        <ul role="list" class="divide-y divide-garis">
-          <li class="px-3 py-2.5">
-            <label class="flex cursor-pointer items-center gap-3">
-              <input type="radio" name="spt_id" value="" class="size-4 accent-aksen" {% if not isian.spt_id %}checked{% endif %}>
-              <span class="text-redup">Tanpa SPT</span>
-            </label>
-          </li>
-          {% for s in daftar_spt %}
-          <li class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5" data-saring-teks="{{ s.nomor }}">
-            <label class="flex min-w-0 flex-1 basis-56 cursor-pointer items-start gap-3">
-              <input type="radio" name="spt_id" value="{{ s.id }}" class="mt-1 size-4 shrink-0 accent-aksen" {% if isian.spt_id == s.id %}checked{% endif %}>
-              <span class="min-w-0">
-                <span class="block font-medium wrap-break-word">{{ s.nomor|jalur }}</span>
-                <span class="block text-xs text-redup wrap-anywhere">{{ s.nama_berkas_asli }} · {{ s.dibuat_batch|waktu_singkat }}</span>
-              </span>
-            </label>
-            <span class="flex gap-1 pl-7 sm:pl-0">
-              {% if s.jalur_docx %}<a href="{{ url_for('arsip_liputan.unduh_spt', spt_id=s.id, jenis='docx') }}" class="tombol tombol-teks min-h-8 px-2 text-xs" aria-label="Unduh Word SPT {{ s.nomor }}">{{ ikon("unduh", "size-4") }}<span>Word</span></a>{% endif %}
-              {% if s.jalur_pdf %}<a href="{{ url_for('arsip_liputan.unduh_spt', spt_id=s.id, jenis='pdf') }}" class="tombol tombol-teks min-h-8 px-2 text-xs" aria-label="Unduh PDF SPT {{ s.nomor }}">{{ ikon("unduh", "size-4") }}<span>PDF</span></a>{% endif %}
-            </span>
-          </li>
-          {% endfor %}
-        </ul>
-        <p class="hidden px-3 py-3 text-sm text-redup" data-saring-kosong>Tidak ada SPT dengan nomor itu.</p>
+      <div class="flex flex-wrap gap-2">
+        {{ pilihan("pakai_spt", "tidak", "Tanpa SPT", isian.pakai_spt != "ya") }}
+        {{ pilihan("pakai_spt", "ya", "Dengan SPT", isian.pakai_spt == "ya") }}
       </div>
-      {% else %}
-      <p class="text-sm text-redup">Belum ada SPT. Pecah berkas SPT lewat modul <a href="{{ url_for('pemecah_spt.index') }}">Pemecah SPT</a>.</p>
-      {% endif %}
+      {# Pencarian & daftar SPT hanya tampil bila "Dengan SPT" dipilih (diatur app.js) #}
+      <div id="wadah-spt" class="mt-3" data-wadah-spt {% if isian.pakai_spt != "ya" %}hidden{% endif %}>
+        {% if daftar_spt %}
+        <label for="f-cari-spt" class="sr-only">Cari nomor SPT</label>
+        <input id="f-cari-spt" type="search" class="input mb-2" placeholder="Cari nomor SPT" data-saring="#daftar-spt">
+        <div id="daftar-spt" class="max-h-72 overflow-y-auto rounded-lg border border-garis">
+          <ul role="list" class="divide-y divide-garis">
+            {% for s in daftar_spt %}
+            <li class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5" data-saring-teks="{{ s.nomor }}">
+              <label class="flex min-w-0 flex-1 basis-56 cursor-pointer items-start gap-3">
+                <input type="radio" name="spt_id" value="{{ s.id }}" class="mt-1 size-4 shrink-0 accent-aksen" {% if isian.spt_id == s.id %}checked{% endif %}>
+                <span class="min-w-0">
+                  <span class="block font-medium wrap-break-word">{{ s.nomor|jalur }}</span>
+                  <span class="block text-xs text-redup wrap-anywhere">{{ s.nama_berkas_asli }} · {{ s.dibuat_batch|waktu_singkat }}</span>
+                </span>
+              </label>
+              <span class="flex gap-1 pl-7 sm:pl-0">
+                {% if s.jalur_docx %}<a href="{{ url_for('arsip_liputan.unduh_spt', spt_id=s.id, jenis='docx') }}" class="tombol tombol-teks min-h-8 px-2 text-xs" aria-label="Unduh Word SPT {{ s.nomor }}">{{ ikon("unduh", "size-4") }}<span>Word</span></a>{% endif %}
+                {% if s.jalur_pdf %}<a href="{{ url_for('arsip_liputan.unduh_spt', spt_id=s.id, jenis='pdf') }}" class="tombol tombol-teks min-h-8 px-2 text-xs" aria-label="Unduh PDF SPT {{ s.nomor }}">{{ ikon("unduh", "size-4") }}<span>PDF</span></a>{% endif %}
+              </span>
+            </li>
+            {% endfor %}
+          </ul>
+          <p class="hidden px-3 py-3 text-sm text-redup" data-saring-kosong>Tidak ada SPT dengan nomor itu.</p>
+        </div>
+        {% else %}
+        <p class="text-sm text-redup">Belum ada SPT. Pecah berkas SPT lewat modul <a href="{{ url_for('pemecah_spt.index') }}">Pemecah SPT</a>.</p>
+        {% endif %}
+      </div>
     </fieldset>
   </section>
 

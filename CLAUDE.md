@@ -100,7 +100,10 @@ app/modul/arsip_liputan/       Fitur 2 — blueprint "arsip_liputan" di /liputan
   routes.py                      /liputan (cari & filter), /liputan/baru, /liputan/<id> (+ /simpan, /ekspor,
                                  /unduh, /paket, /hapus), /liputan/<id>/foto (+ /<fid>, /simpan, /<fid>/simpan|
                                  geser|hapus), /liputan/spt/<spt_id>/<docx|pdf>
-app/templates/arsip_liputan/   index (arsip dikelompokkan per bulan kegiatan, terbaru di atas, satu tabel per bulan), form (konten kiri: Data kegiatan, Isi berita, Foto; panel kanan
+app/templates/arsip_liputan/   index (arsip dikelompokkan per bulan kegiatan, terbaru di atas, satu tabel per bulan), form
+                               (tanggal kegiatan baru kosong; SPT terkait: radio pakai_spt Tanpa/Dengan — daftar &
+                               pencarian [data-wadah-spt] hanya tampil bila "Dengan SPT"; server: "tidak" → spt_id NULL,
+                               "ya" tanpa pilihan → galat) (konten kiri: Data kegiatan, Isi berita, Foto; panel kanan
                                #panel-laporan: Word/ekspor di atas + Kelengkapan ✓/✗; sticky setinggi layar)
 app/templat_docx/berita.docx   TEMPLAT berita (taruh berkas asli di sini; lihat README di folder itu)
 app/templates/base.html        kerangka: sidebar + konten; wadah notifikasi; skrip tema/sidebar di <head>

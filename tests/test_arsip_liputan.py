@@ -378,6 +378,35 @@ class UjiWeb(unittest.TestCase):
         self.assertEqual(log, ["Simpan kegiatan", "Unggah foto", "Ekspor Word"])
         self.assertIn("Arsip Liputan", self.klien.get("/log").get_data(as_text=True))
 
+    def test_tanggal_baru_kosong(self):
+        html = self.klien.get("/liputan/baru").get_data(as_text=True)
+        self.assertRegex(html, r'id="f-tanggal" name="tanggal" type="date" class="input"\s*value=""')
+        self.assertRegex(html, r'data-wadah-spt\s+hidden')            # bawaan: Tanpa SPT, daftar tersembunyi
+
+    def test_pilihan_tanpa_dan_dengan_spt(self):
+        sumber = fx.batch_contoh(self.folder / "batch.docx")
+        r = self.klien.post("/spt/analisis", content_type="multipart/form-data", data={
+            "csrf_token": self.token("/spt"), "format": "word", "berkas": (io.BytesIO(sumber.read_bytes()), "b.docx")})
+        r = self.klien.post("/spt/proses", data={"csrf_token": self.token(r.location),
+                                                 "token": r.location.rsplit("/", 1)[1], "pilih": ["1"]})
+        for _ in range(200):
+            if self.klien.get(f"{r.location}/status").get_json()["selesai"]:
+                break
+        spt_id = self.db().execute("SELECT id FROM spt").fetchone()[0]
+        # Tanpa SPT: spt_id yang ikut terkirim diabaikan
+        _, lid = self.buat(pakai_spt="tidak", spt_id=str(spt_id))
+        self.assertIsNone(self.db().execute("SELECT spt_id FROM liputan WHERE id=?", (lid,)).fetchone()[0])
+        # Dengan SPT tetapi belum memilih: ditolak dengan pesan
+        r, lid2 = self.buat(pakai_spt="ya", spt_id="")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("Pilih SPT dari daftar, atau pilih Tanpa SPT.", r.get_data(as_text=True))
+        self.assertRegex(r.get_data(as_text=True), r'data-wadah-spt\s+>')     # daftar tetap terbuka
+        # Dengan SPT + pilih: tersimpan, dan halaman membuka daftar SPT
+        _, lid3 = self.buat(pakai_spt="ya", spt_id=str(spt_id))
+        self.assertEqual(self.db().execute("SELECT spt_id FROM liputan WHERE id=?", (lid3,)).fetchone()[0], spt_id)
+        html = self.klien.get(f"/liputan/{lid3}").get_data(as_text=True)
+        self.assertRegex(html, r'name="pakai_spt" value="ya"[^>]*checked')
+
     def test_validasi_form(self):
         r, lid = self.buat(tanggal="", judul="")
         self.assertEqual(r.status_code, 400)

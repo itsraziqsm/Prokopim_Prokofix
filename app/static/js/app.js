@@ -475,4 +475,22 @@
     setTimeout(function () { disorot.removeAttribute("data-sorot"); disorot.removeAttribute("data-sorot-pudar"); }, halus ? 1600 : 700);
     if (history.replaceState) history.replaceState(null, "", "#" + tujuan.id);
   });
+
+  /* ---------- 14. SPT terkait: "Tanpa SPT" menyembunyikan daftar, "Dengan SPT" menampilkannya ---------- */
+  var wadahSpt = document.querySelector("[data-wadah-spt]");
+  if (wadahSpt) {
+    document.addEventListener("change", function (e) {
+      if (!e.target || e.target.name !== "pakai_spt") return;
+      var pakai = e.target.value === "ya";
+      wadahSpt.hidden = !pakai;
+      if (pakai) {
+        var cari = wadahSpt.querySelector("input[type=search]");
+        if (cari) cari.focus();
+      } else {
+        // Lepas pilihan SPT agar yang terkirim benar-benar tanpa SPT, lalu perbarui panel Kelengkapan
+        Array.prototype.forEach.call(document.querySelectorAll('input[name="spt_id"]'), function (r) { r.checked = false; });
+        document.dispatchEvent(new Event("change"));
+      }
+    });
+  }
 })();

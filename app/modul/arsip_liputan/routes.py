@@ -74,9 +74,13 @@ def _baca_form():
     data["foto_per_lembar"] = int(data["foto_per_lembar"]) if data["foto_per_lembar"] in ("1", "2", "3") else 2
     if data["status"] not in layanan.STATUS:
         data["status"] = "draf"
+    # "Tanpa SPT" / "Dengan SPT": bila pakai_spt tidak dikirim, ditebak dari ada-tidaknya spt_id
     spt = f.get("spt_id", "")
-    if spt.isdigit():
-        if layanan_spt.ambil_spt(int(spt), semua_pengguna=True) is None:
+    data["pakai_spt"] = f.get("pakai_spt") or ("ya" if spt.isdigit() else "tidak")
+    if data["pakai_spt"] == "ya":
+        if not spt.isdigit():
+            galat["spt_id"] = "Pilih SPT dari daftar, atau pilih Tanpa SPT."
+        elif layanan_spt.ambil_spt(int(spt), semua_pengguna=True) is None:
             galat["spt_id"] = "SPT yang dipilih tidak ditemukan."
         else:
             data["spt_id"] = int(spt)
@@ -90,8 +94,9 @@ def _render_form(liputan=None, isian=None, galat=None, status_kode=200):
                  for f in isi}
     perlu_ekspor_ulang = bool(liputan and liputan["diekspor"] and liputan["diubah"] > liputan["diekspor"])
     ada_ekspor = bool(liputan and layanan.jalur_ekspor(liputan))
-    isian = isian or (dict(liputan) if liputan else {"tanggal": date.today().isoformat(), "foto_per_lembar": 2,
-                                                     "status": "draf"})
+    # Kegiatan baru: tanggal sengaja kosong agar diisi sesuai tanggal kegiatan, bukan tanggal input
+    isian = dict(isian or (dict(liputan) if liputan else {"tanggal": "", "foto_per_lembar": 2, "status": "draf"}))
+    isian.setdefault("pakai_spt", "ya" if isian.get("spt_id") else "tidak")
     daftar_cek = daftar_kelengkapan(isian, foto, ada_ekspor, perlu_ekspor_ulang)
     return render_template(
         "arsip_liputan/form.html",
