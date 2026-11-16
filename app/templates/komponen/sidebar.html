@@ -21,7 +21,7 @@
 <aside id="sidebar" class="sidebar sticky top-0 z-30 flex h-dvh w-16 shrink-0 flex-col border-r border-garis bg-permukaan md:w-60">
   <a href="{{ url_for('utama.dashboard') }}" title="{{ nama_aplikasi }}"
      class="sidebar-item flex h-16 shrink-0 items-center justify-center gap-2.5 border-b border-garis px-3 font-semibold text-teks no-underline md:justify-start md:px-4">
-    <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-aksen text-pada-aksen">{{ ikon("logo") }}</span>
+    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="" width="36" height="36" class="size-9 shrink-0 object-contain">
     <span class="sidebar-label sr-only md:not-sr-only md:truncate">{{ nama_aplikasi }}</span>
   </a>
 
@@ -39,7 +39,7 @@
     <button type="button" id="tombol-sidebar" aria-controls="sidebar" aria-expanded="false"
             aria-label="Lebarkan menu" title="Lebarkan menu"
             class="sidebar-item mb-2 mt-auto hidden min-h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-3 py-2 text-redup hover:bg-permukaan-2 hover:text-teks md:flex md:justify-start">
-      <span class="sidebar-toggle-ikon inline-flex transition-transform">{{ ikon("panah-kiri") }}</span>
+      <span class="sidebar-toggle-ikon inline-flex transition-transform">{{ ikon("caret-kiri") }}</span>
       <span class="sidebar-label sr-only md:not-sr-only" data-label-sidebar>Ciutkan menu</span>
     </button>
 

@@ -10,7 +10,7 @@
   <main id="konten" tabindex="-1"
         class="flex h-full w-full flex-col overflow-y-auto px-6 py-5 focus:outline-none sm:px-10 md:w-3/5 lg:px-16">
     <div class="inline-flex items-center gap-2.5 font-semibold">
-      <span class="grid size-9 place-items-center rounded-lg bg-aksen text-pada-aksen">{{ ikon("logo") }}</span>
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="" width="36" height="36" class="size-9 object-contain">
       {{ nama_aplikasi }}
     </div>
 

@@ -112,7 +112,8 @@ app/templates/auth/            _kartu.html (tata letak 60/40), masuk, siapkan, a
 app/templates/                 dashboard, log, modul_dev, pengaturan, galat
 app/static/src/input.css       SUMBER CSS (edit ini)
 app/static/css/app.css         HASIL BUILD (jangan diedit manual)
-app/static/img/                gambar halaman masuk opsional: masuk.jpg/.png/.webp
+app/static/img/                logo.png (logo aplikasi = logo Pemko Medan, latar transparan; dipakai sidebar & halaman
+                               masuk), favicon.png (64 px), gambar halaman masuk opsional: masuk.jpg/.png/.webp
 instance/                      superapp.db + secret_key (tidak ikut git; backup = salin folder ini)
 instance/data/spt/<id_batch>/  berkas hasil Pemecah SPT
 instance/tmp/                  unggahan sementara selama pratinjau (<token>.docx + .json), dihapus >24 jam
@@ -196,7 +197,7 @@ tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membu
 - Rapi, tenang, profesional (kantor pemerintahan); satu warna aksen biru tua + netral; tanpa gradasi mencolok.
 - Kontras WCAG AA, fokus keyboard terlihat, elemen HTML semantik + ARIA seperlunya, hormati `prefers-reduced-motion`.
 - Responsif 1366×768 sampai monitor lebar; tetap rapi di tablet/ponsel (sidebar jadi ikon saja).
-- Navigasi **hanya sidebar**: atas = Dashboard (ikon jendela), Log; tombol "Lebarkan/Ciutkan menu" (`#tombol-sidebar`,
+- Navigasi **hanya sidebar**: atas = Dashboard (ikon jendela), Log; tombol "Lebarkan/Ciutkan menu" (ikon caret, `#tombol-sidebar`,
   hanya md ke atas) tepat di atas garis pemisah; bawah = Pengaturan, Akun. Bawaan menu **tertutup** (ringkas)
   kecuali `localStorage["sidebar"] == "lebar"`.
 - Tanpa footer. Halaman auth: formulir 60% kiri, gambar 40% kanan, satu layar tanpa scroll.
