@@ -1,6 +1,7 @@
 """Akses data Arsip Liputan: database, folder berkas, pencarian, foto, ekspor."""
 import secrets
 import shutil
+from datetime import date
 from pathlib import Path
 
 from flask import current_app
@@ -9,6 +10,7 @@ from ...db import ambil_db
 from . import ekspor as ekspor_word
 from .foto import olah_foto
 from .teks import nama_ekspor
+from ...waktu import BULAN
 
 FOTO_MAKS = 40
 STATUS = {"draf": "Draf", "final": "Final"}
@@ -23,8 +25,66 @@ def folder_data():
     return folder
 
 
+def folder_bulan(tanggal):
+    """'2026-10-13' -> instance/data/liputan/2026/10-Oktober (berkas disusun per bulan kegiatan)."""
+    try:
+        d = date.fromisoformat(tanggal)
+    except (TypeError, ValueError):
+        return folder_data() / "tanpa-tanggal"
+    return folder_data() / f"{d.year}" / f"{d.month:02d}-{BULAN[d.month - 1]}"
+
+
+def folder_untuk(liputan_id, tanggal):
+    return folder_bulan(tanggal) / str(int(liputan_id))
+
+
 def folder_liputan(liputan_id):
-    return folder_data() / str(int(liputan_id))
+    """Folder berkas kegiatan, dihitung dari tanggal kegiatan yang tersimpan di database."""
+    baris = ambil_db().execute("SELECT tanggal FROM liputan WHERE id = ?", (liputan_id,)).fetchone()
+    return folder_untuk(liputan_id, baris["tanggal"] if baris else "")
+
+
+def _folder_kegiatan_sah(folder, liputan_id):
+    """True bila folder persis instance/data/liputan/<tahun>/<bulan>/<id> (atau tanpa-tanggal/<id>)."""
+    folder, akar = Path(folder).resolve(), folder_data().resolve()
+    if folder.name != str(int(liputan_id)):
+        return False
+    return folder.parent.parent.parent == akar or (folder.parent.parent == akar and folder.parent.name == "tanpa-tanggal")
+
+
+def _bersihkan_folder_kosong(folder):
+    """Hapus folder bulan/tahun yang kosong setelah kegiatan dihapus atau dipindah."""
+    akar = folder_data().resolve()
+    folder = Path(folder).resolve()
+    while folder != akar and folder.is_relative_to(akar):
+        try:
+            folder.rmdir()          # hanya berhasil bila kosong
+        except OSError:
+            break
+        folder = folder.parent
+
+
+def pindahkan_folder(lama, baru):
+    """Pindahkan isi folder kegiatan (foto/, ekspor/) ke lokasi baru. Melempar OSError bila gagal."""
+    lama, baru = Path(lama), Path(baru)
+    if lama.resolve() == baru.resolve() or not lama.is_dir():
+        return
+    baru.mkdir(parents=True, exist_ok=True)
+    for sub in ("foto", "ekspor"):
+        if (lama / sub).exists():
+            if (baru / sub).exists():
+                shutil.rmtree(baru / sub)
+            shutil.move(str(lama / sub), str(baru / sub))
+    _bersihkan_folder_kosong(lama)
+
+
+def rapikan_folder_lama():
+    """Migrasi sekali jalan: folder versi lama instance/data/liputan/<id>/ dipindah ke susunan per bulan.
+    Hanya subfolder foto/ & ekspor/ yang dipindah (aman walau nomor id sama dengan nama folder tahun)."""
+    for baris in ambil_db().execute("SELECT id, tanggal FROM liputan").fetchall():
+        lama = folder_data() / str(baris["id"])
+        if (lama / "foto").is_dir() or (lama / "ekspor").is_dir():
+            pindahkan_folder(lama, folder_untuk(baris["id"], baris["tanggal"]))
 
 
 def jalur_aman(liputan_id, sub, nama):
@@ -47,7 +107,8 @@ _PILIH = """
 
 
 def cari(teks="", tahun="", bulan="", status="", halaman=1):
-    """(daftar, total) arsip yang cocok. Pencarian di judul, tokoh, kegiatan, isi, dan nomor SPT."""
+    """(daftar, total, jumlah_per_bulan) arsip yang cocok, urut tanggal kegiatan terbaru.
+    Pencarian di judul, tokoh, kegiatan, isi, dan nomor SPT. jumlah_per_bulan: {"2026-10": 5, ...}."""
     syarat, param = [], []
     if teks:
         syarat.append("(l.judul LIKE ? OR l.tokoh LIKE ? OR l.kegiatan LIKE ? OR l.isi LIKE ? OR spt.nomor LIKE ?)")
@@ -66,7 +127,9 @@ def cari(teks="", tahun="", bulan="", status="", halaman=1):
     total = db.execute("SELECT COUNT(*) FROM liputan l LEFT JOIN spt ON spt.id = l.spt_id" + where, param).fetchone()[0]
     daftar = db.execute(_PILIH + where + " ORDER BY l.tanggal DESC, l.id DESC LIMIT ? OFFSET ?",
                         param + [PER_HALAMAN, (halaman - 1) * PER_HALAMAN]).fetchall()
-    return daftar, total
+    per_bulan = dict(db.execute("SELECT substr(l.tanggal, 1, 7), COUNT(*) FROM liputan l "
+                                "LEFT JOIN spt ON spt.id = l.spt_id" + where + " GROUP BY 1", param).fetchall())
+    return daftar, total, per_bulan
 
 
 def daftar_tahun():
@@ -88,6 +151,9 @@ def simpan(liputan_id, data, pengguna_id):
                          [pengguna_id] + nilai)
         liputan_id = cur.lastrowid
     else:
+        # Tanggal pindah bulan -> folder berkas ikut pindah. Bila gagal (berkas sedang dibuka),
+        # OSError dilempar SEBELUM database diubah sehingga data & berkas tetap sejalan.
+        pindahkan_folder(folder_liputan(liputan_id), folder_untuk(liputan_id, data["tanggal"]))
         db.execute(f"UPDATE liputan SET {', '.join(k + ' = ?' for k in kolom)}, "
                    "diubah = datetime('now', 'localtime') WHERE id = ?", nilai + [liputan_id])
     db.commit()
@@ -101,10 +167,11 @@ def tandai_diubah(liputan_id):
 
 
 def hapus(liputan):
-    """Hapus folder berkas (hanya instance/data/liputan/<id>) lalu rekamannya (foto ikut terhapus)."""
-    folder = folder_liputan(liputan["id"]).resolve()
-    if folder.parent == folder_data().resolve() and folder.is_dir():
+    """Hapus folder berkas (hanya instance/data/liputan/<tahun>/<bulan>/<id>) lalu rekamannya."""
+    folder = folder_liputan(liputan["id"])
+    if _folder_kegiatan_sah(folder, liputan["id"]) and folder.is_dir():
         shutil.rmtree(folder)
+        _bersihkan_folder_kosong(folder.parent)
     db = ambil_db()
     db.execute("DELETE FROM liputan WHERE id = ?", (liputan["id"],))
     db.commit()

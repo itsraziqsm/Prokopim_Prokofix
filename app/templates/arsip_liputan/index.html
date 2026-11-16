@@ -44,44 +44,57 @@
 </form>
 
 {% if daftar %}
-<section class="panel overflow-hidden p-0!" aria-label="Daftar arsip liputan">
-  <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Tabel arsip liputan (geser untuk melihat semua kolom)">
-    <table class="w-full min-w-3xl border-collapse text-left text-sm">
-      <thead class="bg-permukaan-2 text-redup">
-        <tr>
-          <th scope="col" class="whitespace-nowrap px-4 py-3 font-semibold">Tanggal</th>
-          <th scope="col" class="px-4 py-3 font-semibold">Kegiatan</th>
-          <th scope="col" class="px-4 py-3 font-semibold">Judul</th>
-          <th scope="col" class="px-4 py-3 font-semibold">SPT</th>
-          <th scope="col" class="px-4 py-3 font-semibold">Foto</th>
-          <th scope="col" class="px-4 py-3 font-semibold">Status</th>
-          <th scope="col" class="whitespace-nowrap px-4 py-3 font-semibold">Diubah</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-garis">
-        {% for l in daftar %}
-        <tr class="align-top">
-          <td class="whitespace-nowrap px-4 py-3">{{ l.tanggal|tanggal_id }}</td>
-          <td class="px-4 py-3">{{ l.tokoh }}{% if l.tokoh and l.kegiatan %} – {% endif %}{{ l.kegiatan }}</td>
-          <td class="px-4 py-3"><a href="{{ url_for('arsip_liputan.detail', liputan_id=l.id) }}" class="font-medium">{{ l.judul }}</a></td>
-          <td class="px-4 py-3 wrap-break-word">{{ (l.nomor_spt|jalur) if l.nomor_spt else "–" }}</td>
-          <td class="px-4 py-3">{{ l.jumlah_foto }}</td>
-          <td class="px-4 py-3">{% if l.status == "draf" %}<span class="lencana lencana-pengembangan">Draf</span>{% else %}Final{% endif %}</td>
-          <td class="whitespace-nowrap px-4 py-3 text-redup">{{ l.diubah|waktu_singkat }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% if jumlah_halaman > 1 %}
-  {% set filter = {"q": q, "tahun": tahun, "bulan": bulan, "status": status_pilih} %}
-  <nav aria-label="Halaman arsip" class="flex items-center justify-between gap-3 border-t border-garis px-4 py-3 text-sm">
-    {% if halaman > 1 %}<a class="tombol tombol-sekunder" href="{{ url_for('arsip_liputan.index', hal=halaman - 1, **filter) }}">Sebelumnya</a>{% else %}<span></span>{% endif %}
-    <span class="text-redup">Halaman {{ halaman }} dari {{ jumlah_halaman }}</span>
-    {% if halaman < jumlah_halaman %}<a class="tombol tombol-sekunder" href="{{ url_for('arsip_liputan.index', hal=halaman + 1, **filter) }}">Berikutnya</a>{% else %}<span></span>{% endif %}
-  </nav>
-  {% endif %}
-</section>
+{# Arsip disusun per bulan kegiatan (terbaru di atas). Jumlah = semua kegiatan bulan itu yang cocok dengan saringan. #}
+<div class="grid grid-cols-1 gap-8">
+  {% for k in kelompok %}
+  <section aria-labelledby="bulan-{{ k.kunci }}">
+    <div class="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <h2 id="bulan-{{ k.kunci }}">{{ k.label }}</h2>
+      <p class="text-sm text-redup">{{ k.jumlah }} kegiatan</p>
+    </div>
+    <div class="panel overflow-hidden p-0!">
+      <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Kegiatan {{ k.label }} (geser untuk melihat semua kolom)">
+        <table class="w-full min-w-4xl table-fixed border-collapse text-left text-sm">
+          <colgroup><col class="w-32"><col class="w-40"><col><col class="w-40"><col class="w-14"><col class="w-20"><col class="w-28"></colgroup>
+          <thead class="bg-permukaan-2 text-redup">
+            <tr>
+              <th scope="col" class="px-4 py-3 font-semibold">Tanggal</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Kegiatan</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Judul</th>
+              <th scope="col" class="px-4 py-3 font-semibold">SPT</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Foto</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Status</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Diubah</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-garis">
+            {% for l in k.baris %}
+            <tr class="align-top">
+              <td class="px-4 py-3">{{ l.tanggal|tanggal_id }}</td>
+              <td class="px-4 py-3">{{ l.tokoh }}{% if l.tokoh and l.kegiatan %} – {% endif %}{{ l.kegiatan }}</td>
+              <td class="px-4 py-3"><a href="{{ url_for('arsip_liputan.detail', liputan_id=l.id) }}" class="font-medium">{{ l.judul }}</a></td>
+              <td class="px-4 py-3 wrap-break-word">{{ (l.nomor_spt|jalur) if l.nomor_spt else "–" }}</td>
+              <td class="px-4 py-3">{{ l.jumlah_foto }}</td>
+              <td class="px-4 py-3">{% if l.status == "draf" %}<span class="lencana lencana-pengembangan">Draf</span>{% else %}Final{% endif %}</td>
+              <td class="px-4 py-3 text-redup">{{ l.diubah|waktu_singkat }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+{% if jumlah_halaman > 1 %}
+{% set filter = {"q": q, "tahun": tahun, "bulan": bulan, "status": status_pilih} %}
+<nav aria-label="Halaman arsip" class="mt-6 flex items-center justify-between gap-3 text-sm">
+  {% if halaman > 1 %}<a class="tombol tombol-sekunder" href="{{ url_for('arsip_liputan.index', hal=halaman - 1, **filter) }}">Sebelumnya</a>{% else %}<span></span>{% endif %}
+  <span class="text-redup">Halaman {{ halaman }} dari {{ jumlah_halaman }}</span>
+  {% if halaman < jumlah_halaman %}<a class="tombol tombol-sekunder" href="{{ url_for('arsip_liputan.index', hal=halaman + 1, **filter) }}">Berikutnya</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endif %}
 {% elif q or tahun or bulan or status_pilih %}
 <p class="text-redup">Tidak ada kegiatan yang cocok dengan pencarian.</p>
 {% else %}

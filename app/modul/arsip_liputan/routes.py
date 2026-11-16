@@ -17,6 +17,13 @@ from .foto import UKURAN_MAKS, GalatFoto
 
 bp = Blueprint("arsip_liputan", __name__, url_prefix="/liputan")
 
+
+@bp.record_once
+def _rapikan_folder_lama(keadaan):
+    """Saat aplikasi dinyalakan: pindahkan folder berkas versi lama ke susunan per bulan kegiatan."""
+    with keadaan.app.app_context():
+        layanan.rapikan_folder_lama()
+
 ID_MODUL = "arsip_liputan"
 BATAS_UNGGAH_FOTO = 260 * 1024 * 1024   # satu kiriman unggah foto (dipasang di create_app)
 
@@ -115,9 +122,18 @@ def index():
     tahun = tahun if tahun.isdigit() else ""
     bulan = bulan if bulan.isdigit() and 1 <= int(bulan) <= 12 else ""
     halaman = max(request.args.get("hal", 1, type=int), 1)
-    daftar, total = layanan.cari(q, tahun, bulan, status, halaman)
+    daftar, total, per_bulan = layanan.cari(q, tahun, bulan, status, halaman)
+    # Kelompokkan baris halaman ini per bulan kegiatan (urutan sudah dari tanggal terbaru)
+    kelompok = []
+    for baris in daftar:
+        kunci = baris["tanggal"][:7]
+        if not kelompok or kelompok[-1]["kunci"] != kunci:
+            tahun_k, bulan_k = kunci.split("-") if len(kunci) == 7 else ("", "")
+            kelompok.append({"kunci": kunci, "jumlah": per_bulan.get(kunci, 0), "baris": [],
+                             "label": f"{BULAN[int(bulan_k) - 1]} {tahun_k}" if bulan_k.isdigit() else "Tanpa tanggal"})
+        kelompok[-1]["baris"].append(baris)
     return render_template(
-        "arsip_liputan/index.html", daftar=daftar, total=total, halaman=halaman,
+        "arsip_liputan/index.html", kelompok=kelompok, daftar=daftar, total=total, halaman=halaman,
         jumlah_halaman=max(math.ceil(total / layanan.PER_HALAMAN), 1),
         q=q, tahun=tahun, bulan=bulan, status_pilih=status, daftar_tahun=layanan.daftar_tahun(),
         status=layanan.STATUS)
@@ -151,7 +167,13 @@ def _simpan_dari_form(liputan):
     if galat:
         flash("Perubahan belum disimpan. Periksa isian yang ditandai.", "galat")
         return None, _render_form(liputan, isian=data, galat=galat, status_kode=400)
-    layanan.simpan(liputan["id"], data, None)
+    try:
+        layanan.simpan(liputan["id"], data, None)
+    except OSError:
+        # Tanggal pindah bulan tetapi folder berkas tidak bisa dipindah (mis. Word sedang membuka berkasnya)
+        flash("Perubahan belum disimpan: folder berkas tidak dapat dipindah ke bulan yang baru. "
+              "Tutup berkas Word/foto kegiatan ini lalu coba lagi.", "galat")
+        return None, _render_form(liputan, isian=data, status_kode=409)
     log_proses.catat(ID_MODUL, "Simpan kegiatan", detail=data["judul"])
     return data, None
 

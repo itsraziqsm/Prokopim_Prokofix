@@ -5,6 +5,7 @@ import shutil
 import sqlite3
 import tempfile
 import unittest
+from unittest import mock
 import zipfile
 from pathlib import Path
 
@@ -312,6 +313,14 @@ class UjiWeb(unittest.TestCase):
             pembangun.close()
         return r
 
+    def folder_kegiatan(self, lid):
+        """Folder berkas kegiatan: instance/data/liputan/<tahun>/<bulan>/<id> (dari tanggal kegiatan)."""
+        tanggal = self.db().execute("SELECT tanggal FROM liputan WHERE id=?", (lid,)).fetchone()[0]
+        tahun, bulan = int(tanggal[:4]), int(tanggal[5:7])
+        nama_bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus",
+                      "September", "Oktober", "November", "Desember"][bulan - 1]
+        return self.folder / "instance" / "data" / "liputan" / str(tahun) / f"{bulan:02d}-{nama_bulan}" / str(lid)
+
     def ekspor(self, lid, siapkan_foto=True):
         if siapkan_foto and not self.db().execute("SELECT COUNT(*) FROM liputan_foto WHERE liputan_id=?", (lid,)).fetchone()[0]:
             self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
@@ -327,7 +336,7 @@ class UjiWeb(unittest.TestCase):
         html = self.klien.get(f"/liputan/{lid}").get_data(as_text=True)
         self.assertIn("Word belum dapat dibuat. Lengkapi dulu: foto dokumentasi, nama kegiatan.", html)
         self.assertIsNone(self.db().execute("SELECT berkas_ekspor FROM liputan").fetchone()[0])
-        self.assertFalse((self.folder / "instance" / "data" / "liputan" / str(lid) / "ekspor").exists())
+        self.assertFalse((self.folder_kegiatan(lid) / "ekspor").exists())
         # Isian yang dikirim bersama tombol tetap tersimpan walau Word ditolak
         data = {"csrf_token": self.token(f"/liputan/{lid}"), "tanggal": "2026-10-13", "tokoh": "Wali", "kegiatan": "Rapat",
                 "judul": "Judul Baru", "isi": "Isi", "foto_per_lembar": "2", "status": "draf", "spt_id": ""}
@@ -388,7 +397,7 @@ class UjiWeb(unittest.TestCase):
         self.assertEqual(urut, [ids[1], ids[0]])
         self.assertEqual(self.db().execute("SELECT keterangan, sumber FROM liputan_foto WHERE id=?", (ids[0],)).fetchone(), ("Ket A", "IG"))
         nama = self.db().execute("SELECT nama_berkas FROM liputan_foto WHERE id=?", (ids[0],)).fetchone()[0]
-        berkas = self.folder / "instance" / "data" / "liputan" / str(lid) / "foto" / nama
+        berkas = self.folder_kegiatan(lid) / "foto" / nama
         self.assertTrue(berkas.exists())
         self.klien.post(f"/liputan/{lid}/foto/{ids[0]}/hapus", data={"csrf_token": tok})
         self.assertFalse(berkas.exists())
@@ -459,11 +468,12 @@ class UjiWeb(unittest.TestCase):
         _, lid = self.buat()
         self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
         self.ekspor(lid)
-        folder = self.folder / "instance" / "data" / "liputan" / str(lid)
+        folder = self.folder_kegiatan(lid)
         self.assertTrue((folder / "ekspor").is_dir() and (folder / "foto").is_dir())
         r = self.klien.post(f"/liputan/{lid}/hapus", data={"csrf_token": self.token(f"/liputan/{lid}")})
         self.assertTrue(r.location.endswith("/liputan"))
         self.assertFalse(folder.exists())
+        self.assertFalse(folder.parent.exists(), "folder bulan yang kosong ikut dibersihkan")
         self.assertEqual(self.db().execute("SELECT COUNT(*) FROM liputan_foto").fetchone()[0], 0)
         self.assertEqual(self.klien.get(f"/liputan/{lid}").status_code, 404)
 
@@ -492,6 +502,68 @@ class UjiWeb(unittest.TestCase):
             self.assertIn(teks, panel)
         self.assertRegex(panel, r">5</span> dari 5 wajib")   # foto ada (keterangan hanya pelengkap)
         self.assertRegex(panel, r'data-kelengkapan="word"\s+data-lengkap="1"')
+
+    # ---------- Susunan per bulan kegiatan ----------
+    def test_berkas_disimpan_per_bulan_kegiatan(self):
+        _, lid = self.buat(tanggal="2026-10-13")
+        self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
+        self.ekspor(lid)
+        folder = self.folder / "instance" / "data" / "liputan" / "2026" / "10-Oktober" / str(lid)
+        self.assertTrue((folder / "foto").is_dir() and (folder / "ekspor").is_dir())
+        log = self.db().execute("SELECT lokasi FROM log_proses WHERE aksi='Ekspor Word'").fetchone()[0]
+        self.assertIn("10-Oktober", log)
+
+    def test_ganti_bulan_memindahkan_folder(self):
+        _, lid = self.buat(tanggal="2026-10-13")
+        self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
+        lama = self.folder_kegiatan(lid)
+        data = {"csrf_token": self.token(f"/liputan/{lid}"), "tanggal": "2026-11-02", "tokoh": "Wali",
+                "kegiatan": "Rapat", "judul": "Judul", "isi": "Isi", "foto_per_lembar": "2", "status": "draf", "spt_id": ""}
+        self.klien.post(f"/liputan/{lid}/simpan", data=data)
+        baru = self.folder_kegiatan(lid)
+        self.assertIn("11-November", str(baru))
+        self.assertTrue((baru / "foto").is_dir())
+        self.assertFalse(lama.exists())
+        self.assertFalse(lama.parent.exists(), "folder Oktober yang kosong dibersihkan")
+        fid = self.db().execute("SELECT id FROM liputan_foto").fetchone()[0]
+        r = self.klien.get(f"/liputan/{lid}/foto/{fid}")
+        self.addCleanup(r.close)
+        self.assertEqual(r.status_code, 200)
+
+    def test_gagal_pindah_folder_tanggal_tidak_berubah(self):
+        _, lid = self.buat(tanggal="2026-10-13")
+        self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
+        data = {"csrf_token": self.token(f"/liputan/{lid}"), "tanggal": "2026-12-01", "tokoh": "Wali",
+                "kegiatan": "Rapat", "judul": "Judul", "isi": "Isi", "foto_per_lembar": "2", "status": "draf", "spt_id": ""}
+        with mock.patch("app.modul.arsip_liputan.layanan.shutil.move", side_effect=PermissionError("terkunci")):
+            r = self.klien.post(f"/liputan/{lid}/simpan", data=data)
+        self.assertEqual(r.status_code, 409)
+        self.assertEqual(self.db().execute("SELECT tanggal FROM liputan").fetchone()[0], "2026-10-13")
+        self.assertTrue((self.folder_kegiatan(lid) / "foto").is_dir())
+
+    def test_folder_versi_lama_dipindah_saat_aplikasi_dinyalakan(self):
+        _, lid = self.buat(tanggal="2025-03-05")
+        self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
+        baru = self.folder_kegiatan(lid)
+        lama = self.folder / "instance" / "data" / "liputan" / str(lid)
+        shutil.move(str(baru), str(lama))                      # tiru susunan versi lama
+        create_app({"TESTING": True}, instance_path=str(self.folder / "instance"))
+        self.assertTrue((baru / "foto").is_dir())
+        self.assertFalse(lama.exists())
+
+    def test_arsip_dikelompokkan_per_bulan(self):
+        self.buat(judul="Rapat A", tanggal="2026-10-04")
+        self.buat(judul="Rapat B", tanggal="2026-10-20")
+        self.buat(judul="Upacara", tanggal="2026-11-10")
+        self.buat(judul="Zoom Lama", tanggal="2025-03-01")
+        html = self.klien.get("/liputan").get_data(as_text=True)
+        posisi = [html.index(t) for t in ("November 2026", "Oktober 2026", "Maret 2025")]
+        self.assertEqual(posisi, sorted(posisi), "bulan terbaru di atas")
+        self.assertRegex(html, r"Oktober 2026</h2>\s*<p[^>]*>2 kegiatan")
+        self.assertLess(html.index("Rapat B"), html.index("Rapat A"))   # dalam bulan: tanggal terbaru dulu
+        html = self.klien.get("/liputan?q=Upacara").get_data(as_text=True)
+        self.assertIn("November 2026", html)
+        self.assertNotIn("Oktober 2026", html)   # bulan tanpa hasil pencarian tidak ditampilkan
 
     def test_tanda_perlu_ekspor_ulang(self):
         _, lid = self.buat()

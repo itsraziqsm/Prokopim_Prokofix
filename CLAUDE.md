@@ -92,11 +92,15 @@ app/modul/arsip_liputan/       Fitur 2 — blueprint "arsip_liputan" di /liputan
                                  pelengkap (keterangan foto, SPT, sumber foto, status final, Word terbaru) untuk panel samping;
                                  wajib_belum() = PENGAMAN: rute /ekspor menolak membuat Word bila ada butir wajib kurang
                                  (isian tetap disimpan); tombol [data-butuh-wajib] nonaktif langsung via app.js
-  layanan.py                     DB, folder instance/data/liputan/<id>/{foto,ekspor}, cari(), jalur_aman()
+  layanan.py                     DB, folder PER BULAN KEGIATAN instance/data/liputan/<tahun>/<MM-Bulan>/<id>/{foto,ekspor}
+                                 (folder_liputan(id) dihitung dari tanggal di DB; tanggal pindah bulan → folder ikut
+                                 dipindah SEBELUM DB diubah, gagal → simpan ditolak; folder versi lama <id>/ dipindah
+                                 otomatis saat aplikasi dinyalakan; folder bulan/tahun kosong dibersihkan),
+                                 cari() → (daftar, total, jumlah_per_bulan), jalur_aman()
   routes.py                      /liputan (cari & filter), /liputan/baru, /liputan/<id> (+ /simpan, /ekspor,
                                  /unduh, /paket, /hapus), /liputan/<id>/foto (+ /<fid>, /simpan, /<fid>/simpan|
                                  geser|hapus), /liputan/spt/<spt_id>/<docx|pdf>
-app/templates/arsip_liputan/   index (tabel arsip), form (konten kiri: Data kegiatan, Isi berita, Foto; panel kanan
+app/templates/arsip_liputan/   index (arsip dikelompokkan per bulan kegiatan, terbaru di atas, satu tabel per bulan), form (konten kiri: Data kegiatan, Isi berita, Foto; panel kanan
                                #panel-laporan: Word/ekspor di atas + Kelengkapan ✓/✗; sticky setinggi layar)
 app/templat_docx/berita.docx   TEMPLAT berita (taruh berkas asli di sini; lihat README di folder itu)
 app/templates/base.html        kerangka: sidebar + konten; wadah notifikasi; skrip tema/sidebar di <head>
@@ -109,7 +113,7 @@ app/static/img/                gambar halaman masuk opsional: masuk.jpg/.png/.we
 instance/                      superapp.db + secret_key (tidak ikut git; backup = salin folder ini)
 instance/data/spt/<id_batch>/  berkas hasil Pemecah SPT
 instance/tmp/                  unggahan sementara selama pratinjau (<token>.docx + .json), dihapus >24 jam
-instance/data/liputan/<id>/    foto/ (nama acak, hanya versi olahan) dan ekspor/ (satu Word terbaru)
+instance/data/liputan/<tahun>/<MM-Bulan>/<id>/  foto/ (nama acak, versi olahan) dan ekspor/ (satu Word terbaru)
 tests/test_aplikasi.py         uji inti (create_app(instance_path=folder_sementara))
 tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .docx contoh (batch_contoh())
 tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membuat foto contoh (tujuh_foto())
@@ -173,6 +177,7 @@ tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membu
 - **Tabel lebar**: bungkus dengan `<div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="...">`.
   `relative` WAJIB: tanpa itu teks `sr-only` (absolute) di dalam tabel lolos dan melebarkan halaman di ponsel.
   Teks panjang berisi garis miring (nomor surat, jalur) pakai filter `|jalur` + `wrap-break-word`.
+  Tabel di dalam `grid`: pakai `grid-cols-1` (atau `min-w-0` pada item) agar lebar minimum tabel tidak melebarkan halaman.
 - **Perilaku JS siap pakai** (app.js): `<form data-kirim-sekali data-teks-proses="Memproses...">` (cegah kirim ganda),
   `data-pilih-semua` + `data-pilih-item` + `data-jumlah-dipilih` (centang semua), `data-pilih-berkas` +
   `data-nama-berkas` (input berkas bergaya tombol), `data-salin="teks"` (salin ke clipboard),
