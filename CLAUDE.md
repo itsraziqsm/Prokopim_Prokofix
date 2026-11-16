@@ -57,7 +57,10 @@ app/db.py                      koneksi SQLite per request + SKEMA (pengguna, log
 app/log_proses.py              catat(), per_halaman(), lokasi_terakhir(), buka_di_penjelajah()
 app/waktu.py                   sapaan, tanggal_indonesia, waktu_singkat
 app/modul/pemecah_spt/         Fitur 1 — blueprint "pemecah_spt" di /spt:
-  pemecah.py                     logika murni tanpa Flask: validasi .docx, deteksi judul, nomor, pecah_satu()
+  pemecah.py                     logika murni tanpa Flask: validasi .docx, deteksi judul, nomor, pecah_satu().
+                                 Rentang SPT dimulai di AWAL HALAMAN judulnya (awal_halaman: page break /
+                                 section break / pageBreakBefore, cadangan lastRenderedPageBreak; maks. KOP_MAKS
+                                 elemen di atas judul) agar kop yang diketik di badan dokumen ikut ke SPT-nya
   penamaan.py                    nama berkas dari nomor (sanitasi, duplikat → (1),(2) untuk SEMUA anggota)
   pdf.py                         konversi PDF (Word COM / LibreOffice), deteksi otomatis
   layanan.py                     DB & berkas; daftar_spt(), ambil_spt(id) untuk modul lain (Arsip Liputan)

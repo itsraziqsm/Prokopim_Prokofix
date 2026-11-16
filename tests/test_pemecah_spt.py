@@ -172,6 +172,87 @@ class UjiPdfProgres(DasarBerkas):
         self.assertEqual(laporan, sorted(laporan))
 
 
+class UjiKopDiBadan(DasarBerkas):
+    """Kop surat diketik di badan dokumen (di atas judul), bukan di Header Word."""
+
+    def teks_hasil(self, sumber, info):
+        tujuan = self.folder / f"hasil-{info.urutan}.docx"
+        pecah_satu(sumber, info, tujuan)
+        doc = Document(str(tujuan))
+        bagian = []
+        for el in doc.element.body.iterchildren():
+            if el.tag == f"{W}p":
+                bagian.append("".join(t.text or "" for t in el.iter(f"{W}t")))
+            elif el.tag == f"{W}tbl":
+                bagian.append(" ".join(t.text or "" for t in el.iter(f"{W}t")))
+        return [b for b in bagian if b.strip()]
+
+    def periksa(self, pemisah):
+        sumber = fx.batch_kop_di_badan(self.folder / f"kop-{pemisah}.docx", pemisah=pemisah)
+        hasil = analisis(sumber)
+        self.assertEqual(len(hasil.daftar), 3)
+        self.assertFalse(any("sebelum SPT pertama" in p for p in hasil.peringatan))
+        for info in hasil.daftar:
+            teks = self.teks_hasil(sumber, info)
+            self.assertIn(fx.KOP_BADAN[0], teks[0], f"{pemisah}: kop harus di ATAS SPT {info.urutan}")
+            self.assertEqual(sum(fx.KOP_BADAN[0] in t for t in teks), 1, f"{pemisah}: kop SPT lain ikut terbawa")
+            self.assertEqual(teks[-1], f"Penandatangan SPT {info.urutan}", f"{pemisah}: akhir SPT {info.urutan}")
+            self.assertEqual(info.nomor, f"0059/{info.urutan}/SPT-UL/2026")
+
+    def test_pemisah_page_break(self):
+        self.periksa("page_break")
+
+    def test_pemisah_page_break_di_akhir_paragraf(self):
+        self.periksa("akhir_paragraf")
+
+    def test_pemisah_page_break_before(self):
+        self.periksa("page_break_before")
+
+    def test_pemisah_section_break(self):
+        self.periksa("seksi")
+
+    def test_tanpa_pemisah_kop_tetap_di_spt_sebelumnya(self):
+        # Tanpa bukti pergantian halaman, perilaku lama dipertahankan (SPT mulai dari judul)
+        doc = fx.dokumen_f4()
+        for i in (1, 2):
+            fx.kop_di_badan(doc)
+            fx.judul(doc)
+            fx.isi(doc, f"X/{i}")
+        hasil = analisis(self.simpan(doc))
+        self.assertEqual(hasil.daftar[1].mulai, hasil.daftar[1].judul)
+        self.assertEqual(hasil.daftar[0].mulai, 0)   # SPT pertama: awal dokumen = awal halamannya
+
+    def test_lampiran_panjang_tidak_dipindah_ke_spt_berikutnya(self):
+        doc = fx.dokumen_f4()
+        fx.judul(doc)
+        fx.isi(doc, "L/1")
+        fx.ganti_halaman(doc)
+        for i in range(15):   # lampiran SPT 1 di halaman baru, lebih panjang dari kop
+            doc.add_paragraph(f"Lampiran baris {i}")
+        fx.judul(doc)          # SPT 2 menyambung tanpa pemisah halaman
+        fx.isi(doc, "L/2")
+        hasil = analisis(self.simpan(doc))
+        self.assertEqual(hasil.daftar[1].mulai, hasil.daftar[1].judul)
+        teks1 = self.teks_hasil(self.folder / "uji.docx", hasil.daftar[0])
+        self.assertIn("Lampiran baris 14", teks1)
+
+    def test_penanda_halaman_word_sebagai_cadangan(self):
+        # Dokumen tanpa page break eksplisit, tetapi disimpan Word dengan penanda halaman (lastRenderedPageBreak)
+        doc = fx.dokumen_f4()
+        for i in (1, 2):
+            awal = len(doc.paragraphs)
+            fx.kop_di_badan(doc)
+            if i == 2:
+                run = doc.paragraphs[awal].runs[0]._r
+                run.insert(0, run.makeelement(f"{W}lastRenderedPageBreak", {}))
+            fx.judul(doc)
+            fx.isi(doc, f"R/{i}")
+        sumber = self.simpan(doc)
+        info2 = analisis(sumber).daftar[1]
+        self.assertLess(info2.mulai, info2.judul)
+        self.assertIn(fx.KOP_BADAN[0], self.teks_hasil(sumber, info2)[0])
+
+
 class UjiPenamaan(unittest.TestCase):
     def test_sanitasi(self):
         self.assertEqual(bersihkan("800 / 12 \\ Prokopim/2026"), "800-12-Prokopim-2026")

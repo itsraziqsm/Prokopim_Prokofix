@@ -22,6 +22,7 @@ ENTRI_ZIP_MAKS = 5000                   # batas jumlah isi arsip .docx
 UKURAN_TERDEKOMPRESI_MAKS = 300 * 1024 * 1024   # cegah "zip bomb"
 ELEMEN_CARI_NOMOR = 12                  # nomor dicari di 12 potong teks pertama setelah judul
 PANJANG_CUPLIKAN = 180
+KOP_MAKS = 10                           # maks. paragraf/tabel berisi di atas judul yang dianggap kop
 
 TIPE_MAKRO = "application/vnd.ms-word.document.macroEnabled.main+xml"
 
@@ -39,13 +40,14 @@ class GalatBerkas(Exception):
 @dataclass
 class InfoSPT:
     urutan: int              # 1, 2, 3, ... sesuai kemunculan di batch
-    mulai: int               # indeks elemen body (inklusif)
+    mulai: int               # indeks elemen body (inklusif) = awal halaman tempat judul berada (termasuk kop)
     akhir: int               # indeks elemen body (eksklusif)
     nomor: str
     nomor_terbaca: bool
     cuplikan: str
     kembar: bool = False
     nama: str = ""           # nama berkas tanpa ekstensi (diisi penamaan.py)
+    judul: int | None = None # indeks paragraf judul (None pada data lama = sama dengan mulai)
 
 
 @dataclass
@@ -245,7 +247,68 @@ def _sectpr_paragraf(el):
     return ppr.find(q("sectPr")) if ppr is not None else None
 
 
-# ---------- 3. Analisis ----------
+# ---------- 3. Batas halaman ----------
+def _ada_isi_setelah(paragraf, penanda):
+    """True bila setelah penanda (page break) TERAKHIR di paragraf masih ada teks/gambar."""
+    urutan = list(paragraf.iter(q("br"), q("lastRenderedPageBreak"), q("t"),
+                                q("drawing"), q("pict"), q("object")))
+    posisi = [i for i, n in enumerate(urutan) if penanda(n)]
+    if not posisi:
+        return False
+    for n in urutan[posisi[-1] + 1:]:
+        if n.tag in (q("drawing"), q("pict"), q("object")) or (n.tag == q("t") and (n.text or "").strip()):
+            return True
+    return False
+
+
+def _page_break(n):
+    return n.tag == q("br") and n.get(q("type")) == "page"
+
+
+def _soft_break(n):
+    return n.tag == q("lastRenderedPageBreak")
+
+
+def awal_halaman(elemen, judul, batas_bawah, cadangan):
+    """Indeks elemen pertama di HALAMAN tempat judul berada, dicari mundur dari judul sampai batas_bawah.
+    Kop surat yang diketik di badan dokumen (bukan di Header) ada di atas judul pada halaman yang sama,
+    sehingga harus ikut ke SPT ini, bukan menempel di bawah SPT sebelumnya.
+    Urutan bukti: page break / section break / "page break before" (eksplisit), lalu penanda halaman
+    yang disimpan Word (lastRenderedPageBreak). Bila tidak ada bukti sama sekali, pakai `cadangan`."""
+    def cari(penanda_eksplisit):
+        for i in range(judul, batas_bawah - 1, -1):
+            el = elemen[i]
+            if el.tag != q("p"):
+                continue
+            if penanda_eksplisit:
+                ppr = el.find(q("pPr"))
+                if i < judul and ppr is not None:
+                    sect = ppr.find(q("sectPr"))
+                    jenis = sect.find(q("type")) if sect is not None else None
+                    if sect is not None and (jenis is None or jenis.get(q("val")) != "continuous"):
+                        return i + 1          # section break: halaman baru setelah paragraf ini
+                if ppr is not None and ppr.find(q("pageBreakBefore")) is not None \
+                        and _bernilai_benar(ppr.find(q("pageBreakBefore"))):
+                    return i                  # paragraf ini sendiri mulai di halaman baru
+                penanda = _page_break
+            else:
+                penanda = _soft_break
+            if any(penanda(n) for n in el.iter(q("br"), q("lastRenderedPageBreak"))):
+                return i if _ada_isi_setelah(el, penanda) else i + 1
+        return None
+
+    hasil = cari(True)
+    if hasil is None:
+        hasil = cari(False)
+    hasil = cadangan if hasil is None else min(hasil, judul)
+    # Pengaman: bagian di atas judul hanya dianggap kop bila pendek. Bila panjang, kemungkinan itu
+    # isi SPT sebelumnya (mis. lampiran di halaman baru), jadi SPT ini tetap dimulai dari judulnya.
+    if sum(1 for el in elemen[hasil:judul] if not adalah_kosong(el)) > KOP_MAKS:
+        return judul
+    return hasil
+
+
+# ---------- 4. Analisis ----------
 _POLA_NOMOR = re.compile(r"^nomor\b\s*[:：]?\s*(.*)$", re.IGNORECASE)
 
 
@@ -292,10 +355,18 @@ def analisis(jalur: Path):
             "Tidak ditemukan judul SPT. Judul harus berupa paragraf tersendiri bertuliskan "
             "\"SURAT PERINTAH TUGAS\" yang dicetak tebal dan bergaris bawah.")
 
+    # Awal tiap SPT = awal halaman judulnya (agar kop di badan dokumen ikut). SPT pertama: bila tidak ada
+    # bukti pergantian halaman, awal dokumen dianggap awal halamannya.
+    posisi_mulai = []
+    for k, judul in enumerate(posisi_judul):
+        batas_bawah = posisi_judul[k - 1] + 1 if k else 0
+        posisi_mulai.append(awal_halaman(elemen, judul, batas_bawah, cadangan=judul if k else 0))
+
     peringatan = []
-    sebelum = [el for el in elemen[:posisi_judul[0]] if not adalah_kosong(el)]
+    sebelum = [el for el in elemen[:posisi_mulai[0]] if not adalah_kosong(el)]
     if sebelum:
-        peringatan.append(f"Ada {len(sebelum)} paragraf/tabel sebelum SPT pertama. Bagian ini tidak ikut dipecah.")
+        peringatan.append(f"Ada {len(sebelum)} paragraf/tabel di halaman sebelum SPT pertama. "
+                          "Bagian ini tidak ikut dipecah.")
 
     semua_sectpr = [s for s in (_sectpr_paragraf(el) for el in elemen) if s is not None]
     semua_sectpr.append(doc.element.body.find(q("sectPr")))
@@ -308,16 +379,18 @@ def analisis(jalur: Path):
                           "bisa berbeda dari halaman berikutnya; periksa hasilnya.")
 
     daftar = []
-    batas = posisi_judul[1:] + [len(elemen)]
-    for urutan, (mulai, akhir) in enumerate(zip(posisi_judul, batas), start=1):
-        while akhir > mulai + 1 and adalah_kosong(elemen[akhir - 1]):
+    batas = posisi_mulai[1:] + [len(elemen)]
+    for urutan, (judul, mulai, akhir) in enumerate(zip(posisi_judul, posisi_mulai, batas), start=1):
+        while mulai < judul and adalah_kosong(elemen[mulai]):      # buang paragraf kosong di awal
+            mulai += 1
+        while akhir > judul + 1 and adalah_kosong(elemen[akhir - 1]):  # ... dan di akhir
             akhir -= 1
-        potongan = [t for t in _potongan_teks(elemen[mulai + 1:akhir]) if t][:ELEMEN_CARI_NOMOR]
+        potongan = [t for t in _potongan_teks(elemen[judul + 1:akhir]) if t][:ELEMEN_CARI_NOMOR]
         nomor, terpakai = cari_nomor(potongan)
         sisa = " ".join(t for i, t in enumerate(potongan) if i not in terpakai)
         cuplikan = sisa if len(sisa) <= PANJANG_CUPLIKAN else sisa[:PANJANG_CUPLIKAN].rstrip() + "…"
         daftar.append(InfoSPT(
-            urutan=urutan, mulai=mulai, akhir=akhir,
+            urutan=urutan, mulai=mulai, akhir=akhir, judul=judul,
             nomor=nomor or f"SPT_urut-{urutan}", nomor_terbaca=nomor is not None, cuplikan=cuplikan))
 
     # Penanda "Nomor kembar" (tanpa memperhatikan huruf besar/kecil)
@@ -334,7 +407,7 @@ def analisis(jalur: Path):
     return HasilAnalisis(daftar, peringatan)
 
 
-# ---------- 4. Pemecahan ----------
+# ---------- 5. Pemecahan ----------
 JENIS_REFERENSI = ("headerReference", "footerReference")
 
 

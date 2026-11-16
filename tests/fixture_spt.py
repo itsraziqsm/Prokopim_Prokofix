@@ -60,6 +60,7 @@ def batch_contoh(jalur):
     doc = dokumen_f4()
     gaya = gaya_judul(doc)
     doc.add_paragraph("Catatan pengantar sebelum SPT pertama.")
+    ganti_halaman(doc)   # catatan ada di halaman sendiri, jadi tidak termasuk SPT pertama
     data = [
         dict(nomor="800.1.11.1/101/Prokopim/2026", nama="Budi Santoso"),
         dict(nomor="800.1.11.1/102/Prokopim/2026", nama="Siti Aminah", pecah=True),
@@ -78,5 +79,46 @@ def batch_contoh(jalur):
             r = p.add_run("Berdasarkan Surat Perintah Tugas Nomor 5 Tahun 2026 yang lalu.")
             r.bold = r.underline = True
             judul(doc, underline=False)   # judul tanpa garis bawah: bukan awal SPT
+    doc.save(str(jalur))
+    return jalur
+
+
+KOP_BADAN = ["PEMERINTAH KOTA CONTOH", "SEKRETARIAT DAERAH", "BAGIAN PROTOKOL DAN KOMUNIKASI PIMPINAN"]
+
+
+def kop_di_badan(doc, sebagai_tabel=False):
+    """Kop surat yang diketik di BADAN dokumen (bukan di Header), tepat di atas judul."""
+    if sebagai_tabel:
+        sel = doc.add_table(rows=1, cols=2).rows[0].cells
+        sel[0].text = "[logo]"
+        sel[1].text = "\n".join(KOP_BADAN)
+    else:
+        for baris in KOP_BADAN:
+            doc.add_paragraph(baris).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph("")
+
+
+def batch_kop_di_badan(jalur, pemisah="page_break", jumlah=3):
+    """Beberapa SPT yang masing-masing diawali kop di badan dokumen.
+    pemisah: 'page_break' (Ctrl+Enter di paragraf sendiri), 'akhir_paragraf' (page break di akhir paragraf
+    terakhir SPT), 'page_break_before' (opsi paragraf kop), 'seksi' (section break halaman baru)."""
+    doc = Document()
+    seksi = doc.sections[0]
+    seksi.page_width, seksi.page_height = Mm(215), Mm(330)
+    for i in range(1, jumlah + 1):
+        if i > 1:
+            if pemisah == "page_break":
+                ganti_halaman(doc)
+            elif pemisah == "akhir_paragraf":
+                doc.paragraphs[-1].add_run().add_break(WD_BREAK.PAGE)
+            elif pemisah == "seksi":
+                doc.add_section()
+        awal = len(doc.paragraphs)
+        kop_di_badan(doc, sebagai_tabel=(i == 2 and pemisah != "page_break_before"))
+        if pemisah == "page_break_before" and i > 1:
+            doc.paragraphs[awal].paragraph_format.page_break_before = True
+        judul(doc)
+        isi(doc, f"0059/{i}/SPT-UL/2026", f"Pegawai {i}")
+        doc.add_paragraph(f"Penandatangan SPT {i}")
     doc.save(str(jalur))
     return jalur
