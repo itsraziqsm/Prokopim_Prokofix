@@ -15,7 +15,7 @@
 {%- endmacro %}
 
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Arsip Liputan", url_for('arsip_liputan.index')), (judul_halaman, None)]) }}</div>
+<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Arsip Liputan", url_for('arsip_liputan.index')), (judul_halaman, None)]) }}</div>
 <h1 class="mb-6">{{ judul_halaman }}</h1>
 
 {# ===== Tata letak: konten utama (kiri) + panel laporan (kanan, menempel saat digulir) =====

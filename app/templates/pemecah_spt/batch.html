@@ -4,7 +4,7 @@
 {% block judul %}{{ "Memproses" if batch.status == "proses" else "Hasil pemecahan" }} · Pemecah SPT · {{ nama_aplikasi }}{% endblock %}
 
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Pemecah SPT", url_for('pemecah_spt.index')), ("Hasil", None)]) }}</div>
+<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Pemecah SPT", url_for('pemecah_spt.index')), ("Hasil", None)]) }}</div>
 {% if batch.status == "proses" %}
 <h1 class="mb-1">Memproses</h1>
 <p class="mb-6 text-redup">

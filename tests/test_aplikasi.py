@@ -14,6 +14,7 @@ from contextlib import closing
 
 from app import create_app
 from app import log_proses
+from app.db import ambil_db
 
 SANDI = "rahasia123"
 
@@ -51,7 +52,7 @@ class DasarUji(unittest.TestCase):
 
 class UjiPenyiapan(DasarUji):
     def test_tanpa_akun_diarahkan_ke_siapkan(self):
-        for url in ("/", "/log", "/spt"):
+        for url in ("/", "/alat", "/log", "/spt"):
             self.assertIn("/siapkan", self.klien.get(url).location)
 
     def test_csrf_salah_ditolak(self):
@@ -126,7 +127,7 @@ class UjiHalaman(DasarUji):
         self.buat_akun()
 
     def test_halaman_utama_terbuka(self):
-        for url in ("/", "/log", "/pengaturan", "/akun", "/spt", "/liputan", "/liputan/baru"):
+        for url in ("/", "/alat", "/log", "/pengaturan", "/akun", "/spt", "/liputan", "/liputan/baru"):
             self.assertEqual(self.klien.get(url).status_code, 200, url)
 
     def test_modul_tidak_ada_404(self):
@@ -164,8 +165,32 @@ class UjiHalaman(DasarUji):
         self.assertLess(tombol, html.index('href="/pengaturan"'))               # tepat sebelum bagian bawah
 
     def test_lencana_disembunyikan_bila_semua_modul_siap(self):
-        html = self.klien.get("/").get_data(as_text=True)
+        html = self.klien.get("/alat").get_data(as_text=True)
         self.assertNotIn("lencana-pengembangan", html)
+        self.assertIn("Pemecah SPT", html)
+
+    def test_logo_ke_dashboard_dan_menu_alat(self):
+        html = self.klien.get("/").get_data(as_text=True)
+        self.assertIn('aria-label="Dashboard', html)
+        self.assertIn('href="/alat"', html)
+        self.assertNotIn('aria-current="page" class="sidebar-item flex min-h-11', html)  # menu Alat tidak aktif
+        html = self.klien.get("/liputan").get_data(as_text=True)
+        self.assertIn('href="/alat"', html)                                            # breadcrumb "Alat"
+
+    def test_dashboard_ringkasan_dari_database(self):
+        from datetime import date
+        hari_ini = date.today().isoformat()
+        with self.app.app_context():
+            db = ambil_db()
+            db.execute("INSERT INTO liputan (tanggal, judul, status) VALUES (?, 'Rapat Koordinasi Uji', 'draf')", (hari_ini,))
+            db.execute("INSERT INTO liputan (tanggal, judul, status) VALUES ('2000-01-05', 'Liputan Lama', 'final')")
+            db.commit()
+        with self.app.test_request_context():
+            log_proses.catat("sistem", "Proses ringkasan uji", pengguna_id=1)
+        html = self.klien.get("/").get_data(as_text=True)
+        self.assertIn("Rapat Koordinasi Uji", html)
+        self.assertIn("Proses ringkasan uji", html)
+        self.assertRegex(html, r'tabular-nums">1</span>\s*<span class="text-redup">Liputan ')   # hanya bulan ini
 
 
 class UjiFilter(DasarUji):

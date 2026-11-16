@@ -1,17 +1,74 @@
+{#- Dashboard: sapaan, angka ringkas, liputan yang terakhir diubah, dan aktivitas terakhir.
+    Dibuka lewat logo di sidebar. Semua angka diambil dari database (app/ringkasan.py). -#}
 {% extends "base.html" %}
-{% from "komponen/ui.html" import kartu_modul %}
+
+{% macro angka(nilai, label, url) -%}
+<a href="{{ url }}" class="flex flex-col gap-1 rounded-xl border border-garis bg-permukaan p-5 text-teks no-underline shadow-kartu transition hover:border-garis-kuat hover:shadow-angkat">
+  <span class="text-3xl font-semibold tabular-nums">{{ nilai }}</span>
+  <span class="text-redup">{{ label }}</span>
+</a>
+{%- endmacro %}
 
 {% block konten %}
 <h1 class="mb-1">{{ sapaan }}, {{ g.pengguna.nama_lengkap.split(' ')[0] }}</h1>
 <p class="mb-8 text-redup">{{ tanggal }}</p>
 
-<section aria-labelledby="judul-modul">
-  <h2 id="judul-modul" class="mb-4">Modul</h2>
-  <ul role="list" class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-    {% for m in modul_list %}
-    {# Lencana hanya muncul bila status modul berbeda-beda, dan hanya pada modul yang belum siap #}
-    <li class="grid">{{ kartu_modul(m, status_label, status_campur and m.status != "siap") }}</li>
-    {% endfor %}
+<section aria-label="Ringkasan" class="mb-8">
+  <ul role="list" class="grid gap-4 sm:grid-cols-3">
+    <li class="grid">{{ angka(data.liputan_bulan_ini, "Liputan " ~ nama_bulan, url_for('arsip_liputan.index')) }}</li>
+    <li class="grid">{{ angka(data.liputan_draf, "Liputan masih draf", url_for('arsip_liputan.index', status='draf')) }}</li>
+    <li class="grid">{{ angka(data.spt_bulan_ini, "SPT dipecah " ~ nama_bulan, url_for('pemecah_spt.index')) }}</li>
   </ul>
 </section>
+
+<div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+  <section aria-labelledby="judul-liputan" class="panel min-w-0">
+    <div class="mb-3 flex items-baseline justify-between gap-3">
+      <h2 id="judul-liputan">Liputan terakhir diubah</h2>
+      <a href="{{ url_for('arsip_liputan.index') }}" class="shrink-0 text-sm whitespace-nowrap">Lihat arsip</a>
+    </div>
+    {% if data.liputan_terbaru %}
+    <ul role="list" class="divide-y divide-garis">
+      {% for l in data.liputan_terbaru %}
+      <li class="flex items-start justify-between gap-3 py-3">
+        <div class="min-w-0">
+          <a href="{{ url_for('arsip_liputan.detail', liputan_id=l.id) }}" class="font-medium wrap-break-word">{{ l.judul }}</a>
+          <p class="text-sm text-redup">
+            {{ l.tanggal|tanggal_id }}{% if l.tokoh or l.kegiatan %} · {{ l.tokoh }}{% if l.tokoh and l.kegiatan %} – {% endif %}{{ l.kegiatan }}{% endif %}
+          </p>
+        </div>
+        {% if l.status == "draf" %}<span class="lencana lencana-pengembangan shrink-0">Draf</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-redup">Belum ada liputan. <a href="{{ url_for('arsip_liputan.baru') }}">Buat kegiatan baru</a></p>
+    {% endif %}
+  </section>
+
+  <section aria-labelledby="judul-aktivitas" class="panel min-w-0">
+    <div class="mb-3 flex items-baseline justify-between gap-3">
+      <h2 id="judul-aktivitas">Aktivitas terakhir</h2>
+      <a href="{{ url_for('utama.log') }}" class="shrink-0 text-sm whitespace-nowrap">Lihat log</a>
+    </div>
+    {% if data.log_terbaru %}
+    <ul role="list" class="divide-y divide-garis">
+      {% for log in data.log_terbaru %}
+      <li class="flex items-start justify-between gap-3 py-3">
+        <div class="min-w-0">
+          <p class="font-medium wrap-break-word">
+            {{ log.aksi }}
+            {% if log.status == "gagal" %}<span class="lencana lencana-gagal ml-1">Gagal</span>{% endif %}
+          </p>
+          <p class="text-sm text-redup">{{ nama_sumber(log.modul) }}</p>
+        </div>
+        <time class="shrink-0 text-sm text-redup" datetime="{{ log.waktu|replace(' ', 'T') }}" title="{{ log.waktu }}">{{ log.waktu|waktu_singkat }}</time>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-redup">Belum ada aktivitas.</p>
+    {% endif %}
+  </section>
+</div>
 {% endblock %}

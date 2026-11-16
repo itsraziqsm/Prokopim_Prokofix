@@ -10,7 +10,8 @@ from markupsafe import Markup, escape
 
 from . import log_proses
 from .modules_registry import STATUS_LABEL, cari_modul, semua_modul
-from .waktu import sapaan, tanggal_indonesia, waktu_singkat
+from .ringkasan import ringkasan
+from .waktu import BULAN, sapaan, tanggal_indonesia, waktu_singkat
 
 bp = Blueprint("utama", __name__)
 
@@ -37,17 +38,29 @@ def _filter_jalur(teks):
 
 @bp.route("/")
 def dashboard():
+    """Halaman awal: sapaan + ringkasan data (dibuka lewat logo di sidebar)."""
     sekarang = datetime.now()
-    daftar = semua_modul()
     return render_template(
         "dashboard.html",
+        # Server berjalan di komputer pengguna, jadi jam server = jam pengguna
+        sapaan=sapaan(sekarang.hour),
+        tanggal=tanggal_indonesia(sekarang),
+        nama_bulan=BULAN[sekarang.month - 1],
+        data=ringkasan(g.pengguna["id"], sekarang),
+        nama_sumber=nama_sumber,
+    )
+
+
+@bp.route("/alat")
+def alat():
+    """Daftar semua alat (modul) dalam bentuk kartu."""
+    daftar = semua_modul()
+    return render_template(
+        "alat.html",
         modul_list=daftar,
         status_label=STATUS_LABEL,
         # Lencana hanya berguna bila status modul berbeda-beda
         status_campur=len({m["status"] for m in daftar}) > 1,
-        # Server berjalan di komputer pengguna, jadi jam server = jam pengguna
-        sapaan=sapaan(sekarang.hour),
-        tanggal=tanggal_indonesia(sekarang),
     )
 
 

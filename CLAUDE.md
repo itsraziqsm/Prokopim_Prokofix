@@ -6,7 +6,7 @@ Konteks untuk asisten AI yang bekerja di repo ini. Baca seluruhnya sebelum mengu
 "Super App Prokopim": kumpulan tools kerja pribadi untuk pegawai instansi pemerintah (Bagian Prokopim),
 berjalan **lokal** di komputer pengguna (Windows), dibuka lewat browser di `http://127.0.0.1:<port>`.
 Rencana: aplikasi akan dipindah ke **server Ubuntu** — lihat "Catatan pindah ke server".
-Setiap fitur = satu **modul** yang terdaftar di registry dan tampil sebagai kartu di dashboard.
+Setiap fitur = satu **modul** yang terdaftar di registry dan tampil sebagai kartu di halaman Alat.
 
 ## Pengguna & gaya kerja
 - Berpengalaman membuat website, **belum pernah memakai Python** → beri komentar kode berbahasa Indonesia,
@@ -50,7 +50,9 @@ run.py                         titik masuk; pemilihan port
 package.json                   skrip build Tailwind
 app/__init__.py                create_app(): config, secret key di instance/, blueprint, halaman galat
 app/modules_registry.py        DAFTAR MODUL (sumber tunggal) + STATUS_LABEL
-app/routes.py                  blueprint "utama": /, /log, /log/<id>/buka, /modul/<id>, /pengaturan
+app/routes.py                  blueprint "utama": / (Dashboard), /alat (kartu modul), /log, /log/<id>/buka, /modul/<id>,
+                               /pengaturan
+app/ringkasan.py               data Dashboard: angka liputan bulan ini/draf, SPT bulan ini, 5 liputan & 5 log terakhir
 app/auth.py                    blueprint "auth": /siapkan, /masuk, /keluar, /akun, CLI reset-sandi, penjaga login
 app/keamanan.py                CSRF (csrf_field)
 app/db.py                      koneksi SQLite per request + SKEMA (pengguna, log_proses, spt_batch, spt,
@@ -109,7 +111,7 @@ app/templat_docx/berita.docx   TEMPLAT berita (taruh berkas asli di sini; lihat 
 app/templates/base.html        kerangka: sidebar + konten; wadah notifikasi; skrip tema/sidebar di <head>
 app/templates/komponen/        sidebar.html, ui.html (makro), ikon.html (SVG)
 app/templates/auth/            _kartu.html (tata letak 60/40), masuk, siapkan, akun
-app/templates/                 dashboard, log, modul_dev, pengaturan, galat
+app/templates/                 dashboard (ringkasan), alat (kartu modul), log, modul_dev, pengaturan, galat
 app/static/src/input.css       SUMBER CSS (edit ini)
 app/static/css/app.css         HASIL BUILD (jangan diedit manual)
 app/static/img/                logo.png (logo Prokopim polos, latar transparan; sidebar & halaman masuk), logo-teks.png
@@ -130,10 +132,10 @@ tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membu
 - **Menambah modul**: tambah satu dict di `MODUL` (`app/modules_registry.py`): id, nama, deskripsi,
   tujuan, ikon, status (`"siap"`/`"pengembangan"`), url (None → `/modul/<id>`), urutan, rencana.
   Modul "pengembangan" tetap bisa diklik → template tunggal `modul_dev.html`.
-  Lencana status di dashboard hanya muncul bila status modul berbeda-beda, dan hanya pada modul yang belum siap.
+  Lencana status di halaman Alat hanya muncul bila status modul berbeda-beda, dan hanya pada modul yang belum siap.
   Logika modul nyata: buat blueprint sendiri (mis. `app/modul/pemecah_spt/`), daftarkan di `create_app`,
   isi `url` di registry, ubah status jadi `"siap"`. Logika berat ditaruh di modul murni tanpa Flask agar mudah diuji.
-  Sidebar menandai "Dashboard" aktif untuk semua blueprint modul.
+  Sidebar menandai "Alat" aktif untuk semua blueprint modul; breadcrumb modul diawali ("Alat", /alat).
 - **Semua halaman wajib login** (penjaga `before_app_request` di `auth.py`); pengecualian di `ENDPOINT_PUBLIK`.
 - **Setiap `<form method="post">` wajib `{{ csrf_field() }}`.**
 - **Pencatatan proses**: modul memanggil `catat(modul_id, aksi, status="sukses"|"gagal", detail=..., lokasi=...)`.
@@ -198,7 +200,7 @@ tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membu
 - Rapi, tenang, profesional (kantor pemerintahan); satu warna aksen biru tua + netral; tanpa gradasi mencolok.
 - Kontras WCAG AA, fokus keyboard terlihat, elemen HTML semantik + ARIA seperlunya, hormati `prefers-reduced-motion`.
 - Responsif 1366×768 sampai monitor lebar; tetap rapi di tablet/ponsel (sidebar jadi ikon saja).
-- Navigasi **hanya sidebar**: atas = Dashboard (ikon jendela), Log; tombol "Lebarkan/Ciutkan menu" (ikon caret, `#tombol-sidebar`,
+- Navigasi **hanya sidebar**: logo di puncak = tautan ke Dashboard (disorot saat aktif); atas = Alat (ikon empat kotak), Log; tombol "Lebarkan/Ciutkan menu" (ikon caret, `#tombol-sidebar`,
   hanya md ke atas) tepat di atas garis pemisah; bawah = Pengaturan, Akun. Bawaan menu **tertutup** (ringkas)
   kecuali `localStorage["sidebar"] == "lebar"`.
 - Tanpa footer. Halaman auth: formulir 60% kiri, gambar 40% kanan, satu layar tanpa scroll.

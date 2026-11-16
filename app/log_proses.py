@@ -6,7 +6,7 @@ Cara pakai di modul mana pun (di dalam route, saat pengguna sudah masuk):
     catat("pemecah-spt", "Memecah 12 SPT", lokasi=r"D:\\Arsip\\SPT\\2026-11")
     catat("pemecah-spt", "Gagal membaca file", status="gagal", detail=str(galat))
 
-Data tampil otomatis di dashboard (Proses terakhir & Lokasi simpan terakhir).
+Data tampil di halaman Log dan di Dashboard (Aktivitas terakhir).
 """
 import os
 import subprocess

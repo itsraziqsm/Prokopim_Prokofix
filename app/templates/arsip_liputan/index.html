@@ -4,7 +4,7 @@
 {% block judul %}Arsip Liputan · {{ nama_aplikasi }}{% endblock %}
 
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Arsip Liputan", None)]) }}</div>
+<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Arsip Liputan", None)]) }}</div>
 <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
   <h1>Arsip Liputan</h1>
   <a href="{{ url_for('arsip_liputan.baru') }}" class="tombol tombol-primer">{{ ikon("plus", "size-4") }}<span>Kegiatan baru</span></a>

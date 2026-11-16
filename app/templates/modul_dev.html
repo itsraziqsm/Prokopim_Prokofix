@@ -6,7 +6,7 @@
 {% block judul %}{{ modul.nama }} · {{ nama_aplikasi }}{% endblock %}
 
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), (modul.nama, None)]) }}</div>
+<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), (modul.nama, None)]) }}</div>
 
 <article class="max-w-3xl">
   <div class="mb-3 flex flex-wrap items-center gap-3">

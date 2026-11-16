@@ -4,7 +4,7 @@
 {% block judul %}Pratinjau · Pemecah SPT · {{ nama_aplikasi }}{% endblock %}
 
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Pemecah SPT", url_for('pemecah_spt.index')), ("Pratinjau", None)]) }}</div>
+<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Pemecah SPT", url_for('pemecah_spt.index')), ("Pratinjau", None)]) }}</div>
 <h1 class="mb-1">Pratinjau</h1>
 <p class="mb-6 text-redup">
   <span class="wrap-anywhere">{{ meta.nama_asli }}</span> · {{ hasil.daftar|length }} SPT ditemukan · Keluaran {{ label_format(meta.format) }}
