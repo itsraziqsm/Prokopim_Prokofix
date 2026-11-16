@@ -259,13 +259,15 @@
     var formMenunggu = null, tombolPengirim = null;
     document.addEventListener("submit", function (e) {
       var form = e.target;
-      if (!form.matches || !form.matches("[data-konfirmasi]")) return;
+      // Atribut boleh di tombol pengirim (mis. tombol Hapus di dalam form besar) atau di form
+      var sumber = e.submitter && e.submitter.dataset.konfirmasi ? e.submitter : form;
+      if (!sumber.dataset || !sumber.dataset.konfirmasi) return;
       if (form.dataset.dikonfirmasi === "1") { delete form.dataset.dikonfirmasi; return; }
       e.preventDefault();
       var n = form.querySelectorAll("[data-pilih-item]:checked").length;
-      document.getElementById("dk-judul").textContent = form.dataset.konfirmasiJudul || "Konfirmasi";
-      document.getElementById("dk-pesan").textContent = form.dataset.konfirmasi.replace("{n}", n);
-      document.getElementById("dk-ya").textContent = form.dataset.konfirmasiTombol || "Ya";
+      document.getElementById("dk-judul").textContent = sumber.dataset.konfirmasiJudul || "Konfirmasi";
+      document.getElementById("dk-pesan").textContent = sumber.dataset.konfirmasi.replace("{n}", n);
+      document.getElementById("dk-ya").textContent = sumber.dataset.konfirmasiTombol || "Ya";
       formMenunggu = form;
       tombolPengirim = e.submitter || null;
       dialog.returnValue = "";
@@ -283,4 +285,112 @@
       tombolPengirim = null;
     });
   }
+
+  /* ---------- 10. Zona unggah foto: pilih, seret-lepas, atau tempel (Ctrl+V) ----------
+     Semua berkas dikumpulkan di satu DataTransfer lalu dipasang ke <input type=file>, sehingga
+     formulir dikirim seperti biasa. data-maks-berkas = batas byte per berkas, data-sisa = sisa kuota foto. */
+  var zona = document.querySelector("[data-zona-unggah]");
+  if (zona && window.DataTransfer) {
+    var masukan = zona.querySelector("input[type=file]");
+    var daftarPratinjau = document.querySelector("[data-pratinjau-unggah]");
+    var tombolUnggah = document.querySelector("[data-tombol-unggah]");
+    var maksByte = parseInt(zona.dataset.maksBerkas, 10);
+    var sisaKuota = parseInt(zona.dataset.sisa, 10);
+    var kumpulan = new DataTransfer();
+    var TIPE = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp"];
+
+    var gambarPratinjau = function () {
+      Array.prototype.forEach.call(daftarPratinjau.querySelectorAll("img"), function (img) { URL.revokeObjectURL(img.src); });
+      daftarPratinjau.textContent = "";
+      Array.prototype.forEach.call(kumpulan.files, function (berkas, i) {
+        var li = document.createElement("li");
+        li.className = "grid gap-1 text-xs";
+        var img = document.createElement("img");
+        img.src = URL.createObjectURL(berkas);
+        img.alt = "Pratinjau " + berkas.name;
+        img.className = "aspect-square w-full rounded-md border border-garis bg-permukaan-2 object-cover";
+        var nama = document.createElement("span");
+        nama.className = "truncate text-redup";
+        nama.textContent = berkas.name;
+        var buang = document.createElement("button");
+        buang.type = "button";
+        buang.className = "tombol tombol-teks min-h-8 px-2 text-xs";
+        buang.textContent = "Batalkan";
+        buang.setAttribute("aria-label", "Batalkan " + berkas.name);
+        buang.addEventListener("click", function () {
+          var baru = new DataTransfer();
+          Array.prototype.forEach.call(kumpulan.files, function (b, j) { if (j !== i) baru.items.add(b); });
+          kumpulan = baru;
+          masukan.files = kumpulan.files;
+          gambarPratinjau();
+        });
+        li.appendChild(img); li.appendChild(nama); li.appendChild(buang);
+        daftarPratinjau.appendChild(li);
+      });
+      if (tombolUnggah) tombolUnggah.disabled = kumpulan.files.length === 0;
+    };
+
+    var tambah = function (berkasBaru) {
+      Array.prototype.forEach.call(berkasBaru, function (berkas) {
+        if (TIPE.indexOf(berkas.type) === -1) {
+          window.notifikasi(berkas.name + ": bukan foto JPG, PNG, WebP, GIF, atau BMP.", "galat");
+        } else if (berkas.size > maksByte) {
+          window.notifikasi(berkas.name + ": lebih dari " + Math.round(maksByte / 1048576) + " MB.", "galat");
+        } else if (kumpulan.files.length >= sisaKuota) {
+          window.notifikasi("Batas foto per kegiatan tercapai; " + berkas.name + " tidak ditambahkan.", "galat");
+        } else {
+          kumpulan.items.add(berkas);
+        }
+      });
+      masukan.files = kumpulan.files;
+      gambarPratinjau();
+    };
+
+    masukan.addEventListener("change", function () {
+      var dipilih = Array.prototype.slice.call(masukan.files);
+      masukan.files = kumpulan.files;      // pilihan sebelumnya tetap ada
+      tambah(dipilih);
+    });
+    ["dragenter", "dragover"].forEach(function (jenis) {
+      zona.addEventListener(jenis, function (e) { e.preventDefault(); zona.dataset.seret = ""; });
+    });
+    ["dragleave", "drop"].forEach(function (jenis) {
+      zona.addEventListener(jenis, function () { delete zona.dataset.seret; });
+    });
+    zona.addEventListener("drop", function (e) {
+      e.preventDefault();
+      if (e.dataTransfer && e.dataTransfer.files.length) tambah(e.dataTransfer.files);
+    });
+    // Tempel gambar dari clipboard di mana pun pada halaman (teks biasa tetap ditempel seperti biasa)
+    document.addEventListener("paste", function (e) {
+      var item = e.clipboardData ? Array.prototype.slice.call(e.clipboardData.items) : [];
+      var gambar = item.filter(function (it) { return it.kind === "file" && it.type.indexOf("image/") === 0; });
+      if (!gambar.length) return;
+      e.preventDefault();
+      tambah(gambar.map(function (it, i) {
+        var b = it.getAsFile();
+        var akhiran = (b.type.split("/")[1] || "png").replace("jpeg", "jpg");
+        return new File([b], "tempelan-" + Date.now() + "-" + (i + 1) + "." + akhiran, { type: b.type });
+      }));
+      window.notifikasi(gambar.length + " gambar ditempel. Klik Unggah foto untuk menyimpan.", "info");
+    });
+    gambarPratinjau();
+  }
+
+  /* ---------- 11. Saring daftar: <input data-saring="#wadah">, item [data-saring-teks] ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll("[data-saring]"), function (masukanSaring) {
+    var wadah = document.querySelector(masukanSaring.dataset.saring);
+    if (!wadah) return;
+    var kosong = wadah.querySelector("[data-saring-kosong]");
+    masukanSaring.addEventListener("input", function () {
+      var kata = masukanSaring.value.trim().toLowerCase();
+      var tampil = 0;
+      Array.prototype.forEach.call(wadah.querySelectorAll("[data-saring-teks]"), function (el) {
+        var cocok = !kata || el.dataset.saringTeks.toLowerCase().indexOf(kata) !== -1;
+        el.hidden = !cocok;
+        tampil += cocok ? 1 : 0;
+      });
+      if (kosong) kosong.classList.toggle("hidden", tampil > 0 || !kata);
+    });
+  });
 })();

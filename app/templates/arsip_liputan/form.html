@@ -1,0 +1,210 @@
+{#- Satu halaman untuk kegiatan baru maupun yang sudah ada: Data kegiatan, Isi berita, Foto, Ekspor. -#}
+{% extends "base.html" %}
+{% from "komponen/ui.html" import breadcrumb, field, alert, lencana %}
+{% from "komponen/ikon.html" import ikon %}
+{% set judul_halaman = liputan.judul if liputan else "Kegiatan baru" %}
+{% block judul %}{{ judul_halaman }} · Arsip Liputan · {{ nama_aplikasi }}{% endblock %}
+
+{% macro pilihan(nama, nilai, label, terpilih) -%}
+<label class="flex cursor-pointer items-center gap-2.5 rounded-lg border border-garis bg-permukaan px-3 py-2 transition-colors
+              hover:border-garis-kuat has-checked:border-aksen has-checked:bg-aksen-lembut
+              has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-aksen">
+  <input type="radio" name="{{ nama }}" value="{{ nilai }}" class="size-4 accent-aksen focus-visible:outline-none" {% if terpilih %}checked{% endif %}>
+  <span class="font-medium">{{ label }}</span>
+</label>
+{%- endmacro %}
+
+{% block konten %}
+<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Arsip Liputan", url_for('arsip_liputan.index')), (judul_halaman, None)]) }}</div>
+<h1 class="mb-6 max-w-4xl">{{ judul_halaman }}</h1>
+
+{# ===== Ekspor & tindakan ===== #}
+{% if liputan %}
+<section id="bagian-ekspor" class="panel mb-8 grid gap-4" aria-labelledby="judul-ekspor">
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <h2 id="judul-ekspor" class="text-lg">Word</h2>
+    {% if liputan.berkas_ekspor and ada_ekspor %}
+    <p class="text-sm text-redup"><span class="wrap-anywhere">{{ liputan.berkas_ekspor }}</span> · {{ liputan.diekspor|waktu_singkat }}</p>
+    {% endif %}
+  </div>
+  {% if perlu_ekspor_ulang %}{{ alert("Ada perubahan setelah Word terakhir dibuat. Buat ulang agar Word memuat perubahan terbaru.", "peringatan") }}{% endif %}
+  <div class="flex flex-wrap items-center gap-3">
+    <button type="submit" form="form-kegiatan" formaction="{{ url_for('arsip_liputan.ekspor', liputan_id=liputan.id) }}"
+            class="tombol {{ 'tombol-primer' if not ada_ekspor or perlu_ekspor_ulang else 'tombol-sekunder' }}">{{ ikon("dokumen-pecah", "size-4") }}<span>{{ "Buat ulang Word" if ada_ekspor else "Buat Word" }}</span></button>
+    {% if ada_ekspor %}
+    <a href="{{ url_for('arsip_liputan.unduh', liputan_id=liputan.id) }}" class="tombol {{ 'tombol-sekunder' if perlu_ekspor_ulang else 'tombol-primer' }}">{{ ikon("unduh", "size-4") }}<span>Unduh Word</span></a>
+    <a href="{{ url_for('arsip_liputan.paket', liputan_id=liputan.id) }}" class="tombol tombol-sekunder">{{ ikon("unduh", "size-4") }}<span>Unduh paket ZIP{{ " (Word + SPT)" if liputan.spt_id else "" }}</span></a>
+    {% endif %}
+    <form method="post" action="{{ url_for('arsip_liputan.hapus', liputan_id=liputan.id) }}" class="sm:ml-auto"
+          data-konfirmasi="Hapus kegiatan ini beserta {{ foto|length }} foto dan berkas Word-nya? Tindakan ini tidak dapat dibatalkan."
+          data-konfirmasi-judul="Hapus kegiatan" data-konfirmasi-tombol="Hapus">
+      {{ csrf_field() }}
+      <button type="submit" class="tombol tombol-teks text-bahaya-teks">{{ ikon("hapus", "size-4") }}<span>Hapus kegiatan</span></button>
+    </form>
+  </div>
+  <p class="text-sm text-redup">Word berisi berita, lalu lembar foto di halaman baru (F4). Tombol "Buat Word" juga menyimpan isian di bawah.</p>
+</section>
+{% endif %}
+
+<form id="form-kegiatan" method="post" novalidate
+      action="{{ url_for('arsip_liputan.simpan', liputan_id=liputan.id) if liputan else url_for('arsip_liputan.buat') }}">
+  {{ csrf_field() }}
+
+  {# ===== 1. Data kegiatan ===== #}
+  <section class="panel mb-8 grid gap-5" aria-labelledby="judul-data">
+    <h2 id="judul-data">Data kegiatan</h2>
+    <div class="grid gap-5 sm:grid-cols-3">
+      {{ field("tanggal", "Tanggal", tipe="date", nilai=isian.tanggal or "", galat=galat.tanggal) }}
+      {{ field("tokoh", "Tokoh", nilai=isian.tokoh or "", wajib=false, petunjuk="Mis. Wali, Wakil Wali, Sekda.") }}
+      {{ field("kegiatan", "Kegiatan", nilai=isian.kegiatan or "", wajib=false, petunjuk="Mis. Zoom Meeting.") }}
+    </div>
+    {{ field("judul", "Judul berita", nilai=isian.judul or "", galat=galat.judul) }}
+
+    <div class="grid gap-5 sm:grid-cols-2">
+      <fieldset>
+        <legend class="label">Foto per lembar</legend>
+        <div class="flex flex-wrap gap-2">
+          {% for n in range(1, per_lembar_maks + 1) %}{{ pilihan("foto_per_lembar", n, n|string ~ " foto", (isian.foto_per_lembar|int) == n) }}{% endfor %}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend class="label">Status</legend>
+        <div class="flex flex-wrap gap-2">
+          {% for kode, label in status.items() %}{{ pilihan("status", kode, label, isian.status == kode) }}{% endfor %}
+        </div>
+      </fieldset>
+    </div>
+
+    <fieldset aria-describedby="p-spt{% if galat.spt_id %} g-spt{% endif %}">
+      <legend class="label">SPT terkait</legend>
+      <p id="p-spt" class="petunjuk mb-2 mt-0">Dari hasil Pemecah SPT. SPT tidak dimasukkan ke Word, tetapi ikut di paket ZIP.</p>
+      {% if galat.spt_id %}<p id="g-spt" class="galat-field mb-2">{{ galat.spt_id }}</p>{% endif %}
+      {% if daftar_spt %}
+      <label for="f-cari-spt" class="sr-only">Cari nomor SPT</label>
+      <input id="f-cari-spt" type="search" class="input mb-2" placeholder="Cari nomor SPT" data-saring="#daftar-spt">
+      <div id="daftar-spt" class="max-h-72 overflow-y-auto rounded-lg border border-garis">
+        <ul role="list" class="divide-y divide-garis">
+          <li class="px-3 py-2.5">
+            <label class="flex cursor-pointer items-center gap-3">
+              <input type="radio" name="spt_id" value="" class="size-4 accent-aksen" {% if not isian.spt_id %}checked{% endif %}>
+              <span class="text-redup">Tanpa SPT</span>
+            </label>
+          </li>
+          {% for s in daftar_spt %}
+          <li class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5" data-saring-teks="{{ s.nomor }}">
+            <label class="flex min-w-0 flex-1 basis-56 cursor-pointer items-start gap-3">
+              <input type="radio" name="spt_id" value="{{ s.id }}" class="mt-1 size-4 shrink-0 accent-aksen" {% if isian.spt_id == s.id %}checked{% endif %}>
+              <span class="min-w-0">
+                <span class="block font-medium wrap-break-word">{{ s.nomor|jalur }}</span>
+                <span class="block text-xs text-redup wrap-anywhere">{{ s.nama_berkas_asli }} · {{ s.dibuat_batch|waktu_singkat }}</span>
+              </span>
+            </label>
+            <span class="flex gap-1 pl-7 sm:pl-0">
+              {% if s.jalur_docx %}<a href="{{ url_for('arsip_liputan.unduh_spt', spt_id=s.id, jenis='docx') }}" class="tombol tombol-teks min-h-8 px-2 text-xs" aria-label="Unduh Word SPT {{ s.nomor }}">{{ ikon("unduh", "size-4") }}<span>Word</span></a>{% endif %}
+              {% if s.jalur_pdf %}<a href="{{ url_for('arsip_liputan.unduh_spt', spt_id=s.id, jenis='pdf') }}" class="tombol tombol-teks min-h-8 px-2 text-xs" aria-label="Unduh PDF SPT {{ s.nomor }}">{{ ikon("unduh", "size-4") }}<span>PDF</span></a>{% endif %}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+        <p class="hidden px-3 py-3 text-sm text-redup" data-saring-kosong>Tidak ada SPT dengan nomor itu.</p>
+      </div>
+      {% else %}
+      <p class="text-sm text-redup">Belum ada SPT. Pecah berkas SPT lewat modul <a href="{{ url_for('pemecah_spt.index') }}">Pemecah SPT</a>.</p>
+      {% endif %}
+    </fieldset>
+  </section>
+
+  {# ===== 2. Isi berita ===== #}
+  <section class="panel mb-4 grid gap-3" aria-labelledby="judul-isi">
+    <h2 id="judul-isi"><label for="f-isi">Isi berita</label></h2>
+    <textarea id="f-isi" name="isi" rows="14" class="input min-h-64 leading-relaxed" aria-describedby="p-isi">{{ isian.isi or "" }}</textarea>
+    <p id="p-isi" class="petunjuk mt-0">Tempel dari web/medsos atau ketik langsung. Setiap baris menjadi satu paragraf; spasi berlebih dirapikan saat Word dibuat.</p>
+  </section>
+
+  <div class="mb-10 flex flex-wrap gap-3">
+    <button type="submit" class="tombol tombol-primer">{{ "Simpan" if liputan else "Simpan kegiatan" }}</button>
+    {% if not liputan %}<a href="{{ url_for('arsip_liputan.index') }}" class="tombol tombol-teks">Batal</a>{% endif %}
+  </div>
+</form>
+
+{# ===== 3. Foto ===== #}
+<section id="bagian-foto" class="grid gap-4" aria-labelledby="judul-foto">
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <h2 id="judul-foto">Foto</h2>
+    {% if liputan %}<p class="text-sm text-redup">{{ foto|length }} dari {{ foto_maks }} foto</p>{% endif %}
+  </div>
+
+  {% if not liputan %}
+  <p class="text-redup">Foto dapat ditambahkan setelah kegiatan disimpan.</p>
+  {% else %}
+  {% if foto|length < foto_maks %}
+  <form method="post" action="{{ url_for('arsip_liputan.unggah_foto', liputan_id=liputan.id) }}" enctype="multipart/form-data"
+        class="panel grid gap-4" data-kirim-sekali data-teks-proses="Mengunggah...">
+    {{ csrf_field() }}
+    <div data-zona-unggah data-maks-berkas="{{ ukuran_maks_mb * 1024 * 1024 }}" data-sisa="{{ foto_maks - foto|length }}"
+         class="grid justify-items-center gap-3 rounded-xl border-2 border-dashed border-garis-kuat px-4 py-8 text-center transition-colors data-seret:border-aksen data-seret:bg-aksen-lembut">
+      <span class="text-redup">{{ ikon("gambar", "size-8") }}</span>
+      <input id="f-foto" name="foto" type="file" multiple class="peer sr-only" aria-describedby="p-foto"
+             accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,image/jpeg,image/png,image/webp,image/gif,image/bmp">
+      <label for="f-foto" class="tombol tombol-sekunder peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-aksen">
+        {{ ikon("folder", "size-4") }}<span>Pilih foto</span>
+      </label>
+      <p id="p-foto" class="text-sm text-redup">atau seret foto ke sini, atau tempel dengan Ctrl+V setelah menyalin gambar di browser.<br>
+        JPG, PNG, WebP, GIF, BMP · maks. {{ ukuran_maks_mb }} MB per foto. Foto di atas 800 KB dikompres otomatis.</p>
+    </div>
+    <ul role="list" class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6" data-pratinjau-unggah aria-live="polite"></ul>
+    <div><button type="submit" class="tombol tombol-primer" data-tombol-unggah disabled>{{ ikon("unggah", "size-4") }}<span>Unggah foto</span></button></div>
+  </form>
+  {% else %}
+  {{ alert("Batas " ~ foto_maks ~ " foto per kegiatan sudah tercapai.", "info") }}
+  {% endif %}
+
+  {% if foto %}
+  <form id="form-foto" method="post" action="{{ url_for('arsip_liputan.simpan_semua_foto', liputan_id=liputan.id) }}" class="grid gap-4">
+    {{ csrf_field() }}
+    <ol role="list" class="grid gap-4 lg:grid-cols-2">
+      {% for f in foto %}
+      <li id="foto-{{ f.id }}" class="panel grid gap-4 p-4! sm:grid-cols-5">
+        <div class="sm:col-span-2">
+          <a href="{{ url_for('arsip_liputan.tampil_foto', liputan_id=liputan.id, foto_id=f.id) }}" target="_blank" rel="noopener"
+             class="block overflow-hidden rounded-lg border border-garis bg-permukaan-2">
+            <img src="{{ url_for('arsip_liputan.tampil_foto', liputan_id=liputan.id, foto_id=f.id) }}" loading="lazy"
+                 alt="{{ f.keterangan or ('Foto ' ~ loop.index) }}" class="aspect-4/3 w-full object-contain">
+          </a>
+          <p class="mt-2 text-xs text-redup">
+            Foto {{ loop.index }} · Lembar {{ lembar_ke[f.id] }} · {{ f.lebar }}×{{ f.tinggi }} · {{ (f.ukuran / 1024)|round|int }} KB{{ " · dikompres" if f.diolah }}
+          </p>
+          <p class="text-xs text-redup wrap-anywhere">{{ f.nama_asli }}</p>
+        </div>
+        <div class="grid content-start gap-3 sm:col-span-3">
+          <div>
+            <label for="ket-{{ f.id }}" class="label">Keterangan</label>
+            <textarea id="ket-{{ f.id }}" name="keterangan_{{ f.id }}" rows="2" class="input">{{ f.keterangan }}</textarea>
+          </div>
+          <div>
+            <label for="sum-{{ f.id }}" class="label">Sumber</label>
+            <input id="sum-{{ f.id }}" name="sumber_{{ f.id }}" value="{{ f.sumber }}" class="input" placeholder="Mis. Instagram @akun">
+          </div>
+          <label class="inline-flex items-center gap-2.5 text-sm">
+            <input type="checkbox" name="lembar_baru_{{ f.id }}" value="1" class="size-4 accent-aksen" {% if f.lembar_baru %}checked{% endif %}>
+            Mulai lembar baru
+          </label>
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" name="arah" value="naik" formaction="{{ url_for('arsip_liputan.geser_foto', liputan_id=liputan.id, foto_id=f.id) }}"
+                    class="tombol tombol-sekunder min-h-9 px-3" {% if loop.first %}disabled{% endif %} aria-label="Naikkan foto {{ loop.index }}">{{ ikon("naik", "size-4") }}<span>Naik</span></button>
+            <button type="submit" name="arah" value="turun" formaction="{{ url_for('arsip_liputan.geser_foto', liputan_id=liputan.id, foto_id=f.id) }}"
+                    class="tombol tombol-sekunder min-h-9 px-3" {% if loop.last %}disabled{% endif %} aria-label="Turunkan foto {{ loop.index }}">{{ ikon("turun", "size-4") }}<span>Turun</span></button>
+            <button type="submit" formaction="{{ url_for('arsip_liputan.hapus_foto', liputan_id=liputan.id, foto_id=f.id) }}"
+                    class="tombol tombol-teks min-h-9 px-3 text-bahaya-teks sm:ml-auto" aria-label="Hapus foto {{ loop.index }}"
+                    data-konfirmasi="Hapus foto {{ loop.index }} dari kegiatan ini?" data-konfirmasi-judul="Hapus foto" data-konfirmasi-tombol="Hapus">{{ ikon("hapus", "size-4") }}<span>Hapus</span></button>
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+    <div><button type="submit" class="tombol tombol-primer">Simpan keterangan foto</button></div>
+  </form>
+  {% endif %}
+  {% endif %}
+</section>
+{% endblock %}

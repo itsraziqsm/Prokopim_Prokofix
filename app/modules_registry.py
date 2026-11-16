@@ -44,23 +44,22 @@ MODUL = [
         ],
     },
     {
-        "id": "arsip-liputan",
+        "id": "arsip_liputan",
         "nama": "Arsip Liputan",
-        "deskripsi": "Menyimpan liputan kegiatan resmi lalu mengekspor laporan Word ukuran F4.",
+        "deskripsi": "Arsip liputan kegiatan resmi: berita dan foto, diekspor ke Word F4 untuk dicetak.",
         "tujuan": (
-            "Menyimpan liputan berita kegiatan resmi secara rapi di komputer sendiri: "
-            "data kegiatan, foto dokumentasi, dan isi berita. Laporan dapat diekspor "
-            "menjadi dokumen Word ukuran F4 yang siap dicetak."
+            "Menyimpan data kegiatan, isi berita, dan foto dokumentasi dari medsos atau web, lalu membuat "
+            "satu berkas Word F4 berisi berita diikuti lembar foto bergaris potong."
         ),
         "ikon": "kamera",
-        "status": "pengembangan",
-        "url": None,
+        "status": "siap",
+        "url": "/liputan",
         "urutan": 2,
         "rencana": [
-            "Pencatatan data kegiatan (tanggal, tempat, pimpinan yang hadir)",
-            "Unggah foto dokumentasi beserta keterangannya",
-            "Penulisan dan penyuntingan isi berita",
-            "Ekspor laporan ke Word ukuran F4",
+            "Data kegiatan, isi berita, dan SPT terkait",
+            "Foto dengan keterangan & sumber; unggah, seret, atau tempel",
+            "Ekspor Word F4: berita lalu lembar foto untuk digunting",
+            "Paket ZIP berisi Word dan SPT",
         ],
     },
 ]

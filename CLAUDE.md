@@ -21,7 +21,7 @@ Setiap fitur = satu **modul** yang terdaftar di registry dan tampil sebagai kart
 
 ## Stack & batasan
 - Python 3.10+, Jinja2, SQLite (`sqlite3` bawaan). Dependensi Python yang **disetujui**: `flask`,
-  `python-docx` (membawa `lxml`). Tidak ada yang lain (lihat `requirements.txt`).
+  `python-docx` (membawa `lxml`), `Pillow`. Tidak ada yang lain (lihat `requirements.txt`).
 - PDF dibuat **tanpa paket Python**: Windows → Microsoft Word lewat PowerShell/COM; Linux/Windows tanpa Word →
   LibreOffice `soffice --headless`. Bila keduanya tidak ada, hasil tetap Word dan batch berstatus "sebagian".
 - **Tailwind CSS v4 lewat paket npm** (`@tailwindcss/cli` 4.3.2) — BUKAN CDN.
@@ -53,7 +53,8 @@ app/modules_registry.py        DAFTAR MODUL (sumber tunggal) + STATUS_LABEL
 app/routes.py                  blueprint "utama": /, /log, /log/<id>/buka, /modul/<id>, /pengaturan
 app/auth.py                    blueprint "auth": /siapkan, /masuk, /keluar, /akun, CLI reset-sandi, penjaga login
 app/keamanan.py                CSRF (csrf_field)
-app/db.py                      koneksi SQLite per request + SKEMA (pengguna, log_proses, spt_batch, spt)
+app/db.py                      koneksi SQLite per request + SKEMA (pengguna, log_proses, spt_batch, spt,
+                               liputan, liputan_foto); PRAGMA foreign_keys=ON di setiap koneksi
 app/log_proses.py              catat(), per_halaman(), lokasi_terakhir(), buka_di_penjelajah()
 app/waktu.py                   sapaan, tanggal_indonesia, waktu_singkat
 app/modul/pemecah_spt/         Fitur 1 — blueprint "pemecah_spt" di /spt:
@@ -72,6 +73,23 @@ app/modul/pemecah_spt/         Fitur 1 — blueprint "pemecah_spt" di /spt:
                                  /spt/batch/<id>/buka, /spt/unduh/<spt_id>/<docx|pdf>,
                                  POST /spt/hapus (satu/banyak batch + berkas hasilnya)
 app/templates/pemecah_spt/     index (unggah + riwayat), pratinjau, batch (hasil)
+app/modul/arsip_liputan/       Fitur 2 — blueprint "arsip_liputan" di /liputan (semua pengguna melihat seluruh arsip):
+  teks.py                        paragraf_berita() (normalisasi saat ekspor; DB tetap apa adanya), nama_ekspor()
+                                 "13 Oktober Wali - Zoom Meeting" (tokoh kosong: "13 Oktober - Zoom Meeting")
+  foto.py                        olah_foto(): validasi Pillow; DIOLAH hanya bila > 800 KB, format bukan
+                                 JPG/PNG/GIF/BMP, atau EXIF orientasi ≠ normal → JPEG q85 (turun s.d. 60),
+                                 sisi maks. 1920 (turun s.d. 1200) sampai ≤ 800 KB; selain itu byte tidak disentuh
+  ekspor.py                      Word dari app/templat_docx/berita.docx (isi & gambar contoh + relasinya dibuang,
+                                 sectPr F4 11907x18711 margin 1440 dipertahankan; templat_sementara() bila berkas
+                                 belum ada). BERITA (Title/Normal) lalu LEMBAR FOTO: tiap lembar = tabel 1 kolom,
+                                 kotak garis putus-putus (tinggi baris exact + cantSplit), jeda 0,6 cm, maks. 3 foto;
+                                 bagi_lembar() menghormati "Mulai lembar baru"; paragraf pemisah 1 pt
+  layanan.py                     DB, folder instance/data/liputan/<id>/{foto,ekspor}, cari(), jalur_aman()
+  routes.py                      /liputan (cari & filter), /liputan/baru, /liputan/<id> (+ /simpan, /ekspor,
+                                 /unduh, /paket, /hapus), /liputan/<id>/foto (+ /<fid>, /simpan, /<fid>/simpan|
+                                 geser|hapus), /liputan/spt/<spt_id>/<docx|pdf>
+app/templates/arsip_liputan/   index (tabel arsip), form (Data kegiatan, Isi berita, Foto, Word)
+app/templat_docx/berita.docx   TEMPLAT berita (taruh berkas asli di sini; lihat README di folder itu)
 app/templates/base.html        kerangka: sidebar + konten; wadah notifikasi; skrip tema/sidebar di <head>
 app/templates/komponen/        sidebar.html, ui.html (makro), ikon.html (SVG)
 app/templates/auth/            _kartu.html (tata letak 60/40), masuk, siapkan, akun
@@ -82,8 +100,10 @@ app/static/img/                gambar halaman masuk opsional: masuk.jpg/.png/.we
 instance/                      superapp.db + secret_key (tidak ikut git; backup = salin folder ini)
 instance/data/spt/<id_batch>/  berkas hasil Pemecah SPT
 instance/tmp/                  unggahan sementara selama pratinjau (<token>.docx + .json), dihapus >24 jam
+instance/data/liputan/<id>/    foto/ (nama acak, hanya versi olahan) dan ekspor/ (satu Word terbaru)
 tests/test_aplikasi.py         uji inti (create_app(instance_path=folder_sementara))
 tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .docx contoh (batch_contoh())
+tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membuat foto contoh (tujuh_foto())
 ```
 
 ## Pola & konvensi penting
@@ -110,7 +130,15 @@ tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .
   tombol `.tombol-bahaya` di dialog. Server: hanya milik pengguna, tolak yang masih "proses", hapus folder HANYA
   bila jalurnya persis `instance/data/<modul>/<id>` (lihat `layanan.folder_batch_aman`), hapus berkas dulu baru
   rekaman DB (bila berkas terkunci, rekaman dipertahankan), lalu `catat(..., "Hapus batch", ...)`.
-  Catatan: SPT yang dihapus juga hilang dari `daftar_spt()` (Arsip Liputan nanti harus siap menghadapi ini).
+  Catatan: SPT yang dihapus juga hilang dari `daftar_spt()`; `liputan.spt_id` otomatis jadi NULL (ON DELETE SET NULL).
+- **SPT lintas modul**: `layanan_spt.daftar_spt(semua_pengguna=True, cari=...)` dan `ambil_spt(id, semua_pengguna=True)`
+  untuk modul yang dilihat semua pengguna; default tetap hanya milik pengguna yang masuk.
+- **Foto pengguna**: tampilkan lewat rute yang wajib login (`send_file`), BUKAN folder static. Simpan dengan nama acak.
+  Unggah: pilih/seret/tempel (Ctrl+V) via `[data-zona-unggah]` (DataTransfer → input file). Batas ukuran khusus
+  per rute dipasang di `create_app` (`batas_khusus`) SEBELUM penjaga login, karena CSRF membaca formulir lebih dulu.
+- **Konfirmasi di tombol**: `data-konfirmasi` juga boleh di tombol pengirim (mis. Hapus di dalam form besar).
+- **Satu form, banyak aksi**: tombol dengan `formaction` (mis. Naik/Turun/Hapus foto, "Buat Word" dengan
+  `form="form-kegiatan"`) — rute aksi menyimpan isian form dulu agar ketikan tidak hilang.
 - **Proses lama + progres**: kerjakan di thread latar (`threading.Thread(daemon=True)` dengan
   `app.app_context()`, kirim `current_app._get_current_object()`), simpan progres di DB (kolom `status="proses"`,
   `progres`, `total_langkah`, `tahap`), sediakan endpoint JSON `{selesai, progres, total, persen, tahap, pesan, jenis}`,
@@ -140,7 +168,9 @@ tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .
   `data-pilih-semua` + `data-pilih-item` + `data-jumlah-dipilih` (centang semua), `data-pilih-berkas` +
   `data-nama-berkas` (input berkas bergaya tombol), `data-salin="teks"` (salin ke clipboard),
   `data-pantau-progres="url"` (dipasang makro `progres`), `data-konfirmasi` (dialog konfirmasi),
-  `data-perlu-pilihan` (tombol nonaktif bila belum ada `data-pilih-item` tercentang), notifikasi titipan lewat
+  `data-perlu-pilihan` (tombol nonaktif bila belum ada `data-pilih-item` tercentang),
+  `data-zona-unggah` + `data-pratinjau-unggah` + `data-tombol-unggah` (unggah foto), `data-saring="#wadah"` +
+  `data-saring-teks` + `data-saring-kosong` (saring daftar di sisi klien), notifikasi titipan lewat
   `sessionStorage["notifikasi-tertunda"]` agar tetap tampil setelah halaman dimuat ulang.
 
 ## Standar UI/UX

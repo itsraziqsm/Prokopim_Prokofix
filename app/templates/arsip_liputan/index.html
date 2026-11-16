@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "komponen/ui.html" import breadcrumb %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}Arsip Liputan · {{ nama_aplikasi }}{% endblock %}
+
+{% block konten %}
+<div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Arsip Liputan", None)]) }}</div>
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <h1>Arsip Liputan</h1>
+  <a href="{{ url_for('arsip_liputan.baru') }}" class="tombol tombol-primer">{{ ikon("plus", "size-4") }}<span>Kegiatan baru</span></a>
+</div>
+
+<form method="get" action="{{ url_for('arsip_liputan.index') }}" class="panel mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:items-end" role="search">
+  <div class="sm:col-span-2 lg:col-span-3">
+    <label for="f-q" class="label">Cari</label>
+    <input id="f-q" name="q" type="search" value="{{ q }}" class="input" placeholder="Judul, tokoh, kegiatan, isi, atau nomor SPT">
+  </div>
+  <div>
+    <label for="f-tahun" class="label">Tahun</label>
+    <select id="f-tahun" name="tahun" class="input">
+      <option value="">Semua</option>
+      {% for t in daftar_tahun %}<option value="{{ t }}" {% if t == tahun %}selected{% endif %}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="f-bulan" class="label">Bulan</label>
+    <select id="f-bulan" name="bulan" class="input">
+      <option value="">Semua</option>
+      {% for b in range(1, 13) %}<option value="{{ b }}" {% if b|string == bulan %}selected{% endif %}>{{ nama_bulan(b) }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="f-status" class="label">Status</label>
+    <select id="f-status" name="status" class="input">
+      <option value="">Semua</option>
+      {% for kode, label in status.items() %}<option value="{{ kode }}" {% if kode == status_pilih %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-6">
+    <button type="submit" class="tombol tombol-sekunder">{{ ikon("cari", "size-4") }}<span>Cari</span></button>
+    {% if q or tahun or bulan or status_pilih %}<a href="{{ url_for('arsip_liputan.index') }}" class="tombol tombol-teks">Atur ulang</a>{% endif %}
+    <p class="text-sm text-redup">{{ total }} kegiatan</p>
+  </div>
+</form>
+
+{% if daftar %}
+<section class="panel overflow-hidden p-0!" aria-label="Daftar arsip liputan">
+  <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Tabel arsip liputan (geser untuk melihat semua kolom)">
+    <table class="w-full min-w-3xl border-collapse text-left text-sm">
+      <thead class="bg-permukaan-2 text-redup">
+        <tr>
+          <th scope="col" class="whitespace-nowrap px-4 py-3 font-semibold">Tanggal</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Kegiatan</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Judul</th>
+          <th scope="col" class="px-4 py-3 font-semibold">SPT</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Foto</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Status</th>
+          <th scope="col" class="whitespace-nowrap px-4 py-3 font-semibold">Diubah</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-garis">
+        {% for l in daftar %}
+        <tr class="align-top">
+          <td class="whitespace-nowrap px-4 py-3">{{ l.tanggal|tanggal_id }}</td>
+          <td class="px-4 py-3">{{ l.tokoh }}{% if l.tokoh and l.kegiatan %} – {% endif %}{{ l.kegiatan }}</td>
+          <td class="px-4 py-3"><a href="{{ url_for('arsip_liputan.detail', liputan_id=l.id) }}" class="font-medium">{{ l.judul }}</a></td>
+          <td class="px-4 py-3 wrap-break-word">{{ (l.nomor_spt|jalur) if l.nomor_spt else "–" }}</td>
+          <td class="px-4 py-3">{{ l.jumlah_foto }}</td>
+          <td class="px-4 py-3">{% if l.status == "draf" %}<span class="lencana lencana-pengembangan">Draf</span>{% else %}Final{% endif %}</td>
+          <td class="whitespace-nowrap px-4 py-3 text-redup">{{ l.diubah|waktu_singkat }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if jumlah_halaman > 1 %}
+  {% set filter = {"q": q, "tahun": tahun, "bulan": bulan, "status": status_pilih} %}
+  <nav aria-label="Halaman arsip" class="flex items-center justify-between gap-3 border-t border-garis px-4 py-3 text-sm">
+    {% if halaman > 1 %}<a class="tombol tombol-sekunder" href="{{ url_for('arsip_liputan.index', hal=halaman - 1, **filter) }}">Sebelumnya</a>{% else %}<span></span>{% endif %}
+    <span class="text-redup">Halaman {{ halaman }} dari {{ jumlah_halaman }}</span>
+    {% if halaman < jumlah_halaman %}<a class="tombol tombol-sekunder" href="{{ url_for('arsip_liputan.index', hal=halaman + 1, **filter) }}">Berikutnya</a>{% else %}<span></span>{% endif %}
+  </nav>
+  {% endif %}
+</section>
+{% elif q or tahun or bulan or status_pilih %}
+<p class="text-redup">Tidak ada kegiatan yang cocok dengan pencarian.</p>
+{% else %}
+<p class="text-redup">Belum ada kegiatan di arsip.</p>
+{% endif %}
+{% endblock %}

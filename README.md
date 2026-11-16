@@ -1,9 +1,19 @@
 # Super App Kerja
 
 Kumpulan tools kerja pribadi yang berjalan **lokal** di komputer sendiri (tanpa internet).
-Python + Flask + python-docx + Jinja2, tampilan dengan **Tailwind CSS v4** (paket npm), JS biasa.
+Python + Flask + python-docx + Pillow + Jinja2, tampilan dengan **Tailwind CSS v4** (paket npm), JS biasa.
 
-> Status: **Fitur 1 Pemecah SPT siap**. Arsip Liputan masih dalam pengembangan.
+> Status: **Fitur 1 Pemecah SPT** dan **Fitur 2 Arsip Liputan** siap.
+
+## Arsip Liputan
+Menyimpan liputan kegiatan resmi (data kegiatan, isi berita, foto) lalu membuat satu Word F4:
+berita, kemudian lembar foto bergaris potong (1–3 foto per lembar) untuk dicetak dan digunting.
+1. **Arsip Liputan → Kegiatan baru**: isi tanggal, tokoh, kegiatan, judul, SPT terkait (opsional), isi berita.
+2. **Foto**: pilih, seret, atau tempel (Ctrl+V). Foto di atas 800 KB dikompres otomatis. Isi keterangan & sumber,
+   atur urutan dengan Naik/Turun, centang "Mulai lembar baru" bila perlu.
+3. **Buat Word** → **Unduh Word** (`13 Oktober Wali - Zoom Meeting.docx`) atau **Unduh paket ZIP** (Word + SPT).
+
+Templat Word: `app/templat_docx/berita.docx` (lihat README di folder itu).
 
 ## Pemecah SPT
 Memecah satu `.docx` berisi banyak Surat Perintah Tugas menjadi satu berkas per SPT (Word, PDF, atau keduanya).
@@ -101,6 +111,8 @@ app/
     css/app.css             # hasil build (jangan diedit)
     js/app.js               # tema, sidebar ringkas, notifikasi, tombol salin
 app/modul/pemecah_spt/      # Fitur 1: pemecah, penamaan, pdf, layanan, routes
+app/modul/arsip_liputan/    # Fitur 2: teks, foto, ekspor, layanan, routes
+app/templat_docx/           # templat Word berita (berita.docx)
 tests/                      # uji otomatis: python -m unittest -v
 ```
 

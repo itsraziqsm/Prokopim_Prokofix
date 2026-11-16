@@ -62,6 +62,41 @@ CREATE TABLE IF NOT EXISTS spt (
     dibuat     TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_spt_batch ON spt (batch_id, urutan);
+
+-- Arsip Liputan: satu baris = satu kegiatan resmi beserta beritanya
+CREATE TABLE IF NOT EXISTS liputan (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    pengguna_id      INTEGER REFERENCES pengguna(id) ON DELETE SET NULL,   -- pembuat
+    tanggal          TEXT NOT NULL,                     -- YYYY-MM-DD
+    tokoh            TEXT NOT NULL DEFAULT '',          -- mis. "Wali"
+    kegiatan         TEXT NOT NULL DEFAULT '',          -- mis. "Zoom Meeting"
+    judul            TEXT NOT NULL,
+    isi              TEXT NOT NULL DEFAULT '',          -- disimpan apa adanya
+    spt_id           INTEGER REFERENCES spt(id) ON DELETE SET NULL,
+    foto_per_lembar  INTEGER NOT NULL DEFAULT 2,        -- 1-3
+    status           TEXT NOT NULL DEFAULT 'draf',      -- draf | final
+    berkas_ekspor    TEXT,                              -- nama Word terakhir di folder ekspor/
+    diekspor         TEXT,
+    dibuat           TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    diubah           TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_liputan_tanggal ON liputan (tanggal DESC, id DESC);
+
+CREATE TABLE IF NOT EXISTS liputan_foto (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    liputan_id   INTEGER NOT NULL REFERENCES liputan(id) ON DELETE CASCADE,
+    urutan       INTEGER NOT NULL,
+    nama_berkas  TEXT NOT NULL,                 -- nama acak di folder foto/
+    nama_asli    TEXT NOT NULL DEFAULT '',      -- hanya untuk tampilan
+    keterangan   TEXT NOT NULL DEFAULT '',
+    sumber       TEXT NOT NULL DEFAULT '',
+    lembar_baru  INTEGER NOT NULL DEFAULT 0,
+    lebar        INTEGER NOT NULL,
+    tinggi       INTEGER NOT NULL,
+    ukuran       INTEGER NOT NULL,              -- byte (setelah diolah)
+    diolah       INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_liputan_foto ON liputan_foto (liputan_id, urutan);
 """
 
 

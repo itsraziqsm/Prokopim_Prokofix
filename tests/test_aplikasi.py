@@ -126,7 +126,7 @@ class UjiHalaman(DasarUji):
         self.buat_akun()
 
     def test_halaman_utama_terbuka(self):
-        for url in ("/", "/log", "/pengaturan", "/akun", "/spt", "/modul/arsip-liputan"):
+        for url in ("/", "/log", "/pengaturan", "/akun", "/spt", "/liputan", "/liputan/baru"):
             self.assertEqual(self.klien.get(url).status_code, 200, url)
 
     def test_modul_tidak_ada_404(self):
@@ -156,9 +156,9 @@ class UjiHalaman(DasarUji):
         with self.app.test_request_context(), self.assertRaises(ValueError):
             log_proses.catat("sistem", "x", status="proses", pengguna_id=1)
 
-    def test_lencana_hanya_pada_modul_belum_siap(self):
+    def test_lencana_disembunyikan_bila_semua_modul_siap(self):
         html = self.klien.get("/").get_data(as_text=True)
-        self.assertEqual(html.count("lencana-pengembangan"), 1)   # Arsip Liputan saja
+        self.assertNotIn("lencana-pengembangan", html)
 
 
 class UjiFilter(DasarUji):

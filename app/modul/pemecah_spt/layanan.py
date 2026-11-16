@@ -231,11 +231,18 @@ _PILIH_SPT = """
 """
 
 
-def daftar_spt(pengguna_id=None, batch_id=None, hanya_berhasil=True):
+def daftar_spt(pengguna_id=None, batch_id=None, hanya_berhasil=True, semua_pengguna=False, cari=""):
     """SPT hasil pecahan milik pengguna (default: pengguna yang sedang masuk), terbaru dulu.
-    Tiap item berisi kolom tabel spt + folder, jalur_docx, jalur_pdf (Path atau None)."""
-    pengguna_id = pengguna_id if pengguna_id is not None else g.pengguna["id"]
-    sql, param = _PILIH_SPT + " WHERE b.pengguna_id = ?", [pengguna_id]
+    semua_pengguna=True: SPT semua pengguna (dipakai Arsip Liputan yang dilihat semua pengguna).
+    cari: saring berdasarkan nomor SPT. Tiap item berisi kolom tabel spt + folder, jalur_docx, jalur_pdf."""
+    if semua_pengguna:
+        sql, param = _PILIH_SPT + " WHERE 1 = 1", []
+    else:
+        pengguna_id = pengguna_id if pengguna_id is not None else g.pengguna["id"]
+        sql, param = _PILIH_SPT + " WHERE b.pengguna_id = ?", [pengguna_id]
+    if cari:
+        sql += " AND spt.nomor LIKE ?"
+        param.append(f"%{cari}%")
     if batch_id is not None:
         sql += " AND spt.batch_id = ?"
         param.append(batch_id)
@@ -245,8 +252,11 @@ def daftar_spt(pengguna_id=None, batch_id=None, hanya_berhasil=True):
     return [_ke_dict(b) for b in ambil_db().execute(sql, param).fetchall()]
 
 
-def ambil_spt(spt_id, pengguna_id=None):
-    """Satu SPT milik pengguna beserta jalur berkasnya, atau None."""
+def ambil_spt(spt_id, pengguna_id=None, semua_pengguna=False):
+    """Satu SPT milik pengguna (atau milik siapa pun bila semua_pengguna=True) beserta jalur berkasnya."""
+    if semua_pengguna:
+        baris = ambil_db().execute(_PILIH_SPT + " WHERE spt.id = ?", (spt_id,)).fetchone()
+        return _ke_dict(baris) if baris else None
     pengguna_id = pengguna_id if pengguna_id is not None else g.pengguna["id"]
     baris = ambil_db().execute(_PILIH_SPT + " WHERE spt.id = ? AND b.pengguna_id = ?",
                                (spt_id, pengguna_id)).fetchone()

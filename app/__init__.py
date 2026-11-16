@@ -7,7 +7,7 @@ import os
 import secrets
 from datetime import timedelta
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from werkzeug.exceptions import HTTPException
 
 from .modules_registry import NAMA_APLIKASI
@@ -44,10 +44,21 @@ def create_app(konfigurasi=None, instance_path=None):
     db.siapkan_db(app)
 
     from . import auth, routes
-    from .modul import pemecah_spt
+    from .modul import arsip_liputan, pemecah_spt
+
+    # Batas unggahan khusus per rute. Harus dipasang SEBELUM penjaga login (yang membaca formulir untuk
+    # cek CSRF), karena batas ukuran berlaku saat formulir pertama kali dibaca.
+    batas_khusus = {"arsip_liputan.unggah_foto": arsip_liputan.routes.BATAS_UNGGAH_FOTO}
+
+    @app.before_request
+    def batas_unggahan():
+        if request.endpoint in batas_khusus:
+            request.max_content_length = batas_khusus[request.endpoint]
+
     app.register_blueprint(auth.bp)
     app.register_blueprint(routes.bp)
     app.register_blueprint(pemecah_spt.bp)
+    app.register_blueprint(arsip_liputan.bp)
 
     # Tersedia otomatis di SEMUA template Jinja
     from .keamanan import csrf_field
@@ -62,7 +73,8 @@ def create_app(konfigurasi=None, instance_path=None):
         judul = {404: "Halaman tidak ditemukan", 400: "Permintaan tidak valid",
                  405: "Metode tidak diizinkan", 413: "Berkas terlalu besar"}.get(e.code, e.name)
         pesan = {404: "Alamat yang Anda buka tidak tersedia, atau modul tersebut belum terdaftar.",
-                 413: "Ukuran berkas maksimal 25 MB."}.get(e.code, e.description)
+                 413: "Ukuran unggahan melebihi batas (berkas SPT maks. 25 MB, foto maks. 15 MB per berkas)."
+                 }.get(e.code, e.description)
         return render_template("galat.html", kode=e.code, judul=judul, pesan=pesan), e.code
 
     return app
