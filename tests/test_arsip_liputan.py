@@ -66,6 +66,13 @@ class UjiKelengkapan(unittest.TestCase):
         self.assertEqual(butir["keterangan"]["detail"], "1 dari 2 foto")
         self.assertTrue(butir["foto"]["lengkap"])
 
+    def test_tujuan_klik_ke_isian_foto_kosong_pertama(self):
+        foto = [{"id": 7, "keterangan": "a", "sumber": ""}, {"id": 9, "keterangan": "", "sumber": ""}]
+        butir = {b["kunci"]: b for b in daftar_kelengkapan({"tanggal": "2026-10-13"}, foto)}
+        self.assertEqual(butir["keterangan"]["target"], "ket-9")
+        self.assertEqual(butir["sumber"]["target"], "sum-7")
+        self.assertEqual(daftar_kelengkapan({})[3]["target"], "bagian-foto")
+
     def test_word_perlu_dibuat_ulang(self):
         hasil = daftar_kelengkapan({"tanggal": "2026-10-13"}, ada_ekspor=True, perlu_ekspor_ulang=True)
         word = next(b for b in hasil if b["kunci"] == "word")

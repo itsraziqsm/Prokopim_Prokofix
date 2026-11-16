@@ -158,6 +158,10 @@
 /* Saat tema berganti (app.js), matikan transisi agar warna berubah serentak */
 .ganti-tema *, .ganti-tema *::before, .ganti-tema *::after { transition: none !important; }
 
+/* Sorotan sesaat pada isian tujuan setelah butir Kelengkapan diklik (dipasang app.js) */
+[data-sorot] { outline: 3px solid var(--warna-aksen); outline-offset: 4px; border-radius: .5rem; }
+[data-sorot-pudar] { outline-color: transparent; transition: outline-color .6s ease; }
+
 /* Hormati pengguna yang meminta animasi minimal */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }

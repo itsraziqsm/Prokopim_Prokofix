@@ -185,7 +185,8 @@ tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membu
   `data-perlu-pilihan` (tombol nonaktif bila belum ada `data-pilih-item` tercentang),
   `data-zona-unggah` + `data-pratinjau-unggah` + `data-tombol-unggah` (unggah foto), `data-saring="#wadah"` +
   `data-saring-teks` + `data-saring-kosong` (saring daftar di sisi klien), `data-kelengkapan` + `data-cek=
-  "isi:ID | pilih:NAMA | nilai:NAMA=NILAI"` (centang/silang panel diperbarui langsung dari isian formulir), notifikasi titipan lewat
+  "isi:ID | pilih:NAMA | nilai:NAMA=NILAI"` (centang/silang panel diperbarui langsung dari isian formulir;
+  klik butir = gulir halus ke isian + fokus + sorotan sesaat `[data-sorot]`, tanpa animasi bila reduced-motion), notifikasi titipan lewat
   `sessionStorage["notifikasi-tertunda"]` agar tetap tampil setelah halaman dimuat ulang.
 
 ## Standar UI/UX

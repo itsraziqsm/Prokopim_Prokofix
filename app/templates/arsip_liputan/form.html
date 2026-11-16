@@ -114,7 +114,7 @@
       </fieldset>
     </div>
 
-    <fieldset aria-describedby="p-spt{% if galat.spt_id %} g-spt{% endif %}">
+    <fieldset id="pilihan-spt" aria-describedby="p-spt{% if galat.spt_id %} g-spt{% endif %}">
       <legend class="label">SPT terkait</legend>
       <p id="p-spt" class="petunjuk mb-2 mt-0">Dari hasil Pemecah SPT. SPT tidak dimasukkan ke Word, tetapi ikut di paket ZIP.</p>
       {% if galat.spt_id %}<p id="g-spt" class="galat-field mb-2">{{ galat.spt_id }}</p>{% endif %}

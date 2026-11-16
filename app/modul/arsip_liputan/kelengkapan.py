@@ -11,6 +11,13 @@ def daftar_kelengkapan(isian, foto=(), ada_ekspor=False, perlu_ekspor_ulang=Fals
     def ada(kunci):
         return bool(str(isian.get(kunci) or "").strip())
 
+    def kosong_pertama(kolom, awalan):
+        """Id isian foto pertama yang kolomnya masih kosong (tujuan klik di panel), atau bagian Foto."""
+        for f in foto:
+            if not (f[kolom] or "").strip() and "id" in f.keys():
+                return f"{awalan}-{f['id']}"
+        return "bagian-foto"
+
     jumlah_foto = len(foto)
     berketerangan = sum(1 for f in foto if (f["keterangan"] or "").strip())
     bersumber = sum(1 for f in foto if (f["sumber"] or "").strip())
@@ -32,12 +39,12 @@ def daftar_kelengkapan(isian, foto=(), ada_ekspor=False, perlu_ekspor_ulang=Fals
         {"kunci": "keterangan", "label": "Keterangan foto",
          "lengkap": jumlah_foto > 0 and berketerangan == jumlah_foto,
          "detail": f"{berketerangan} dari {jumlah_foto} foto" if jumlah_foto else "",
-         "wajib": False, "target": "bagian-foto", "cek": None},
+         "wajib": False, "target": kosong_pertama("keterangan", "ket"), "cek": None},
         {"kunci": "spt", "label": "SPT terkait", "lengkap": bool(isian.get("spt_id")), "detail": "",
-         "wajib": False, "target": "f-cari-spt", "cek": "pilih:spt_id"},
+         "wajib": False, "target": "pilihan-spt", "cek": "pilih:spt_id"},
         {"kunci": "sumber", "label": "Sumber foto", "lengkap": jumlah_foto > 0 and bersumber == jumlah_foto,
          "detail": f"{bersumber} dari {jumlah_foto} foto" if jumlah_foto else "",
-         "wajib": False, "target": "bagian-foto", "cek": None},
+         "wajib": False, "target": kosong_pertama("sumber", "sum"), "cek": None},
         {"kunci": "status", "label": "Status final", "lengkap": isian.get("status") == "final", "detail": "",
          "wajib": False, "target": "judul-data", "cek": "nilai:status=final"},
         {"kunci": "word", "label": "Word terbaru", "lengkap": ada_ekspor and not perlu_ekspor_ulang,

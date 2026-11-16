@@ -450,4 +450,29 @@
     document.addEventListener("input", perbaruiPanel);
     document.addEventListener("change", perbaruiPanel);
   }
+
+  /* ---------- 13. Klik butir Kelengkapan: gulir halus ke isiannya ----------
+     Bukan lompatan mendadak: gulir halus (kecuali pengguna memilih "kurangi animasi"),
+     isian difokus tanpa lompatan kedua, lalu disorot sesaat agar mudah ditemukan. */
+  var kurangiGerak = window.matchMedia("(prefers-reduced-motion: reduce)");
+  document.addEventListener("click", function (e) {
+    var tautan = e.target.closest("[data-kelengkapan] a[href^='#']");
+    if (!tautan) return;
+    var tujuan = document.getElementById(tautan.getAttribute("href").slice(1));
+    if (!tujuan) return;
+    e.preventDefault();
+    var halus = !kurangiGerak.matches;
+    tujuan.scrollIntoView({ behavior: halus ? "smooth" : "auto", block: "center" });
+    // Fokus isian (agar bisa langsung diketik) tanpa memicu lompatan gulir tambahan
+    var bisaFokus = tujuan.matches("input, textarea, select, button, a[href]") ? tujuan
+      : tujuan.querySelector("input:not([type=hidden]), textarea, select");
+    if (bisaFokus && tujuan.id !== "bagian-foto") bisaFokus.focus({ preventScroll: true });
+    // Sorot sesaat
+    var disorot = tujuan;
+    disorot.removeAttribute("data-sorot-pudar");
+    disorot.setAttribute("data-sorot", "");
+    setTimeout(function () { disorot.setAttribute("data-sorot-pudar", ""); }, halus ? 900 : 600);
+    setTimeout(function () { disorot.removeAttribute("data-sorot"); disorot.removeAttribute("data-sorot-pudar"); }, halus ? 1600 : 700);
+    if (history.replaceState) history.replaceState(null, "", "#" + tujuan.id);
+  });
 })();
