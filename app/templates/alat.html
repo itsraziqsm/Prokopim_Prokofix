@@ -1,3 +1,5 @@
+{#- Halaman Alat: kartu modul. Modul tanpa anak di baris pertama (tanpa judul); setiap modul induk
+    (mis. Data Podcast) menjadi judul kelompok dengan kartu fitur anaknya di bawahnya. -#}
 {% extends "base.html" %}
 {% from "komponen/ui.html" import kartu_modul %}
 
@@ -5,10 +7,15 @@
 
 {% block konten %}
 <h1 class="mb-6">Alat</h1>
-<ul role="list" class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-  {% for m in modul_list %}
-  {# Lencana hanya muncul bila status modul berbeda-beda, dan hanya pada modul yang belum siap #}
-  <li class="grid">{{ kartu_modul(m, status_label, status_campur and m.status != "siap") }}</li>
-  {% endfor %}
-</ul>
+{% for k in kelompok %}
+<section class="{{ 'mt-10' if not loop.first }} scroll-mt-6" {% if k.induk %}id="{{ k.induk.id|replace('_', '-') }}" aria-labelledby="kelompok-{{ k.induk.id }}"{% else %}aria-label="Alat umum"{% endif %}>
+  {% if k.induk %}<h2 id="kelompok-{{ k.induk.id }}" class="mb-4">{{ k.induk.nama }}</h2>{% endif %}
+  <ul role="list" class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+    {% for m in k.modul %}
+    {# Lencana hanya muncul bila status modul berbeda-beda, dan hanya pada modul yang belum siap #}
+    <li class="grid">{{ kartu_modul(m, status_label, status_campur and m.status != "siap") }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endfor %}
 {% endblock %}

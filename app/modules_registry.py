@@ -13,9 +13,9 @@ Keterangan kolom:
     url        : alamat tujuan bila status "siap"; None = pakai halaman /modul/<id>.
     urutan     : urutan pengerjaan (1 = dikerjakan pertama).
     rencana    : daftar rencana fitur (3-5 butir).
-    induk      : id modul induk, atau None untuk modul tingkat atas. Modul tingkat atas tampil sebagai
-                 kartu di halaman Alat; modul anak tampil sebagai kartu di halaman induknya
-                 (mis. "Materi Podcast" di dalam "Data Podcast"). Fitur anak baru cukup diberi induk yang sama.
+    induk      : id modul induk, atau None untuk modul tingkat atas. Modul yang PUNYA anak (mis. "Data Podcast")
+                 tidak tampil sebagai kartu, melainkan sebagai JUDUL KELOMPOK di halaman Alat; kartu anak-anaknya
+                 (mis. "Materi Podcast") tampil di bawah judul itu. Fitur anak baru cukup diberi induk yang sama.
 """
 
 NAMA_APLIKASI = "Super App Prokopim"
@@ -118,6 +118,19 @@ def modul_utama():
 def anak_dari(induk_id):
     """Fitur anak dari sebuah modul induk, urut sesuai 'urutan'."""
     return [m for m in semua_modul() if m.get("induk") == induk_id]
+
+
+def kelompok_alat():
+    """Susunan halaman Alat: [{"induk": None | modul induk, "modul": [kartu...]}, ...].
+    Kelompok pertama = modul tingkat atas tanpa anak (tanpa judul); lalu satu kelompok per modul induk."""
+    tanpa_anak, kelompok = [], []
+    for m in modul_utama():
+        anak = anak_dari(m["id"])
+        if anak:
+            kelompok.append({"induk": m, "modul": anak})
+        else:
+            tanpa_anak.append(m)
+    return ([{"induk": None, "modul": tanpa_anak}] if tanpa_anak else []) + kelompok
 
 
 def cari_modul(modul_id):

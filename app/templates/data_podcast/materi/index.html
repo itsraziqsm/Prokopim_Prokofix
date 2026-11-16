@@ -5,7 +5,7 @@
 {% block judul %}Materi Podcast · {{ nama_aplikasi }}{% endblock %}
 
 {% block konten %}
-<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Data Podcast", url_for('data_podcast.index')), ("Materi Podcast", None)]) }}</div>
+<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat', _anchor='data-podcast')), ("Materi Podcast", None)]) }}</div>
 <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
   <h1>Materi Podcast</h1>
   <a href="{{ url_for('materi_podcast.baru') }}" class="tombol tombol-primer">{{ ikon("plus", "size-4") }}<span>Materi baru</span></a>

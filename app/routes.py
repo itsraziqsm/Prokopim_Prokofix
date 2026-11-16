@@ -9,7 +9,7 @@ from flask import Blueprint, abort, flash, g, redirect, render_template, request
 from markupsafe import Markup, escape
 
 from . import log_proses
-from .modules_registry import STATUS_LABEL, cari_modul, modul_utama
+from .modules_registry import STATUS_LABEL, cari_modul, kelompok_alat
 from .ringkasan import ringkasan
 from .waktu import BULAN, sapaan, tanggal_indonesia, waktu_singkat
 
@@ -53,11 +53,12 @@ def dashboard():
 
 @bp.route("/alat")
 def alat():
-    """Daftar semua alat (modul) dalam bentuk kartu."""
-    daftar = modul_utama()   # modul anak tampil di halaman induknya
+    """Kartu semua alat; modul induk (mis. Data Podcast) menjadi judul kelompok di atas kartu anaknya."""
+    kelompok = kelompok_alat()
+    daftar = [m for k in kelompok for m in k["modul"]]
     return render_template(
         "alat.html",
-        modul_list=daftar,
+        kelompok=kelompok,
         status_label=STATUS_LABEL,
         # Lencana hanya berguna bila status modul berbeda-beda
         status_campur=len({m["status"] for m in daftar}) > 1,

@@ -217,17 +217,19 @@ class DasarWeb(unittest.TestCase):
 class UjiHalaman(DasarWeb):
     def test_semua_halaman_terbuka_dan_kartu_induk(self):
         mid = self.contoh()
-        for url in ("/podcast", "/podcast/materi", "/podcast/materi?q=Hijau", "/podcast/materi/baru",
+        for url in ("/podcast/materi", "/podcast/materi?q=Hijau", "/podcast/materi/baru",
                     f"/podcast/materi/{mid}", f"/podcast/materi/{mid}/instansi/1", f"/podcast/materi/{mid}/baca"):
             self.assertEqual(self.klien.get(url).status_code, 200, url)
         alat = self.klien.get("/alat").get_data(as_text=True)
-        self.assertIn('href="/podcast"', alat)
-        self.assertNotIn('href="/podcast/materi"', alat)          # anak tampil di halaman induk saja
-        self.assertIn("Pemecah SPT", alat)
-        self.assertIn("Arsip Liputan", alat)
-        induk = self.klien.get("/podcast").get_data(as_text=True)
-        self.assertIn('href="/podcast/materi"', induk)
-        self.assertNotIn("Fitur baru akan hadir di sini", induk)       # tanpa kartu pengisi
+        # Data Podcast = judul kelompok (bukan kartu); Materi Podcast langsung di bawahnya
+        self.assertIn('id="data-podcast"', alat)
+        self.assertIn('href="/podcast/materi"', alat)
+        self.assertNotIn('href="/podcast"', alat)
+        self.assertLess(alat.index("Arsip Liputan"), alat.index('id="data-podcast"'))
+        self.assertLess(alat.index('id="data-podcast"'), alat.index("Materi Podcast"))
+        r = self.klien.get("/podcast")
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(r.location.endswith("/alat#data-podcast"))
         # halaman di bawah daftar materi memakai satu tautan kembali, bukan breadcrumb panjang
         detail = self.klien.get(f"/podcast/materi/{mid}").get_data(as_text=True)
         self.assertNotIn('aria-label="Breadcrumb"', detail)
@@ -391,7 +393,7 @@ class UjiKeamanan(DasarWeb):
     def test_rute_wajib_login(self):
         mid = self.contoh()
         tamu = self.app.test_client()
-        for url in ("/podcast", "/podcast/materi", "/podcast/materi/baru", f"/podcast/materi/{mid}",
+        for url in ("/podcast/materi", "/podcast/materi/baru", f"/podcast/materi/{mid}",
                     f"/podcast/materi/{mid}/instansi/1", f"/podcast/materi/{mid}/baca", f"/podcast/materi/{mid}/unduh"):
             r = tamu.get(url)
             self.assertEqual(r.status_code, 302, url)

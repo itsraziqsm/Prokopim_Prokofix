@@ -1,6 +1,7 @@
-"""Modul induk Data Podcast (alamat /podcast).
+"""Modul induk Data Podcast.
 
-Induk hanya menampilkan kartu fitur anaknya (dari registry: modul dengan induk "data_podcast").
+Induk TIDAK punya halaman sendiri: di halaman Alat ia menjadi judul kelompok dengan kartu fitur anaknya
+(dari registry: modul dengan induk "data_podcast"). Alamat /podcast dialihkan ke bagian itu.
 Fitur anak = sub-paket sendiri dengan blueprint sendiri, mis. materi/ (Materi Podcast, alamat /podcast/materi).
 Menambah fitur anak baru: buat sub-paket baru di sini, daftarkan blueprint-nya di create_app, lalu tambahkan
 modul dengan "induk": "data_podcast" di app/modules_registry.py.
@@ -9,9 +10,8 @@ Perintah terminal (cli_group "podcast"):
     flask --app run podcast contoh     -> buat satu materi contoh fiktif untuk mencoba tampilan
 """
 import click
-from flask import Blueprint, render_template
+from flask import Blueprint, redirect, url_for
 
-from ...modules_registry import STATUS_LABEL, anak_dari, cari_modul
 from . import materi
 
 bp = Blueprint("data_podcast", __name__, url_prefix="/podcast", cli_group="podcast")
@@ -23,14 +23,8 @@ SEMUA_BLUEPRINT = [bp, materi.bp]
 
 @bp.route("")
 def index():
-    daftar = anak_dari(ID_MODUL)
-    return render_template(
-        "data_podcast/index.html",
-        induk=cari_modul(ID_MODUL),
-        anak=daftar,
-        status_label=STATUS_LABEL,
-        status_campur=len({m["status"] for m in daftar}) > 1,
-    )
+    """Tautan lama /podcast -> kelompok "Data Podcast" di halaman Alat."""
+    return redirect(url_for("utama.alat", _anchor="data-podcast"))
 
 
 @bp.cli.command("contoh")

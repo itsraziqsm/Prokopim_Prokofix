@@ -49,8 +49,9 @@ python -m unittest -v    # uji otomatis (wajib lulus sebelum commit)
 run.py                         titik masuk; pemilihan port
 package.json                   skrip build Tailwind
 app/__init__.py                create_app(): config, secret key di instance/, blueprint, halaman galat
-app/modules_registry.py        DAFTAR MODUL (sumber tunggal) + STATUS_LABEL; field `induk` (None = tingkat atas, tampil di
-                               halaman Alat; anak tampil di halaman induknya); modul_utama(), anak_dari(induk_id)
+app/modules_registry.py        DAFTAR MODUL (sumber tunggal) + STATUS_LABEL; field `induk` (None = tingkat atas). Modul yang
+                               punya anak = JUDUL KELOMPOK di halaman Alat (bukan kartu, tanpa halaman sendiri), kartu
+                               anaknya tampil di bawah judul itu; kelompok_alat(), modul_utama(), anak_dari(induk_id)
 app/routes.py                  blueprint "utama": / (Dashboard), /alat (kartu modul), /log, /log/<id>/buka, /modul/<id>,
                                /pengaturan
 app/ringkasan.py               data Dashboard: angka liputan bulan ini/draf, SPT bulan ini, 5 liputan & 5 log terakhir
@@ -103,8 +104,8 @@ app/modul/arsip_liputan/       Fitur 2 — blueprint "arsip_liputan" di /liputan
   routes.py                      /liputan (cari & filter), /liputan/baru, /liputan/<id> (+ /simpan, /ekspor,
                                  /unduh, /paket, /hapus), /liputan/<id>/foto (+ /<fid>, /simpan, /<fid>/simpan|
                                  geser|hapus), /liputan/spt/<spt_id>/<docx|pdf>
-app/modul/data_podcast/        Fitur 3 — INDUK "Data Podcast": blueprint "data_podcast" di /podcast (kartu fitur anak dari
-                               registry + kartu "Fitur baru akan hadir di sini"), cli_group "podcast"
+app/modul/data_podcast/        Fitur 3 — INDUK "Data Podcast" = judul kelompok di halaman Alat (#data-podcast); blueprint
+                               "data_podcast" hanya mengalihkan /podcast ke /alat#data-podcast, cli_group "podcast"
                                (flask --app run podcast contoh = materi contoh FIKTIF), SEMUA_BLUEPRINT didaftarkan di create_app.
                                Fitur anak baru = sub-paket baru di sini + modul registry dengan "induk": "data_podcast".
   materi/                        Fitur anak "Materi Podcast" — blueprint "materi_podcast" di /podcast/materi (semua pengguna
@@ -120,7 +121,7 @@ app/modul/data_podcast/        Fitur 3 — INDUK "Data Podcast": blueprint "data
     routes.py                      /podcast/materi (+ ?q=), /baru, /<id> (+ /simpan, /hapus, /duplikat, /ekspor, /unduh,
                                    /baca), /<id>/instansi (POST tambah), /<id>/instansi/<iid> (GET/POST simpan, /geser,
                                    /hapus), POST /pratinjau (fragmen HTML untuk pratinjau langsung)
-app/templates/data_podcast/    index (induk); materi/ index, baru, detail (tabel instansi + naik/turun, Word, judul, duplikat,
+app/templates/data_podcast/    materi/ index, baru, detail (tabel instansi + naik/turun, Word, judul, duplikat,
                                hapus), instansi (editor pertanyaan + pratinjau + "Tandai selesai"), baca (mode baca)
 app/templates/arsip_liputan/   index (arsip dikelompokkan per bulan kegiatan, terbaru di atas, satu tabel per bulan), form
                                (tanggal kegiatan baru kosong; SPT terkait: radio pakai_spt Tanpa/Dengan — daftar &

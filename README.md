@@ -7,7 +7,7 @@ Python + Flask + python-docx + Pillow + Jinja2, tampilan dengan **Tailwind CSS v
 
 ## Data Podcast › Materi Podcast
 Menyimpan pertanyaan untuk tiap instansi (OPD) beserta jawabannya per tema podcast.
-1. **Alat → Data Podcast → Materi Podcast → Materi baru**: isi judul (mis. "Rekap Jawaban Podcast ... 2026") dan keterangan ("Per 11 November").
+1. **Alat → (kelompok Data Podcast) Materi Podcast → Materi baru**: isi judul (mis. "Rekap Jawaban Podcast ... 2026") dan keterangan ("Per 11 November").
 2. **Tambah instansi**, lalu buka instansinya: tulis pertanyaan & jawaban (pratinjau tampil langsung), klik **Simpan**.
    Format jawaban: `1. ` daftar bernomor, `- ` poin, indentasi 2 spasi = bersarang, `**tebal**`, `*miring*`,
    baris `**judul**` = judul kecil, baris `| a | b |` = tabel (`|---|---|` menandai header).
