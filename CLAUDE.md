@@ -58,9 +58,11 @@ app/log_proses.py              catat(), per_halaman(), lokasi_terakhir(), buka_d
 app/waktu.py                   sapaan, tanggal_indonesia, waktu_singkat
 app/modul/pemecah_spt/         Fitur 1 — blueprint "pemecah_spt" di /spt:
   pemecah.py                     logika murni tanpa Flask: validasi .docx, deteksi judul, nomor, pecah_satu().
-                                 Rentang SPT dimulai di AWAL HALAMAN judulnya (awal_halaman: page break /
-                                 section break / pageBreakBefore, cadangan lastRenderedPageBreak; maks. KOP_MAKS
-                                 elemen di atas judul) agar kop yang diketik di badan dokumen ikut ke SPT-nya
+                                 Rentang SPT dimulai di AWAL HALAMAN judulnya agar kop yang diketik di badan
+                                 dokumen ikut ke SPT-nya (awal_halaman): 1) page break / section break /
+                                 pageBreakBefore (paragraf & baris pertama tabel), 2) kop yang isinya mirip kop
+                                 SPT pertama (kop diketik ulang, halaman didorong Enter; KEMIRIPAN_KOP_MIN),
+                                 3) lastRenderedPageBreak; maks. KOP_MAKS elemen berisi di atas judul
   penamaan.py                    nama berkas dari nomor (sanitasi, duplikat → (1),(2) untuk SEMUA anggota)
   pdf.py                         konversi PDF (Word COM / LibreOffice), deteksi otomatis
   layanan.py                     DB & berkas; daftar_spt(), ambil_spt(id) untuk modul lain (Arsip Liputan)

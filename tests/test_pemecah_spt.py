@@ -211,16 +211,60 @@ class UjiKopDiBadan(DasarBerkas):
     def test_pemisah_section_break(self):
         self.periksa("seksi")
 
-    def test_tanpa_pemisah_kop_tetap_di_spt_sebelumnya(self):
-        # Tanpa bukti pergantian halaman, perilaku lama dipertahankan (SPT mulai dari judul)
+    def test_tanpa_pemisah_kop_dikenali_dari_isinya(self):
+        # Tanpa page break sama sekali: kop SPT pertama jadi acuan untuk mengenali kop berikutnya
         doc = fx.dokumen_f4()
         for i in (1, 2):
             fx.kop_di_badan(doc)
             fx.judul(doc)
             fx.isi(doc, f"X/{i}")
+        sumber = self.simpan(doc)
+        hasil = analisis(sumber)
+        self.assertEqual(hasil.daftar[0].mulai, 0)   # SPT pertama: awal dokumen = awal halamannya
+        self.assertLess(hasil.daftar[1].mulai, hasil.daftar[1].judul)
+        for info in hasil.daftar:
+            teks = self.teks_hasil(sumber, info)
+            self.assertIn(fx.KOP_BADAN[0], teks[0])
+            self.assertEqual(sum(fx.KOP_BADAN[0] in t for t in teks), 1)
+
+    def test_tanpa_kop_dan_tanpa_pemisah_mulai_dari_judul(self):
+        doc = fx.dokumen_f4()
+        for i in (1, 2):
+            fx.judul(doc)
+            fx.isi(doc, f"Y/{i}")
         hasil = analisis(self.simpan(doc))
         self.assertEqual(hasil.daftar[1].mulai, hasil.daftar[1].judul)
-        self.assertEqual(hasil.daftar[0].mulai, 0)   # SPT pertama: awal dokumen = awal halamannya
+
+    def test_kop_tabel_diketik_ulang_dan_didorong_enter(self):
+        """Kasus dokumen pengguna: kop tabel berlogo + garis, diketik ulang, halaman didorong dengan Enter."""
+        sumber = fx.batch_kop_diketik_ulang(self.folder / "manual.docx")
+        hasil = analisis(sumber)
+        self.assertEqual(len(hasil.daftar), 3)
+        self.assertFalse(any("sebelum SPT pertama" in p for p in hasil.peringatan))
+        for info in hasil.daftar:
+            tujuan = self.folder / f"manual-{info.urutan}.docx"
+            pecah_satu(sumber, info, tujuan)
+            body = [el for el in Document(str(tujuan)).element.body.iterchildren() if el.tag != f"{W}sectPr"]
+            self.assertEqual(body[0].tag, f"{W}tbl", f"SPT {info.urutan} harus diawali tabel kop")
+            self.assertIn("PEMERINTAH KOTA MEDAN", "".join(t.text for t in body[0].iter(f"{W}t")))
+            self.assertIsNotNone(body[1].find(f".//{W}pBdr"), "garis bawah kop ikut")
+            teks_akhir = "".join(t.text or "" for t in body[-1].iter(f"{W}t"))
+            self.assertEqual(teks_akhir, f"Penandatangan SPT {info.urutan}", "tanpa kop/Enter sisa di bawah")
+            self.assertEqual(sum(1 for el in body if el.tag == f"{W}tbl"
+                                 and "PEMERINTAH" in "".join(t.text for t in el.iter(f"{W}t"))), 1)
+
+    def test_tabel_kop_dengan_penanda_halaman_word(self):
+        doc = fx.dokumen_f4()
+        fx.judul(doc)
+        fx.isi(doc, "Z/1")
+        sel = doc.add_table(rows=1, cols=1).rows[0].cells
+        sel[0].text = "KOP BERBEDA DARI SPT LAIN"
+        run = sel[0].paragraphs[0].runs[0]._r
+        run.insert(0, run.makeelement(f"{W}lastRenderedPageBreak", {}))
+        fx.judul(doc)
+        fx.isi(doc, "Z/2")
+        hasil = analisis(self.simpan(doc))
+        self.assertLess(hasil.daftar[1].mulai, hasil.daftar[1].judul)
 
     def test_lampiran_panjang_tidak_dipindah_ke_spt_berikutnya(self):
         doc = fx.dokumen_f4()

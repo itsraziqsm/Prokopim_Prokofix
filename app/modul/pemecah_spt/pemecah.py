@@ -7,6 +7,7 @@ Istilah:
 """
 import copy
 import re
+from difflib import SequenceMatcher
 import unicodedata
 import zipfile
 from dataclasses import asdict, dataclass, field
@@ -23,6 +24,7 @@ UKURAN_TERDEKOMPRESI_MAKS = 300 * 1024 * 1024   # cegah "zip bomb"
 ELEMEN_CARI_NOMOR = 12                  # nomor dicari di 12 potong teks pertama setelah judul
 PANJANG_CUPLIKAN = 180
 KOP_MAKS = 10                           # maks. paragraf/tabel berisi di atas judul yang dianggap kop
+KEMIRIPAN_KOP_MIN = 0.85                # kop diketik ulang boleh beda sedikit (spasi, salah ketik)
 
 TIPE_MAKRO = "application/vnd.ms-word.document.macroEnabled.main+xml"
 
@@ -226,8 +228,8 @@ def adalah_judul_spt(el, gaya: GayaDokumen):
 
 
 def _punya_isi_visual(el):
-    """Gambar, objek, atau tabel di dalam elemen."""
-    return any(True for _ in el.iter(q("drawing"), q("pict"), q("object"), q("tbl")))
+    """Gambar, objek, tabel, atau garis tepi paragraf (mis. garis di bawah kop) di dalam elemen."""
+    return any(True for _ in el.iter(q("drawing"), q("pict"), q("object"), q("tbl"), q("pBdr")))
 
 
 def adalah_kosong(el):
@@ -269,37 +271,102 @@ def _soft_break(n):
     return n.tag == q("lastRenderedPageBreak")
 
 
-def awal_halaman(elemen, judul, batas_bawah, cadangan):
-    """Indeks elemen pertama di HALAMAN tempat judul berada, dicari mundur dari judul sampai batas_bawah.
-    Kop surat yang diketik di badan dokumen (bukan di Header) ada di atas judul pada halaman yang sama,
-    sehingga harus ikut ke SPT ini, bukan menempel di bawah SPT sebelumnya.
-    Urutan bukti: page break / section break / "page break before" (eksplisit), lalu penanda halaman
-    yang disimpan Word (lastRenderedPageBreak). Bila tidak ada bukti sama sekali, pakai `cadangan`."""
-    def cari(penanda_eksplisit):
-        for i in range(judul, batas_bawah - 1, -1):
-            el = elemen[i]
-            if el.tag != q("p"):
-                continue
-            if penanda_eksplisit:
-                ppr = el.find(q("pPr"))
-                if i < judul and ppr is not None:
-                    sect = ppr.find(q("sectPr"))
-                    jenis = sect.find(q("type")) if sect is not None else None
-                    if sect is not None and (jenis is None or jenis.get(q("val")) != "continuous"):
-                        return i + 1          # section break: halaman baru setelah paragraf ini
-                if ppr is not None and ppr.find(q("pageBreakBefore")) is not None \
-                        and _bernilai_benar(ppr.find(q("pageBreakBefore"))):
-                    return i                  # paragraf ini sendiri mulai di halaman baru
-                penanda = _page_break
-            else:
-                penanda = _soft_break
-            if any(penanda(n) for n in el.iter(q("br"), q("lastRenderedPageBreak"))):
-                return i if _ada_isi_setelah(el, penanda) else i + 1
-        return None
+def _baris_pertama(tabel):
+    """Paragraf-paragraf di baris pertama tabel (tempat penanda halaman bila tabel mulai di halaman baru)."""
+    baris = tabel.find(q("tr"))
+    return [] if baris is None else list(baris.iter(q("p")))
 
-    hasil = cari(True)
+
+def _cari_batas(elemen, judul, batas_bawah, eksplisit):
+    """Cari mundur dari judul: indeks awal halaman judul, atau None bila tidak ada bukti.
+    eksplisit=True : page break, section break (bukan continuous), "page break before".
+    eksplisit=False: penanda halaman yang disimpan Word (lastRenderedPageBreak)."""
+    penanda = _page_break if eksplisit else _soft_break
+    for i in range(judul, batas_bawah - 1, -1):
+        el = elemen[i]
+        if el.tag == q("tbl"):
+            # Tabel (mis. kop berlogo) yang dimulai di halaman baru: penandanya di baris pertama
+            for p in _baris_pertama(el):
+                ppr = p.find(q("pPr"))
+                if eksplisit and ppr is not None and ppr.find(q("pageBreakBefore")) is not None \
+                        and _bernilai_benar(ppr.find(q("pageBreakBefore"))):
+                    return i
+                if any(penanda(n) for n in p.iter(q("br"), q("lastRenderedPageBreak"))) \
+                        and not teks_sebelum_penanda(p, penanda):
+                    return i
+            continue
+        if el.tag != q("p"):
+            continue
+        ppr = el.find(q("pPr"))
+        if eksplisit and ppr is not None:
+            sect = ppr.find(q("sectPr"))
+            jenis = sect.find(q("type")) if sect is not None else None
+            if i < judul and sect is not None and (jenis is None or jenis.get(q("val")) != "continuous"):
+                return i + 1          # section break: halaman baru setelah paragraf ini
+            if ppr.find(q("pageBreakBefore")) is not None and _bernilai_benar(ppr.find(q("pageBreakBefore"))):
+                return i              # paragraf ini sendiri mulai di halaman baru
+        if any(penanda(n) for n in el.iter(q("br"), q("lastRenderedPageBreak"))):
+            return i if _ada_isi_setelah(el, penanda) else i + 1
+    return None
+
+
+def teks_sebelum_penanda(paragraf, penanda):
+    """True bila ada teks sebelum penanda halaman pertama di paragraf."""
+    for n in paragraf.iter(q("t"), q("br"), q("lastRenderedPageBreak")):
+        if penanda(n):
+            return False
+        if n.tag == q("t") and (n.text or "").strip():
+            return True
+    return False
+
+
+def _tanda(el):
+    """Ringkasan isi elemen untuk membandingkan kop: teks ternormalisasi, '<gambar>' bila hanya visual,
+    None bila kosong."""
+    if adalah_kosong(el):
+        return None
+    return normalisasi(teks_elemen(el)) or "<gambar>"
+
+
+def kop_acuan(elemen, mulai, judul):
+    """Tanda-tanda elemen berisi di atas judul (kop), atau None bila tidak ada / terlalu panjang."""
+    tanda = [t for t in (_tanda(el) for el in elemen[mulai:judul]) if t]
+    return tanda if 0 < len(tanda) <= KOP_MAKS else None
+
+
+def cari_kop_serupa(elemen, judul, batas_bawah, acuan):
+    """Untuk kop yang DIKETIK ULANG di setiap SPT tanpa pemisah halaman (mis. didorong dengan Enter):
+    mundur dari judul, lewati paragraf kosong, ambil sejumlah elemen berisi sebanyak kop acuan, lalu
+    bandingkan isinya. Mengembalikan indeks awal kop bila mirip, selain itu None."""
+    terkumpul = []
+    i = judul - 1
+    while i >= batas_bawah and len(terkumpul) < len(acuan):
+        tanda = _tanda(elemen[i])
+        if tanda:
+            terkumpul.append((i, tanda))
+        i -= 1
+    if len(terkumpul) < len(acuan):
+        return None
+    terkumpul.reverse()
+    kandidat = " | ".join(t for _, t in terkumpul)
+    if SequenceMatcher(None, kandidat, " | ".join(acuan)).ratio() < KEMIRIPAN_KOP_MIN:
+        return None
+    return terkumpul[0][0]
+
+
+def awal_halaman(elemen, judul, batas_bawah, cadangan, acuan=None):
+    """Indeks elemen pertama SPT: awal halaman tempat judul berada, dicari mundur dari judul.
+    Kop yang diketik di badan dokumen ada di atas judul pada halaman yang sama, sehingga harus ikut
+    ke SPT ini, bukan menempel di bawah SPT sebelumnya. Urutan bukti:
+      1. page break / section break / "page break before" (paragraf maupun baris pertama tabel)
+      2. kop yang isinya mirip kop acuan (kop diketik ulang, halaman didorong dengan Enter)
+      3. penanda halaman yang disimpan Word (lastRenderedPageBreak)
+      4. `cadangan`"""
+    hasil = _cari_batas(elemen, judul, batas_bawah, eksplisit=True)
+    if hasil is None and acuan:
+        hasil = cari_kop_serupa(elemen, judul, batas_bawah, acuan)
     if hasil is None:
-        hasil = cari(False)
+        hasil = _cari_batas(elemen, judul, batas_bawah, eksplisit=False)
     hasil = cadangan if hasil is None else min(hasil, judul)
     # Pengaman: bagian di atas judul hanya dianggap kop bila pendek. Bila panjang, kemungkinan itu
     # isi SPT sebelumnya (mis. lampiran di halaman baru), jadi SPT ini tetap dimulai dari judulnya.
@@ -357,10 +424,13 @@ def analisis(jalur: Path):
 
     # Awal tiap SPT = awal halaman judulnya (agar kop di badan dokumen ikut). SPT pertama: bila tidak ada
     # bukti pergantian halaman, awal dokumen dianggap awal halamannya.
-    posisi_mulai = []
+    posisi_mulai, acuan = [], None
     for k, judul in enumerate(posisi_judul):
         batas_bawah = posisi_judul[k - 1] + 1 if k else 0
-        posisi_mulai.append(awal_halaman(elemen, judul, batas_bawah, cadangan=judul if k else 0))
+        mulai = awal_halaman(elemen, judul, batas_bawah, cadangan=judul if k else 0, acuan=acuan)
+        posisi_mulai.append(mulai)
+        if acuan is None:   # kop pertama yang ditemukan jadi acuan untuk SPT berikutnya
+            acuan = kop_acuan(elemen, mulai, judul)
 
     peringatan = []
     sebelum = [el for el in elemen[:posisi_mulai[0]] if not adalah_kosong(el)]

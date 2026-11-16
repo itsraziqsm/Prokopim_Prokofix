@@ -122,3 +122,55 @@ def batch_kop_di_badan(jalur, pemisah="page_break", jumlah=3):
         doc.add_paragraph(f"Penandatangan SPT {i}")
     doc.save(str(jalur))
     return jalur
+
+
+def kop_tabel_bergaris(doc, variasi=""):
+    """Kop seperti di dokumen pengguna: tabel 2 kolom (logo | teks), lalu paragraf kosong bergaris bawah."""
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+    sel = doc.add_table(rows=1, cols=2).rows[0].cells
+    sel[0].text = ""
+    sel[0].paragraphs[0].add_run().add_picture(_LOGO, width=Mm(20))
+    baris = ["PEMERINTAH KOTA MEDAN", "SEKRETARIAT DAERAH" + variasi, "BAGIAN PROTOKOL DAN KOMUNIKASI PIMPINAN",
+             "Jalan Kapten Maulana Lubis Nomor 2, Medan Petisah, Medan, Sumatera Utara 20112"]
+    sel[1].text = baris[0]
+    for b in baris[1:]:
+        sel[1].add_paragraph(b)
+    garis = doc.add_paragraph()
+    pbdr = OxmlElement("w:pBdr")
+    bawah = OxmlElement("w:bottom")
+    for k, v in (("w:val", "thickThinSmallGap"), ("w:sz", "18"), ("w:space", "1"), ("w:color", "auto")):
+        bawah.set(qn(k), v)
+    pbdr.append(bawah)
+    garis._p.get_or_add_pPr().append(pbdr)
+
+
+def _buat_logo():
+    """PNG 1x1 piksel sebagai pengganti logo."""
+    import base64
+    import io
+    return io.BytesIO(base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="))
+
+
+_LOGO = None
+
+
+def batch_kop_diketik_ulang(jalur, jumlah=3, enter=18):
+    """Meniru dokumen pengguna: tiap SPT diawali kop tabel berlogo yang DIKETIK ULANG (sedikit beda),
+    dan halaman berikutnya didorong dengan menekan Enter berkali-kali (tanpa page break)."""
+    global _LOGO
+    doc = Document()
+    seksi = doc.sections[0]
+    seksi.page_width, seksi.page_height = Mm(215), Mm(330)
+    for i in range(1, jumlah + 1):
+        _LOGO = _buat_logo()
+        kop_tabel_bergaris(doc, variasi="  " if i == 2 else "")   # SPT 2: spasi berlebih (diketik ulang)
+        judul(doc)
+        isi(doc, f"0059/{i}/SPT-UL/2026", f"Pegawai {i}")
+        doc.add_paragraph(f"Penandatangan SPT {i}")
+        if i < jumlah:
+            for _ in range(enter):
+                doc.add_paragraph("")
+    doc.save(str(jalur))
+    return jalur
