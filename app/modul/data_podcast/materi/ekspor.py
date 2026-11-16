@@ -116,7 +116,8 @@ def _siapkan_gaya(doc):
 # ---------- Penomoran daftar (numbering asli Word) ----------
 class Penomoran:
     """Dua definisi daftar (bernomor & berpoin). Setiap daftar di jawaban mendapat w:num baru
-    dengan startOverride=1, sehingga penomoran selalu mulai dari 1 per daftar."""
+    dengan startOverride=1, sehingga penomoran mulai dari 1 per daftar. Daftar LANJUTAN (rantai sama,
+    lihat pengurai.urai) memakai w:num yang sama sehingga Word melanjutkan nomornya."""
     ID_BERNOMOR, ID_POIN = 9001, 9002
 
     def __init__(self, doc):
@@ -145,6 +146,16 @@ class Penomoran:
                 self.el.append(abstrak)
         ada = [int(n.get(qn("w:numId"))) for n in self.el.findall(qn("w:num"))]
         self.berikut = max(ada, default=0) + 1
+        self.per_rantai = {}
+
+    def untuk_daftar(self, blok, tingkat, kunci):
+        """numId untuk satu blok daftar; kunci = (id pertanyaan, rantai) agar rantai tidak bocor antarjawaban."""
+        if blok["bernomor"] and kunci in self.per_rantai:
+            return self.per_rantai[kunci]
+        nid = self.baru(blok["bernomor"], tingkat)
+        if blok["bernomor"]:
+            self.per_rantai[kunci] = nid
+        return nid
 
     def baru(self, bernomor, tingkat):
         nid = self.berikut
@@ -271,7 +282,7 @@ def _sel_header(sel, teks, gaya, rata=None):
 
 
 # ---------- Isi jawaban ----------
-def _tulis_blok(doc, daftar_blok, penomoran, tingkat=0, dalam_butir=False):
+def _tulis_blok(doc, daftar_blok, penomoran, tingkat=0, dalam_butir=False, kunci_jawaban=0):
     for b in daftar_blok:
         if b["jenis"] == "paragraf":
             setelah_tabel = doc.element.body[-2].tag == qn("w:tbl")
@@ -288,13 +299,13 @@ def _tulis_blok(doc, daftar_blok, penomoran, tingkat=0, dalam_butir=False):
             _segmen(doc.add_paragraph(style="Judul Jawaban"), b["isi"])
         elif b["jenis"] == "daftar":
             tingkat_ini = min(tingkat, 8)
-            nid = penomoran.baru(b["bernomor"], tingkat_ini)
+            nid = penomoran.untuk_daftar(b, tingkat_ini, (kunci_jawaban, b.get("rantai")))
             for butir in b["butir"]:
                 p = doc.add_paragraph(style="Butir Jawaban")
                 _ppr_tambah(p, f'<w:numPr {nsdecls("w")}><w:ilvl w:val="{tingkat_ini}"/>'
                                f'<w:numId w:val="{nid}"/></w:numPr>')
                 _segmen(p, butir["isi"])
-                _tulis_blok(doc, butir["anak"], penomoran, tingkat + 1, dalam_butir=True)
+                _tulis_blok(doc, butir["anak"], penomoran, tingkat + 1, dalam_butir=True, kunci_jawaban=kunci_jawaban)
         elif b["jenis"] == "tabel":
             _tabel_jawaban(doc, b, IND_JAWABAN + (IND_BUTIR * tingkat if dalam_butir else 0))
 
@@ -412,7 +423,7 @@ def buat_dokumen(materi, instansi, tujuan):
             _run(p, "\t" + rapikan(tanya["teks"]))
             if tanya["terjawab"]:
                 doc.add_paragraph("JAWABAN", style="Label Jawaban")
-                _tulis_blok(doc, urai(tanya["jawaban"]), penomoran)
+                _tulis_blok(doc, urai(tanya["jawaban"]), penomoran, kunci_jawaban=(n, k))
 
     # Word mewajibkan paragraf setelah tabel terakhir sebelum akhir dokumen
     tubuh = doc.element.body

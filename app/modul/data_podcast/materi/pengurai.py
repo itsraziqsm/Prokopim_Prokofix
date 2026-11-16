@@ -4,7 +4,10 @@ Dipakai bersama oleh tampilan web (html()) dan ekspor Word (ekspor.py), sehingga
 
 Aturan penulisan (lihat juga contoh di halaman instansi):
     - Satu baris tidak kosong = satu paragraf. Baris kosong diabaikan.
-    - "1. teks"  = butir daftar bernomor (nomor yang diketik tidak dipakai; selalu mulai dari 1 per daftar).
+    - "1. teks"  = butir daftar bernomor. Di dalam satu daftar yang tidak terputus, nomor diurutkan otomatis
+      (angka ketikan diabaikan). Bila daftar diselingi paragraf/judul/tabel (tingkat teratas), butir berikutnya:
+        * diketik "1."          -> MULAI daftar baru dari 1;
+        * diketik "2." atau lebih -> MELANJUTKAN nomor daftar bernomor sebelumnya (2, 3, ...).
     - "- teks"   = butir daftar berpoin.
     - Indentasi 2 spasi atau lebih (atau tab) di bawah sebuah butir = butir bersarang; baris TANPA penanda
       dengan indentasi lebih dalam = paragraf lanjutan butir tersebut.
@@ -16,8 +19,12 @@ Aturan penulisan (lihat juga contoh di halaman instansi):
 Hasil urai() = daftar BLOK (dict):
     {"jenis": "paragraf", "isi": [segmen]}
     {"jenis": "judul",    "isi": [segmen]}
-    {"jenis": "daftar",   "bernomor": bool, "butir": [{"isi": [segmen], "anak": [blok...]}]}
+    {"jenis": "daftar",   "bernomor": bool, "butir": [{"isi": [segmen], "anak": [blok...]}],
+                          "mulai": int, "rantai": int}
         anak = paragraf lanjutan dan/atau daftar bersarang, urut sesuai teks
+        mulai = nomor butir pertama (1, atau lanjutan dari daftar sebelumnya)
+        rantai = id daftar; daftar lanjutan memakai rantai yang SAMA dengan daftar yang dilanjutkannya
+                 (ekspor Word memakai satu w:num per rantai sehingga nomornya bersambung)
     {"jenis": "tabel",    "header": [[segmen]...] atau None, "baris": [[[segmen]...]...]}
 Segmen = (teks, tebal, miring).
 """
@@ -133,6 +140,22 @@ def urai(teks):
     # Tumpukan daftar yang sedang terbuka: (indentasi penanda, blok daftar, wadah tempat daftar berada)
     tumpukan = []
     baris_tabel = []
+    rantai = {"berikut": 1, "terakhir": None}   # daftar bernomor tingkat teratas terakhir (untuk dilanjutkan)
+
+    def daftar_baru(bernomor, wadah, nomor_ketik):
+        """Buat blok daftar. Di tingkat teratas, daftar bernomor yang diketik mulai dari angka > 1
+        melanjutkan daftar bernomor sebelumnya; "1." selalu memulai daftar baru."""
+        daftar = {"jenis": "daftar", "bernomor": bernomor, "butir": [], "mulai": 1, "rantai": rantai["berikut"]}
+        sebelumnya = rantai["terakhir"]
+        if bernomor and wadah is blok:
+            if nomor_ketik > 1 and sebelumnya is not None:
+                daftar["mulai"] = sebelumnya["mulai"] + len(sebelumnya["butir"])
+                daftar["rantai"] = sebelumnya["rantai"]
+            rantai["terakhir"] = daftar
+        if daftar["rantai"] == rantai["berikut"]:
+            rantai["berikut"] += 1
+        wadah.append(daftar)
+        return daftar
 
     def tutup_tabel():
         if baris_tabel:
@@ -156,25 +179,23 @@ def urai(teks):
         if m_nomor or m_poin:
             bernomor = bool(m_nomor)
             isi_butir = (m_nomor or m_poin).group(m_nomor and 2 or 1)
+            nomor_ketik = int(m_nomor.group(1)) if m_nomor else 0
             # Tutup daftar yang lebih dalam dari baris ini
             while tumpukan and indentasi <= tumpukan[-1][0] - SELISIH_SARANG:
                 tumpukan.pop()
             if tumpukan and indentasi >= tumpukan[-1][0] + SELISIH_SARANG:
                 # Butir bersarang: daftar baru di dalam butir terakhir
                 wadah = tumpukan[-1][1]["butir"][-1]["anak"]
-                daftar = {"jenis": "daftar", "bernomor": bernomor, "butir": []}
-                wadah.append(daftar)
+                daftar = daftar_baru(bernomor, wadah, nomor_ketik)
                 tumpukan.append((indentasi, daftar, wadah))
             elif tumpukan:
                 # Tingkat yang sama: lanjutkan daftar, atau mulai daftar baru bila jenisnya berbeda
                 ind, daftar, wadah = tumpukan[-1]
                 if daftar["bernomor"] != bernomor:
-                    daftar = {"jenis": "daftar", "bernomor": bernomor, "butir": []}
-                    wadah.append(daftar)
+                    daftar = daftar_baru(bernomor, wadah, nomor_ketik)
                     tumpukan[-1] = (ind, daftar, wadah)
             else:
-                daftar = {"jenis": "daftar", "bernomor": bernomor, "butir": []}
-                blok.append(daftar)
+                daftar = daftar_baru(bernomor, blok, nomor_ketik)
                 tumpukan.append((indentasi, daftar, blok))
             tumpukan[-1][1]["butir"].append({"isi": urai_inline(isi_butir), "anak": []})
             continue
@@ -218,13 +239,14 @@ def _html_blok(daftar_blok, kedalaman=0):
             keluaran.append(Markup('<p class="judul-jawaban">') + _html_inline(b["isi"]) + Markup("</p>"))
         elif jenis == "daftar":
             tag = "ol" if b["bernomor"] else "ul"
+            mulai = f' start="{int(b["mulai"])}"' if b["bernomor"] and b.get("mulai", 1) > 1 else ""
             butir = []
             for item in b["butir"]:
                 isi = _html_inline(item["isi"])
                 if item["anak"]:
                     isi = Markup("<p>") + isi + Markup("</p>") + _html_blok(item["anak"], kedalaman + 1)
                 butir.append(Markup("<li>") + isi + Markup("</li>"))
-            keluaran.append(Markup(f'<{tag} data-tingkat="{kedalaman % 3}">') + Markup("").join(butir)
+            keluaran.append(Markup(f'<{tag}{mulai} data-tingkat="{kedalaman % 3}">') + Markup("").join(butir)
                             + Markup(f"</{tag}>"))
         elif jenis == "tabel":
             baris_html = []

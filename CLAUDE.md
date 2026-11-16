@@ -159,8 +159,10 @@ tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD,
   isi `url` di registry, ubah status jadi `"siap"`. Logika berat ditaruh di modul murni tanpa Flask agar mudah diuji.
   Sidebar menandai "Alat" aktif untuk semua blueprint modul; breadcrumb modul diawali ("Alat", /alat).
 - **Materi Podcast — format jawaban** (kolom teks biasa, BUKAN HTML; DB menyimpan apa adanya, maks. 20.000 karakter):
-  satu baris = satu paragraf (baris kosong diabaikan); `1. ` bernomor (nomor ketikan diabaikan, selalu mulai dari 1 per
-  daftar); `- ` poin; indentasi ≥2 spasi/tab di bawah butir = butir bersarang, baris tanpa penanda yang lebih menjorok
+  satu baris = satu paragraf (baris kosong diabaikan); `1. ` bernomor (di dalam satu daftar tak terputus nomor ketikan
+  diabaikan; bila daftar tingkat teratas diselingi paragraf/judul/tabel: ketik `1.` = daftar baru mulai 1, ketik `2.`+ =
+  MELANJUTKAN daftar bernomor sebelumnya — blok berbagi `rantai`, HTML `<ol start>`, Word memakai w:num yang sama per
+  rantai dalam satu jawaban); `- ` poin; indentasi ≥2 spasi/tab di bawah butir = butir bersarang, baris tanpa penanda yang lebih menjorok
   = paragraf lanjutan butir; `**tebal**`, `*miring*`; baris yang seluruhnya `**teks**` = judul kecil; baris diawali `|` =
   tabel (`|---|` menandai baris sebelumnya header, `\|` = garis tegak di dalam sel); spasi ganda/NBSP/tepi dirapikan
   saat tampil & ekspor; tanda tak berpasangan tampil apa adanya, pengurai tidak pernah melempar galat.
@@ -172,7 +174,7 @@ tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD,
   Heading 1 [bookmark instansi_<n>, garis bawah, keepNext], Status Instansi, Pertanyaan [latar EDF1F6, garis kiri aksen,
   nomor i.k + tab, keepNext hanya bila berjawaban], Label Jawaban "JAWABAN", Isi Jawaban [indentasi 0,6 cm], Judul
   Jawaban, Butir Jawaban, Lanjutan Butir, Sel Tabel, Kaki). Tabel ringkasan No/Instansi(tautan internal)/Pertanyaan/Status
-  (warna latar + teks status tertulis). Daftar = numbering asli Word: tiap daftar w:num baru + startOverride=1. Tabel
+  (warna latar + teks status tertulis). Daftar = numbering asli Word: tiap daftar/rantai w:num baru + startOverride=1 (lanjutan = w:num sama). Tabel
   jawaban: header biru tua, border C5CDD6, cantSplit, lebar ≤ area cetak. Footer "<judul>  ·  Halaman PAGE dari NUMPAGES".
   Isi teks tidak boleh berubah selain perapian spasi (diuji: urutan kata dokumen = urutan kata DB).
   Acuan tampilan: dokumen "REKAP_JAWABAN_UNTUK_PODCAST_PER_11_NOVEMBER_RAPI.docx" (berisi data asli; tidak di-commit).

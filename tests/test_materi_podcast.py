@@ -43,8 +43,27 @@ class UjiPengurai(unittest.TestCase):
         html = str(pengurai.html("7. tujuh\n3. tiga"))
         self.assertIn("<ol", html)
         self.assertNotIn("start=", html)          # nomor ketikan tidak dipakai
-        # paragraf di antara dua daftar -> dua daftar terpisah (masing-masing mulai dari 1)
+        # paragraf di antara dua daftar -> dua blok daftar
         self.assertEqual(self.jenis("1. a\nSela\n5. b"), ["daftar", "paragraf", "daftar"])
+
+    def test_daftar_diselingi_paragraf_bisa_lanjut_atau_mulai_baru(self):
+        teks = ("1. Deteksi\nPenjelasan\n2. Verifikasi\nPenjelasan\n3. Mobilisasi\nPenjelasan\n"
+                "1. Baru satu\n2. Baru dua\nSela\n1. Baru lagi")
+        daftar = [b for b in pengurai.urai(teks) if b["jenis"] == "daftar"]
+        self.assertEqual([d["mulai"] for d in daftar], [1, 2, 3, 1, 1])
+        rantai = [d["rantai"] for d in daftar]
+        self.assertEqual(rantai[0], rantai[1])
+        self.assertEqual(rantai[1], rantai[2])                  # "2." dan "3." melanjutkan
+        self.assertEqual(len({rantai[2], rantai[3], rantai[4]}), 3)   # "1." selalu daftar baru
+        html = str(pengurai.html(teks))
+        self.assertIn('<ol start="2"', html)
+        self.assertIn('<ol start="3"', html)
+        self.assertEqual(html.count("<ol "), 5)
+        # di dalam satu daftar yang tidak terputus, angka ketikan tetap diabaikan
+        self.assertEqual(pengurai.urai("1. a\n1. b\n1. c")[0]["mulai"], 1)
+        self.assertEqual(len(pengurai.urai("1. a\n1. b\n1. c")[0]["butir"]), 3)
+        # tanpa daftar sebelumnya, "3." tetap mulai dari 1
+        self.assertEqual(pengurai.urai("Sela\n3. x")[1]["mulai"], 1)
 
     def test_daftar_berpoin_dan_ganti_jenis(self):
         blok = pengurai.urai("- a\n- b\n1. c")
@@ -482,6 +501,20 @@ class UjiEkspor(DasarWeb):
         for num in penomoran.findall(qn("w:num")):
             if num.get(qn("w:numId")) in dipakai:
                 self.assertEqual(num.find(f".//{W}startOverride").get(qn("w:val")), "1")
+
+    def test_daftar_lanjutan_memakai_num_yang_sama_di_word(self):
+        from app.modul.data_podcast.materi.ekspor import buat_dokumen
+        jawab = "1. a\nSela\n2. b\nSela\n1. baru"
+        ins = [{"nama": "X", "status": "proses", "label_status": "Dalam proses", "jumlah": 2, "terjawab": 2,
+                "pertanyaan": [{"teks": "T1", "jawaban": jawab, "terjawab": True},
+                               {"teks": "T2", "jawaban": "2. lanjut?", "terjawab": True}]}]
+        tujuan = Path(self.folder) / "nomor.docx"
+        buat_dokumen({"judul": "Uji", "keterangan": ""}, ins, tujuan)
+        doc = Document(tujuan)
+        num = [p._p.pPr.numPr.numId.val for p in doc.paragraphs if p.style.name == "Butir Jawaban"]
+        self.assertEqual(num[0], num[1])            # "2." melanjutkan daftar "1."
+        self.assertNotEqual(num[1], num[2])         # "1." memulai daftar baru
+        self.assertNotIn(num[3], num[:3])           # jawaban lain tidak melanjutkan nomor jawaban sebelumnya
 
     def test_tabel_jawaban_tidak_melebihi_area_cetak(self):
         for t in self.doc.tables[1:]:
