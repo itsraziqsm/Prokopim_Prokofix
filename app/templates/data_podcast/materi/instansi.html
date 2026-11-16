@@ -1,0 +1,133 @@
+{#- Halaman instansi: nama, tanda selesai, dan daftar pertanyaan + jawaban dengan pratinjau langsung.
+    Tambah / hapus / urut ulang pertanyaan dilakukan di browser (app.js, bagian 17), lalu SATU tombol Simpan
+    mengirim seluruh daftar sesuai urutan di layar (pid[], teks[], jawaban[]). -#}
+{% extends "base.html" %}
+{% from "komponen/ui.html" import breadcrumb, field, alert %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}{{ ins.nama }} · {{ materi.judul }} · {{ nama_aplikasi }}{% endblock %}
+
+{% set CONTOH_FORMAT = "Paragraf biasa dengan **tebal** dan *miring*.\n**Judul kecil**\n1. Butir bernomor\n   Paragraf lanjutan butir\n   - Butir bersarang\n2. Butir kedua\n- Butir berpoin\n| Kolom A | Kolom B |\n|---|---|\n| isi | isi |" %}
+
+{% macro baris_pertanyaan(kunci, urut, p, galat_teks=None, galat_jawaban=None) -%}
+{#- nomor = nomor instansi (dari konteks halaman), urut = nomor pertanyaan -#}
+<section class="panel grid gap-4 p-5!" data-pertanyaan aria-labelledby="judul-{{ kunci }}">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <h2 id="judul-{{ kunci }}" class="text-lg">Pertanyaan {{ nomor }}.<span data-nomor>{{ urut }}</span></h2>
+    <div class="flex gap-1">
+      <button type="button" class="tombol tombol-teks min-h-9 px-2" data-aksi-pertanyaan="naik" data-label="Naikkan pertanyaan">{{ ikon("naik", "size-4") }}<span class="sr-only" data-label-teks>Naikkan pertanyaan {{ urut }}</span></button>
+      <button type="button" class="tombol tombol-teks min-h-9 px-2" data-aksi-pertanyaan="turun" data-label="Turunkan pertanyaan">{{ ikon("turun", "size-4") }}<span class="sr-only" data-label-teks>Turunkan pertanyaan {{ urut }}</span></button>
+      <button type="button" class="tombol tombol-teks min-h-9 px-2 text-bahaya-teks" data-aksi-pertanyaan="hapus" data-label="Hapus pertanyaan">{{ ikon("hapus", "size-4") }}<span class="sr-only" data-label-teks>Hapus pertanyaan {{ urut }}</span></button>
+    </div>
+  </div>
+  <input type="hidden" name="pid" value="{{ p.id or '' }}">
+  <div>
+    <label for="tanya-{{ kunci }}" class="label">Teks pertanyaan</label>
+    <textarea id="tanya-{{ kunci }}" name="teks" rows="2" class="input" maxlength="{{ panjang.pertanyaan }}"
+              {% if galat_teks %}aria-invalid="true" aria-describedby="g-tanya-{{ kunci }}"{% endif %}>{{ p.teks or "" }}</textarea>
+    {% if galat_teks %}<p id="g-tanya-{{ kunci }}" class="galat-field">{{ galat_teks }}</p>{% endif %}
+  </div>
+  <div class="grid gap-4 lg:grid-cols-2">
+    <div class="min-w-0">
+      <label for="jawab-{{ kunci }}" class="label">Jawaban</label>
+      <textarea id="jawab-{{ kunci }}" name="jawaban" rows="10" class="input font-mono text-sm" maxlength="{{ panjang.jawaban }}"
+                data-pratinjau-sumber="pratinjau-{{ kunci }}"
+                aria-describedby="bantuan-format{% if galat_jawaban %} g-jawab-{{ kunci }}{% endif %}"
+                {% if galat_jawaban %}aria-invalid="true"{% endif %}>{{ p.jawaban or "" }}</textarea>
+      {% if galat_jawaban %}<p id="g-jawab-{{ kunci }}" class="galat-field">{{ galat_jawaban }}</p>{% endif %}
+    </div>
+    <div class="min-w-0">
+      <p id="label-pratinjau-{{ kunci }}" class="label">Pratinjau</p>
+      <div id="pratinjau-{{ kunci }}" role="region" aria-labelledby="label-pratinjau-{{ kunci }}"
+           class="isi-jawaban min-h-24 rounded-lg border border-garis bg-latar px-4 py-3 text-sm wrap-break-word">
+        {%- if p.jawaban and p.jawaban.strip() %}{{ p.jawaban|jawaban_html }}{% else %}<p class="text-redup" data-pratinjau-kosong>Belum ada jawaban.</p>{% endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+{%- endmacro %}
+
+{% block konten %}
+<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Data Podcast", url_for('data_podcast.index')), ("Materi Podcast", url_for('materi_podcast.index')), (materi.judul, url_for('materi_podcast.detail', materi_id=materi.id)), (ins.nama, None)]) }}</div>
+
+<div class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+  <h1 class="wrap-break-word">{{ nomor }}. {{ ins.nama }}</h1>
+  <span class="lencana lencana-{{ ins.lencana }}">{{ ins.label_status }}</span>
+</div>
+
+<form id="form-instansi" method="post" novalidate data-editor-pertanyaan data-jaga-perubahan
+      data-pratinjau-url="{{ url_for('materi_podcast.pratinjau') }}" data-pertanyaan-maks="{{ pertanyaan_maks }}"
+      action="{{ url_for('materi_podcast.simpan_instansi', materi_id=materi.id, instansi_id=ins.id) }}">
+  {{ csrf_field() }}
+  {% if galat.umum %}<div class="mb-4">{{ alert(galat.umum, "galat") }}</div>{% endif %}
+
+  <section class="panel mb-6 grid gap-5 sm:grid-cols-2 sm:items-start" aria-label="Data instansi">
+    {{ field("nama", "Nama instansi", nilai=ins.nama, galat=galat.nama) }}
+    {% set terjawab = pertanyaan|selectattr("jawaban")|map(attribute="jawaban")|map("trim")|select|list|length %}
+    <div class="sm:pt-7">
+      <label class="flex cursor-pointer items-start gap-3 has-disabled:cursor-not-allowed">
+        <input type="checkbox" name="selesai" value="1" class="mt-1 size-4 accent-aksen" data-tanda-selesai
+               aria-describedby="p-selesai" {% if ins.selesai %}checked{% endif %}
+               {% if not pertanyaan or terjawab < pertanyaan|length %}disabled{% endif %}>
+        <span>
+          <span class="font-semibold">Tandai selesai</span>
+          <span id="p-selesai" class="block text-sm text-redup" data-info-selesai>
+            Aktif bila semua pertanyaan sudah berjawaban ({{ terjawab }} dari {{ pertanyaan|length }} terjawab).
+          </span>
+        </span>
+      </label>
+    </div>
+  </section>
+
+  <details id="bantuan-format" class="panel mb-6 p-5!">
+    <summary class="cursor-pointer font-semibold">Contoh format penulisan jawaban</summary>
+    <div class="mt-4 grid gap-4 lg:grid-cols-2">
+      <div class="min-w-0">
+        <p class="label">Ditulis</p>
+        <pre class="overflow-x-auto rounded-lg border border-garis bg-latar p-3 text-sm">{{ CONTOH_FORMAT }}</pre>
+      </div>
+      <div class="min-w-0">
+        <p class="label">Hasil</p>
+        <div class="isi-jawaban rounded-lg border border-garis bg-latar px-4 py-3 text-sm">{{ CONTOH_FORMAT|jawaban_html }}</div>
+      </div>
+    </div>
+    <ul class="mt-4 grid list-disc gap-1 pl-5 text-sm text-redup">
+      <li>Satu baris = satu paragraf. Baris kosong diabaikan.</li>
+      <li>Nomor daftar selalu diurutkan ulang mulai dari 1, apa pun angka yang diketik.</li>
+      <li>Butir bersarang dan paragraf lanjutan: beri 2 spasi atau lebih (atau tab) di awal baris.</li>
+      <li>Garis tegak di dalam sel tabel ditulis <code>\|</code>.</li>
+    </ul>
+  </details>
+
+  <div class="grid gap-6" data-daftar-pertanyaan>
+    {% for p in pertanyaan %}
+    {{ baris_pertanyaan("p" ~ loop.index, loop.index, p, galat["teks-" ~ loop.index], galat["jawaban-" ~ loop.index]) }}
+    {% endfor %}
+  </div>
+  <p class="panel text-redup" data-pertanyaan-kosong {% if pertanyaan %}hidden{% endif %}>Belum ada pertanyaan untuk instansi ini.</p>
+
+  <div class="mt-6">
+    <button type="button" class="tombol tombol-sekunder" data-tambah-pertanyaan>{{ ikon("plus", "size-4") }}<span>Tambah pertanyaan</span></button>
+  </div>
+  <p class="sr-only" aria-live="polite" data-pengumuman></p>
+
+  {# Bilah simpan menempel di bawah layar #}
+  <div class="sticky bottom-0 z-10 -mx-4 mt-8 flex flex-wrap items-center gap-3 border-t border-garis bg-latar px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+    <button type="submit" class="tombol tombol-primer">Simpan</button>
+    <p class="text-sm font-medium text-dev-teks" data-tanda-berubah hidden>Ada perubahan yang belum disimpan.</p>
+    <nav class="ml-auto flex flex-wrap gap-2" aria-label="Instansi lain">
+      {% if sebelumnya %}<a href="{{ url_for('materi_podcast.instansi', materi_id=materi.id, instansi_id=sebelumnya.id) }}" class="tombol tombol-teks">‹ {{ nomor - 1 }}. <span class="max-w-40 truncate">{{ sebelumnya.nama }}</span></a>{% endif %}
+      {% if berikutnya %}<a href="{{ url_for('materi_podcast.instansi', materi_id=materi.id, instansi_id=berikutnya.id) }}" class="tombol tombol-teks">{{ nomor + 1 }}. <span class="max-w-40 truncate">{{ berikutnya.nama }}</span> ›</a>{% endif %}
+    </nav>
+  </div>
+</form>
+
+<form method="post" action="{{ url_for('materi_podcast.hapus_instansi', materi_id=materi.id, instansi_id=ins.id) }}" class="mt-6"
+      data-konfirmasi="Hapus {{ ins.nama }} beserta {{ ins.jumlah }} pertanyaan dan jawabannya? Tindakan ini tidak dapat dibatalkan."
+      data-konfirmasi-judul="Hapus instansi" data-konfirmasi-tombol="Hapus">
+  {{ csrf_field() }}
+  <button type="submit" class="tombol tombol-teks text-bahaya-teks">{{ ikon("hapus", "size-4") }}<span>Hapus instansi</span></button>
+</form>
+
+{# Cetakan pertanyaan baru (dipakai app.js); __KUNCI__ diganti kunci unik #}
+<template id="cetakan-pertanyaan">{{ baris_pertanyaan("__KUNCI__", "", {}) }}</template>
+{% endblock %}

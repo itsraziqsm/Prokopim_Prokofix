@@ -3,7 +3,18 @@
 Kumpulan tools kerja pribadi yang berjalan **lokal** di komputer sendiri (tanpa internet).
 Python + Flask + python-docx + Pillow + Jinja2, tampilan dengan **Tailwind CSS v4** (paket npm), JS biasa.
 
-> Status: **Fitur 1 Pemecah SPT** dan **Fitur 2 Arsip Liputan** siap.
+> Status: **Fitur 1 Pemecah SPT**, **Fitur 2 Arsip Liputan**, dan **Fitur 3 Data Podcast › Materi Podcast** siap.
+
+## Data Podcast › Materi Podcast
+Menyimpan pertanyaan untuk tiap instansi (OPD) beserta jawabannya per tema podcast.
+1. **Alat → Data Podcast → Materi Podcast → Materi baru**: isi judul (mis. "Rekap Jawaban Podcast ... 2026") dan keterangan ("Per 11 November").
+2. **Tambah instansi**, lalu buka instansinya: tulis pertanyaan & jawaban (pratinjau tampil langsung), klik **Simpan**.
+   Format jawaban: `1. ` daftar bernomor, `- ` poin, indentasi 2 spasi = bersarang, `**tebal**`, `*miring*`,
+   baris `**judul**` = judul kecil, baris `| a | b |` = tabel (`|---|---|` menandai header).
+3. **Tandai selesai** bila semua pertanyaan sudah berjawaban. **Mode baca** untuk membaca/mencari/mencetak,
+   **Ekspor Word** (A4) lalu **Unduh Word**. **Duplikat materi** untuk rekap versi berikutnya.
+
+Data contoh fiktif untuk mencoba: `flask --app run podcast contoh`.
 
 ## Arsip Liputan
 Menyimpan liputan kegiatan resmi (data kegiatan, isi berita, foto) lalu membuat satu Word F4:
@@ -103,15 +114,16 @@ app/
   waktu.py                  # sapaan & tanggal Bahasa Indonesia
   templates/
     base.html               # kerangka: sidebar + konten (atau tanpa sidebar sebelum masuk)
-    dashboard.html, log.html, modul_dev.html, pengaturan.html, galat.html
+    dashboard.html, alat.html, log.html, modul_dev.html, pengaturan.html, galat.html
     auth/                   # masuk, siapkan, akun
     komponen/               # sidebar, ui (makro), ikon SVG
   static/
     src/input.css           # SUMBER CSS Tailwind (edit ini)
     css/app.css             # hasil build (jangan diedit)
-    js/app.js               # tema, sidebar ringkas, notifikasi, tombol salin
+    js/app.js               # tema, sidebar, notifikasi, konfirmasi, unggah foto, editor pertanyaan, mode baca
 app/modul/pemecah_spt/      # Fitur 1: pemecah, penamaan, pdf, layanan, routes
 app/modul/arsip_liputan/    # Fitur 2: teks, foto, ekspor, layanan, routes
+app/modul/data_podcast/     # Fitur 3 (induk): materi/ = Materi Podcast (pengurai, ekspor, layanan, routes)
 app/templat_docx/           # templat Word berita (berita.docx)
 tests/                      # uji otomatis: python -m unittest -v
 ```

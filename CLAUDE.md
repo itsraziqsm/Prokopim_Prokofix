@@ -49,14 +49,15 @@ python -m unittest -v    # uji otomatis (wajib lulus sebelum commit)
 run.py                         titik masuk; pemilihan port
 package.json                   skrip build Tailwind
 app/__init__.py                create_app(): config, secret key di instance/, blueprint, halaman galat
-app/modules_registry.py        DAFTAR MODUL (sumber tunggal) + STATUS_LABEL
+app/modules_registry.py        DAFTAR MODUL (sumber tunggal) + STATUS_LABEL; field `induk` (None = tingkat atas, tampil di
+                               halaman Alat; anak tampil di halaman induknya); modul_utama(), anak_dari(induk_id)
 app/routes.py                  blueprint "utama": / (Dashboard), /alat (kartu modul), /log, /log/<id>/buka, /modul/<id>,
                                /pengaturan
 app/ringkasan.py               data Dashboard: angka liputan bulan ini/draf, SPT bulan ini, 5 liputan & 5 log terakhir
 app/auth.py                    blueprint "auth": /siapkan, /masuk, /keluar, /akun, CLI reset-sandi, penjaga login
 app/keamanan.py                CSRF (csrf_field)
 app/db.py                      koneksi SQLite per request + SKEMA (pengguna, log_proses, spt_batch, spt,
-                               liputan, liputan_foto); PRAGMA foreign_keys=ON di setiap koneksi
+                               liputan, liputan_foto, materi_podcast, materi_instansi, materi_pertanyaan); PRAGMA foreign_keys=ON di setiap koneksi
 app/log_proses.py              catat(), per_halaman(), lokasi_terakhir(), buka_di_penjelajah()
 app/waktu.py                   sapaan, tanggal_indonesia, waktu_singkat
 app/modul/pemecah_spt/         Fitur 1 — blueprint "pemecah_spt" di /spt:
@@ -102,6 +103,25 @@ app/modul/arsip_liputan/       Fitur 2 — blueprint "arsip_liputan" di /liputan
   routes.py                      /liputan (cari & filter), /liputan/baru, /liputan/<id> (+ /simpan, /ekspor,
                                  /unduh, /paket, /hapus), /liputan/<id>/foto (+ /<fid>, /simpan, /<fid>/simpan|
                                  geser|hapus), /liputan/spt/<spt_id>/<docx|pdf>
+app/modul/data_podcast/        Fitur 3 — INDUK "Data Podcast": blueprint "data_podcast" di /podcast (kartu fitur anak dari
+                               registry + kartu "Fitur baru akan hadir di sini"), cli_group "podcast"
+                               (flask --app run podcast contoh = materi contoh FIKTIF), SEMUA_BLUEPRINT didaftarkan di create_app.
+                               Fitur anak baru = sub-paket baru di sini + modul registry dengan "induk": "data_podcast".
+  materi/                        Fitur anak "Materi Podcast" — blueprint "materi_podcast" di /podcast/materi (semua pengguna
+                                 melihat semua materi). Tabel materi_podcast → materi_instansi → materi_pertanyaan (CASCADE).
+    pengurai.py                    logika murni: urai(teks) → blok (paragraf/judul/daftar{bernomor,butir[{isi,anak}]}/tabel),
+                                   html(teks) → HTML AMAN (semua teks di-escape, HTML dibangun sendiri), teks_polos(),
+                                   rapikan()/ada_isi(). Dipakai BERSAMA oleh web (filter jawaban_html, /pratinjau) & Word.
+    layanan.py                     DB (query tanpa N+1; fungsi SQL ada_isi() didaftarkan per koneksi), status_instansi()
+                                   (selesai | proses | belum), simpan_instansi() menyinkronkan SELURUH daftar pertanyaan dalam
+                                   satu transaksi (pid milik instansi lain diabaikan), duplikat_materi(), ekspor(), jalur_ekspor()
+    ekspor.py                      Word A4 (lihat "Ekspor Word Materi Podcast" di bawah)
+    contoh.py                      data contoh fiktif (3 instansi: selesai + daftar bersarang & tabel, dalam proses, belum)
+    routes.py                      /podcast/materi (+ ?q=), /baru, /<id> (+ /simpan, /hapus, /duplikat, /ekspor, /unduh,
+                                   /baca), /<id>/instansi (POST tambah), /<id>/instansi/<iid> (GET/POST simpan, /geser,
+                                   /hapus), POST /pratinjau (fragmen HTML untuk pratinjau langsung)
+app/templates/data_podcast/    index (induk); materi/ index, baru, detail (tabel instansi + naik/turun, Word, judul, duplikat,
+                               hapus), instansi (editor pertanyaan + pratinjau + "Tandai selesai"), baca (mode baca)
 app/templates/arsip_liputan/   index (arsip dikelompokkan per bulan kegiatan, terbaru di atas, satu tabel per bulan), form
                                (tanggal kegiatan baru kosong; SPT terkait: radio pakai_spt Tanpa/Dengan — daftar &
                                pencarian [data-wadah-spt] hanya tampil bila "Dengan SPT"; server: "tidak" → spt_id NULL,
@@ -121,9 +141,11 @@ instance/                      superapp.db + secret_key (tidak ikut git; backup 
 instance/data/spt/<id_batch>/  berkas hasil Pemecah SPT
 instance/tmp/                  unggahan sementara selama pratinjau (<token>.docx + .json), dihapus >24 jam
 instance/data/liputan/<tahun>/<MM-Bulan>/<id>/  foto/ (nama acak, versi olahan) dan ekspor/ (satu Word terbaru)
+instance/data/podcast/<id>/ekspor/             satu Word terbaru Materi Podcast (nama dari judul + keterangan)
 tests/test_aplikasi.py         uji inti (create_app(instance_path=folder_sementara))
 tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .docx contoh (batch_contoh())
 tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membuat foto contoh (tujuh_foto())
+tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD, N+1, ekspor Word, keamanan, CLI)
 ```
 
 ## Pola & konvensi penting
@@ -136,6 +158,24 @@ tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membu
   Logika modul nyata: buat blueprint sendiri (mis. `app/modul/pemecah_spt/`), daftarkan di `create_app`,
   isi `url` di registry, ubah status jadi `"siap"`. Logika berat ditaruh di modul murni tanpa Flask agar mudah diuji.
   Sidebar menandai "Alat" aktif untuk semua blueprint modul; breadcrumb modul diawali ("Alat", /alat).
+- **Materi Podcast — format jawaban** (kolom teks biasa, BUKAN HTML; DB menyimpan apa adanya, maks. 20.000 karakter):
+  satu baris = satu paragraf (baris kosong diabaikan); `1. ` bernomor (nomor ketikan diabaikan, selalu mulai dari 1 per
+  daftar); `- ` poin; indentasi ≥2 spasi/tab di bawah butir = butir bersarang, baris tanpa penanda yang lebih menjorok
+  = paragraf lanjutan butir; `**tebal**`, `*miring*`; baris yang seluruhnya `**teks**` = judul kecil; baris diawali `|` =
+  tabel (`|---|` menandai baris sebelumnya header, `\|` = garis tegak di dalam sel); spasi ganda/NBSP/tepi dirapikan
+  saat tampil & ekspor; tanda tak berpasangan tampil apa adanya, pengurai tidak pernah melempar galat.
+- **Materi Podcast — status instansi**: "Belum ada jawaban" (tak satu pun terjawab), "Dalam proses", "Selesai" (kolom
+  `selesai`, hanya berlaku bila SEMUA pertanyaan berjawaban; server menolak tanda selesai bila ada yang kosong, isian lain
+  tetap disimpan). Lencana: selesai = `lencana-siap`, proses = `lencana-peringatan`, belum = `lencana-netral`.
+- **Ekspor Word Materi Podcast** (ekspor.py, python-docx, dibangun dari nol): A4 11906x16838, margin 2 cm, Calibri 12,
+  baris 1,2, setelah 6 pt; GAYA BERNAMA (Title [caps, 19 pt, 1F3A5F, 2 baris lewat bagi_judul()], Subjudul, Ringkas,
+  Heading 1 [bookmark instansi_<n>, garis bawah, keepNext], Status Instansi, Pertanyaan [latar EDF1F6, garis kiri aksen,
+  nomor i.k + tab, keepNext hanya bila berjawaban], Label Jawaban "JAWABAN", Isi Jawaban [indentasi 0,6 cm], Judul
+  Jawaban, Butir Jawaban, Lanjutan Butir, Sel Tabel, Kaki). Tabel ringkasan No/Instansi(tautan internal)/Pertanyaan/Status
+  (warna latar + teks status tertulis). Daftar = numbering asli Word: tiap daftar w:num baru + startOverride=1. Tabel
+  jawaban: header biru tua, border C5CDD6, cantSplit, lebar ≤ area cetak. Footer "<judul>  ·  Halaman PAGE dari NUMPAGES".
+  Isi teks tidak boleh berubah selain perapian spasi (diuji: urutan kata dokumen = urutan kata DB).
+  Acuan tampilan: dokumen "REKAP_JAWABAN_UNTUK_PODCAST_PER_11_NOVEMBER_RAPI.docx" (berisi data asli; tidak di-commit).
 - **Semua halaman wajib login** (penjaga `before_app_request` di `auth.py`); pengecualian di `ENDPOINT_PUBLIK`.
 - **Setiap `<form method="post">` wajib `{{ csrf_field() }}`.**
 - **Pencatatan proses**: modul memanggil `catat(modul_id, aksi, status="sukses"|"gagal", detail=..., lokasi=...)`.
@@ -181,6 +221,8 @@ tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membu
   Sapaan & tanggal dihitung di server saja (server = komputer pengguna); jangan duplikasi di JS.
 - **Ukuran**: pakai skala bawaan Tailwind (`text-sm`, `size-4`, `min-h-10`, ...). Hindari nilai sembarang `[...]`.
 - Ikon baru: tambahkan cabang di `komponen/ikon.html`, warna `currentColor`.
+- **Cetak**: `@media print` di input.css memaksa warna tema terang, menyembunyikan sidebar/notifikasi/`[data-tidak-dicetak]`.
+  Isi jawaban bergaya lewat `.isi-jawaban` (daftar bertingkat via `data-tingkat`, tabel); ukuran huruf mode baca dalam `em`.
 - **Tabel lebar**: bungkus dengan `<div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="...">`.
   `relative` WAJIB: tanpa itu teks `sr-only` (absolute) di dalam tabel lolos dan melebarkan halaman di ponsel.
   Teks panjang berisi garis miring (nomor surat, jalur) pakai filter `|jalur` + `wrap-break-word`.
@@ -190,7 +232,12 @@ tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membu
   `data-nama-berkas` (input berkas bergaya tombol), `data-salin="teks"` (salin ke clipboard),
   `data-pantau-progres="url"` (dipasang makro `progres`), `data-konfirmasi` (dialog konfirmasi),
   `data-perlu-pilihan` (tombol nonaktif bila belum ada `data-pilih-item` tercentang),
-  `data-zona-unggah` + `data-pratinjau-unggah` + `data-tombol-unggah` (unggah foto), `data-saring="#wadah"` +
+  `data-zona-unggah` + `data-pratinjau-unggah` + `data-tombol-unggah` (unggah foto), `window.konfirmasi(pesan,
+  {judul, tombol}, lanjut)` (dialog konfirmasi dari JS), `?fokus=<id>` (fokus kembali ke tombol setelah dialihkan, mis.
+  naik/turun), `<form data-jaga-perubahan>` + `[data-tanda-berubah]` (peringatan beforeunload; event "ubah-daftar"),
+  `[data-editor-pertanyaan]` (tambah/naik/turun/hapus pertanyaan di browser, pratinjau langsung lewat POST /pratinjau,
+  `[data-tanda-selesai]` aktif hanya bila semua berjawaban), `[data-alat-baca]` (mode baca: filter status, cari + sorot
+  `<mark>`, ukuran huruf `localStorage["ukuran-baca"]`, cetak), `data-saring="#wadah"` +
   `data-saring-teks` + `data-saring-kosong` (saring daftar di sisi klien), `data-kelengkapan` + `data-cek=
   "isi:ID | pilih:NAMA | nilai:NAMA=NILAI"` (centang/silang panel diperbarui langsung dari isian formulir;
   klik butir = gulir halus ke isian + fokus + sorotan sesaat `[data-sorot]`, tanpa animasi bila reduced-motion), notifikasi titipan lewat

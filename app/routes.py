@@ -9,7 +9,7 @@ from flask import Blueprint, abort, flash, g, redirect, render_template, request
 from markupsafe import Markup, escape
 
 from . import log_proses
-from .modules_registry import STATUS_LABEL, cari_modul, semua_modul
+from .modules_registry import STATUS_LABEL, cari_modul, modul_utama
 from .ringkasan import ringkasan
 from .waktu import BULAN, sapaan, tanggal_indonesia, waktu_singkat
 
@@ -54,7 +54,7 @@ def dashboard():
 @bp.route("/alat")
 def alat():
     """Daftar semua alat (modul) dalam bentuk kartu."""
-    daftar = semua_modul()
+    daftar = modul_utama()   # modul anak tampil di halaman induknya
     return render_template(
         "alat.html",
         modul_list=daftar,

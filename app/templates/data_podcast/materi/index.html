@@ -1,0 +1,56 @@
+{#- Daftar materi podcast + pencarian judul. -#}
+{% extends "base.html" %}
+{% from "komponen/ui.html" import breadcrumb %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}Materi Podcast · {{ nama_aplikasi }}{% endblock %}
+
+{% block konten %}
+<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Data Podcast", url_for('data_podcast.index')), ("Materi Podcast", None)]) }}</div>
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <h1>Materi Podcast</h1>
+  <a href="{{ url_for('materi_podcast.baru') }}" class="tombol tombol-primer">{{ ikon("plus", "size-4") }}<span>Materi baru</span></a>
+</div>
+
+<form method="get" action="{{ url_for('materi_podcast.index') }}" role="search" class="mb-6 flex flex-wrap items-end gap-3">
+  <div class="min-w-0 flex-1 basis-64">
+    <label for="f-q" class="label">Cari judul</label>
+    <input id="f-q" name="q" type="search" value="{{ q }}" class="input" placeholder="Mis. Mitigasi Bencana">
+  </div>
+  <button type="submit" class="tombol tombol-sekunder">{{ ikon("cari", "size-4") }}<span>Cari</span></button>
+  {% if q %}<a href="{{ url_for('materi_podcast.index') }}" class="tombol tombol-teks">Atur ulang</a>{% endif %}
+</form>
+
+{% if daftar %}
+<div class="panel p-0! overflow-hidden">
+  <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Daftar materi podcast">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-permukaan-2 text-redup">
+        <tr>
+          <th scope="col" class="px-4 py-3 font-semibold">Materi</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Instansi</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Terjawab</th>
+          <th scope="col" class="px-4 py-3 font-semibold">Diubah</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-garis">
+        {% for m in daftar %}
+        <tr class="align-top">
+          <td class="px-4 py-3">
+            <a href="{{ url_for('materi_podcast.detail', materi_id=m.id) }}" class="font-medium wrap-break-word">{{ m.judul }}</a>
+            {% if m.keterangan %}<p class="text-redup">{{ m.keterangan }}</p>{% endif %}
+          </td>
+          <td class="px-4 py-3">{{ m.jumlah_instansi }}</td>
+          <td class="whitespace-nowrap px-4 py-3">{{ m.jumlah_terjawab }} dari {{ m.jumlah_pertanyaan }} pertanyaan</td>
+          <td class="whitespace-nowrap px-4 py-3 text-redup">{{ m.diubah|waktu_singkat }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% elif q %}
+<p class="text-redup">Tidak ada materi dengan judul “{{ q }}”.</p>
+{% else %}
+<p class="text-redup">Belum ada materi. <a href="{{ url_for('materi_podcast.baru') }}">Buat materi baru</a></p>
+{% endif %}
+{% endblock %}

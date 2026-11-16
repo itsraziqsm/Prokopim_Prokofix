@@ -13,6 +13,9 @@ Keterangan kolom:
     url        : alamat tujuan bila status "siap"; None = pakai halaman /modul/<id>.
     urutan     : urutan pengerjaan (1 = dikerjakan pertama).
     rencana    : daftar rencana fitur (3-5 butir).
+    induk      : id modul induk, atau None untuk modul tingkat atas. Modul tingkat atas tampil sebagai
+                 kartu di halaman Alat; modul anak tampil sebagai kartu di halaman induknya
+                 (mis. "Materi Podcast" di dalam "Data Podcast"). Fitur anak baru cukup diberi induk yang sama.
 """
 
 NAMA_APLIKASI = "Super App Prokopim"
@@ -36,6 +39,7 @@ MODUL = [
         "status": "siap",
         "url": "/spt",
         "urutan": 1,
+        "induk": None,
         "rencana": [
             "Deteksi judul SPT bercetak tebal dan bergaris bawah",
             "Pratinjau dan pilih SPT sebelum diproses",
@@ -55,11 +59,47 @@ MODUL = [
         "status": "siap",
         "url": "/liputan",
         "urutan": 2,
+        "induk": None,
         "rencana": [
             "Data kegiatan, isi berita, dan SPT terkait",
             "Foto dengan keterangan & sumber; unggah, seret, atau tempel",
             "Ekspor Word F4: berita lalu lembar foto untuk digunting",
             "Paket ZIP berisi Word dan SPT",
+        ],
+    },
+    {
+        "id": "data_podcast",
+        "nama": "Data Podcast",
+        "deskripsi": "Kumpulan alat persiapan podcast: materi pertanyaan dan jawaban per instansi.",
+        "tujuan": "Induk untuk fitur-fitur persiapan podcast. Setiap fitur anak tampil sebagai kartu di halamannya.",
+        "ikon": "mikrofon",
+        "status": "siap",
+        "url": "/podcast",
+        "urutan": 3,
+        "induk": None,
+        "rencana": [
+            "Materi Podcast: pertanyaan & jawaban per instansi",
+            "Fitur persiapan podcast lainnya menyusul",
+        ],
+    },
+    {
+        "id": "materi_podcast",
+        "nama": "Materi Podcast",
+        "deskripsi": "Pertanyaan untuk tiap instansi beserta jawabannya per tema podcast; mode baca dan ekspor Word.",
+        "tujuan": (
+            "Menyimpan pertanyaan yang diajukan ke tiap instansi (OPD) beserta jawabannya, memantau instansi "
+            "yang sudah atau belum menjawab, membacanya dengan nyaman, dan mengekspornya sebagai dokumen Word A4."
+        ),
+        "ikon": "tanya-jawab",
+        "status": "siap",
+        "url": "/podcast/materi",
+        "urutan": 1,
+        "induk": "data_podcast",
+        "rencana": [
+            "Pertanyaan & jawaban per instansi dengan format ringan (daftar, tebal, tabel)",
+            "Status instansi: belum ada jawaban, dalam proses, selesai",
+            "Mode baca dengan pencarian, filter status, dan cetak",
+            "Ekspor Word A4 dengan ringkasan dan tautan ke tiap instansi",
         ],
     },
 ]
@@ -68,6 +108,16 @@ MODUL = [
 def semua_modul():
     """Mengembalikan semua modul, diurutkan berdasarkan kolom 'urutan'."""
     return sorted(MODUL, key=lambda m: m["urutan"])
+
+
+def modul_utama():
+    """Modul tingkat atas (tanpa induk) untuk halaman Alat."""
+    return [m for m in semua_modul() if not m.get("induk")]
+
+
+def anak_dari(induk_id):
+    """Fitur anak dari sebuah modul induk, urut sesuai 'urutan'."""
+    return [m for m in semua_modul() if m.get("induk") == induk_id]
 
 
 def cari_modul(modul_id):

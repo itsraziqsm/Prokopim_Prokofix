@@ -31,6 +31,8 @@
   --dev-latar: #fbf0d4;    --dev-teks: #6e4a00;
   --bahaya-latar: #fde8e8; --bahaya-teks: #9b1c1c;
   --info-latar: #e6eef6;   --info-teks: #163d63;
+  --netral-latar: #e9ecf0; --netral-teks: #3a4350;   /* status "belum" (Materi Podcast) */
+  --tanda-latar: #ffe08a;  --tanda-teks: #1b2430;    /* sorotan hasil pencarian (<mark>) */
 
   --tirai: rgba(15, 20, 27, .55);   /* latar gelap di belakang dialog */
   --bayangan: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
@@ -58,6 +60,8 @@
   --dev-latar: #3b2f12;    --dev-teks: #f2cf7d;
   --bahaya-latar: #3d1a1a; --bahaya-teks: #f5b4b4;
   --info-latar: #1c2d40;   --info-teks: #b0d1f5;
+  --netral-latar: #283240; --netral-teks: #c5ced9;
+  --tanda-latar: #8a6a00;  --tanda-teks: #fffaf0;
 
   --tirai: rgba(0, 0, 0, .65);
   --bayangan: 0 1px 2px rgba(0, 0, 0, .4);
@@ -88,6 +92,10 @@
   --color-bahaya-teks: var(--bahaya-teks);
   --color-info-latar: var(--info-latar);
   --color-info-teks: var(--info-teks);
+  --color-netral-latar: var(--netral-latar);
+  --color-netral-teks: var(--netral-teks);
+  --color-tanda-latar: var(--tanda-latar);
+  --color-tanda-teks: var(--tanda-teks);
   --color-tirai: var(--tirai);
   --shadow-kartu: var(--bayangan);
   --shadow-angkat: var(--bayangan-angkat);
@@ -126,6 +134,7 @@
   .lencana-pengembangan  { @apply bg-dev-latar text-dev-teks; }
   .lencana-peringatan    { @apply bg-dev-latar text-dev-teks; }
   .lencana-gagal         { @apply bg-bahaya-latar text-bahaya-teks; }
+  .lencana-netral        { @apply bg-netral-latar text-netral-teks; }
 
   .panel { @apply rounded-xl border border-garis bg-permukaan shadow-kartu p-5 sm:p-8; }
 
@@ -164,6 +173,55 @@
 /* Sorotan sesaat pada isian tujuan setelah butir Kelengkapan diklik (dipasang app.js) */
 [data-sorot] { outline: 3px solid var(--warna-aksen); outline-offset: 4px; border-radius: .5rem; }
 [data-sorot-pudar] { outline-color: transparent; transition: outline-color .6s ease; }
+
+/* ---------- Materi Podcast ---------- */
+/* Isi jawaban hasil pengurai.html(): paragraf, judul kecil, daftar (bersarang), tabel */
+.isi-jawaban > * + * { margin-top: .6em; }
+.isi-jawaban p + p, .isi-jawaban li > p + * { margin-top: .4em; }
+.isi-jawaban .judul-jawaban { font-weight: 600; margin-top: .9em; }
+.isi-jawaban .judul-jawaban:first-child { margin-top: 0; }
+.isi-jawaban ol, .isi-jawaban ul { padding-left: 1.6em; }
+.isi-jawaban li + li { margin-top: .3em; }
+.isi-jawaban li > ol, .isi-jawaban li > ul { margin-top: .3em; }
+.isi-jawaban ol[data-tingkat="0"] { list-style-type: decimal; }
+.isi-jawaban ol[data-tingkat="1"] { list-style-type: lower-alpha; }
+.isi-jawaban ol[data-tingkat="2"] { list-style-type: lower-roman; }
+.isi-jawaban ul[data-tingkat="0"] { list-style-type: disc; }
+.isi-jawaban ul[data-tingkat="1"] { list-style-type: circle; }
+.isi-jawaban ul[data-tingkat="2"] { list-style-type: square; }
+.isi-jawaban li::marker { color: var(--teks-redup); }
+.isi-jawaban table { border-collapse: collapse; font-size: .9em; min-width: 100%; }
+.isi-jawaban th, .isi-jawaban td { border: 1px solid var(--garis-kuat); padding: .35em .6em; text-align: left; vertical-align: top; }
+.isi-jawaban th { background: var(--warna-aksen); color: var(--teks-pada-aksen); font-weight: 600; }
+mark { background: var(--tanda-latar); color: var(--tanda-teks); border-radius: .2em; padding: 0 .1em; }
+
+/* Mode baca: tiga ukuran huruf (tombol A−/A/A+, disimpan di localStorage["ukuran-baca"]) */
+[data-baca] { font-size: 1.0625rem; line-height: 1.75; }
+[data-baca][data-ukuran="kecil"] { font-size: .9375rem; }
+[data-baca][data-ukuran="besar"] { font-size: 1.25rem; }
+[data-baca] h2 { font-size: 1.4em; line-height: 1.3; }
+[data-baca] h3 { font-size: 1em; }
+
+/* ---------- Cetak ---------- */
+@media print {
+  /* Cetak selalu dengan warna tema terang, apa pun tema layar */
+  :root, :root[data-theme="dark"] {
+    --latar: #ffffff; --permukaan: #ffffff; --permukaan-2: #eef2f6; --teks: #000000; --teks-redup: #3f4854;
+    --garis: #c5cdd6; --garis-kuat: #a9b4c2; --warna-aksen: #1d4e7e; --teks-pada-aksen: #ffffff;
+    --warna-aksen-lembut: #edf1f6;
+    --siap-latar: #e3f3e8; --siap-teks: #1d5c34; --dev-latar: #fbf0d4; --dev-teks: #6e4a00;
+    --netral-latar: #e9ecf0; --netral-teks: #3a4350; --tanda-latar: #ffe08a; --tanda-teks: #000000;
+    color-scheme: light;
+  }
+  body { background: #ffffff; }
+  .sidebar, #wadah-notifikasi, [data-tidak-dicetak] { display: none !important; }
+  main > div { max-width: none; padding: 0; }
+  * { box-shadow: none !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  a { color: inherit; text-decoration: none; }
+  [data-cetak-tetap] { break-inside: avoid; break-after: avoid; }
+  [data-cetak-bagian] + [data-cetak-bagian] { break-before: auto; }
+  h2, h3 { break-after: avoid; }
+}
 
 /* Hormati pengguna yang meminta animasi minimal */
 @media (prefers-reduced-motion: reduce) {

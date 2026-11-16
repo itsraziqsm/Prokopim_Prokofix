@@ -1,4 +1,4 @@
-/* Super App Prokopim — JS: tema, sidebar ringkas, notifikasi pop-up, tombol salin. */
+/* Super App Prokopim — JS: tema, sidebar, notifikasi, konfirmasi, unggah foto, editor pertanyaan, mode baca. */
 (function () {
   "use strict";
 
@@ -257,8 +257,23 @@
      {n} diganti jumlah [data-pilih-item] yang dicentang di dalam form. Dialog memakai <dialog> bawaan browser:
      fokus terkunci di dalam dialog, Esc = batal. */
   var dialog = document.getElementById("dialog-konfirmasi");
+  var formMenunggu = null, tombolPengirim = null, lanjutMenunggu = null, fokusSemula = null;
+  function bukaKonfirmasi(judul, pesan, tombol) {
+    document.getElementById("dk-judul").textContent = judul || "Konfirmasi";
+    document.getElementById("dk-pesan").textContent = pesan;
+    document.getElementById("dk-ya").textContent = tombol || "Ya";
+    dialog.returnValue = "";
+    dialog.showModal();
+  }
+  // Dari JS: window.konfirmasi("Pesan", { judul: "...", tombol: "Hapus" }, function () { ...bila Ya... })
+  window.konfirmasi = function (pesan, opsi, lanjut) {
+    if (!dialog || !dialog.showModal) { lanjut(); return; }
+    opsi = opsi || {};
+    lanjutMenunggu = lanjut;
+    fokusSemula = document.activeElement;
+    bukaKonfirmasi(opsi.judul, pesan, opsi.tombol);
+  };
   if (dialog && dialog.showModal) {
-    var formMenunggu = null, tombolPengirim = null;
     document.addEventListener("submit", function (e) {
       var form = e.target;
       // Atribut boleh di tombol pengirim (mis. tombol Hapus di dalam form besar) atau di form
@@ -267,24 +282,25 @@
       if (form.dataset.dikonfirmasi === "1") { delete form.dataset.dikonfirmasi; return; }
       e.preventDefault();
       var n = form.querySelectorAll("[data-pilih-item]:checked").length;
-      document.getElementById("dk-judul").textContent = sumber.dataset.konfirmasiJudul || "Konfirmasi";
-      document.getElementById("dk-pesan").textContent = sumber.dataset.konfirmasi.replace("{n}", n);
-      document.getElementById("dk-ya").textContent = sumber.dataset.konfirmasiTombol || "Ya";
       formMenunggu = form;
       tombolPengirim = e.submitter || null;
-      dialog.returnValue = "";
-      dialog.showModal();
+      bukaKonfirmasi(sumber.dataset.konfirmasiJudul, sumber.dataset.konfirmasi.replace("{n}", n), sumber.dataset.konfirmasiTombol);
     }, true);   // fase capture: berjalan sebelum handler lain
     dialog.addEventListener("close", function () {
-      if (dialog.returnValue === "ya" && formMenunggu) {
+      var ya = dialog.returnValue === "ya";
+      if (ya && formMenunggu) {
         formMenunggu.dataset.dikonfirmasi = "1";
         if (formMenunggu.requestSubmit) formMenunggu.requestSubmit(tombolPengirim || undefined);
         else formMenunggu.submit();
-      } else if (tombolPengirim) {
-        tombolPengirim.focus();
+      } else if (ya && lanjutMenunggu) {
+        lanjutMenunggu();
+      } else if (tombolPengirim || fokusSemula) {
+        (tombolPengirim || fokusSemula).focus();
       }
       formMenunggu = null;
       tombolPengirim = null;
+      lanjutMenunggu = null;
+      fokusSemula = null;
     });
   }
 
@@ -491,6 +507,289 @@
         Array.prototype.forEach.call(document.querySelectorAll('input[name="spt_id"]'), function (r) { r.checked = false; });
         document.dispatchEvent(new Event("change"));
       }
+    });
+  }
+
+  /* ---------- 15. Fokus kembali setelah dialihkan: ?fokus=<id elemen> ----------
+     Dipakai tombol Naik/Turun instansi agar pengguna keyboard tetap di tombol yang sama setelah halaman dimuat ulang. */
+  var idFokus = new URLSearchParams(location.search).get("fokus");
+  if (idFokus) {
+    var elFokus = document.getElementById(idFokus);
+    if (elFokus && elFokus.disabled) {
+      // Tombolnya kini nonaktif (sudah di ujung daftar): pindah ke tombol lain di baris yang sama
+      var baris = elFokus.closest("tr, li, section");
+      elFokus = baris ? baris.querySelector("button:not([disabled])") : null;
+    }
+    if (elFokus) elFokus.focus();
+    if (history.replaceState) history.replaceState(null, "", location.pathname + location.hash);
+  }
+
+  /* ---------- 16. Peringatan sebelum meninggalkan halaman bila ada perubahan belum disimpan ----------
+     <form data-jaga-perubahan> ... <p data-tanda-berubah hidden>. Event "ubah-daftar" = perubahan dari JS. */
+  Array.prototype.forEach.call(document.querySelectorAll("form[data-jaga-perubahan]"), function (form) {
+    var berubah = false;
+    var tanda = form.querySelector("[data-tanda-berubah]");
+    function tandai() {
+      if (berubah) return;
+      berubah = true;
+      if (tanda) tanda.hidden = false;
+    }
+    form.addEventListener("input", tandai);
+    form.addEventListener("change", tandai);
+    form.addEventListener("ubah-daftar", tandai);
+    form.addEventListener("submit", function () { berubah = false; });
+    window.addEventListener("beforeunload", function (e) {
+      if (!berubah) return;
+      e.preventDefault();
+      e.returnValue = "";   // browser menampilkan pesan bawaannya sendiri
+    });
+  });
+
+  /* ---------- 17. Editor pertanyaan (halaman instansi Materi Podcast) ----------
+     Tambah / naik / turun / hapus pertanyaan di browser, penomoran ulang, pratinjau jawaban langsung
+     (HTML dibuat server oleh pengurai yang sama dengan ekspor Word), dan kotak "Tandai selesai"
+     yang hanya aktif bila semua pertanyaan sudah berjawaban. */
+  var editor = document.querySelector("[data-editor-pertanyaan]");
+  if (editor) {
+    var daftarTanya = editor.querySelector("[data-daftar-pertanyaan]");
+    var cetakanTanya = document.getElementById("cetakan-pertanyaan");
+    var kosongTanya = editor.querySelector("[data-pertanyaan-kosong]");
+    var pengumuman = editor.querySelector("[data-pengumuman]");
+    var tombolTambah = editor.querySelector("[data-tambah-pertanyaan]");
+    var kotakSelesai = editor.querySelector("[data-tanda-selesai]");
+    var infoSelesai = editor.querySelector("[data-info-selesai]");
+    var maksTanya = parseInt(editor.dataset.pertanyaanMaks || "150", 10);
+    var csrfTanya = editor.querySelector("input[name=csrf_token]").value;
+    var penghitung = 0;
+    var KOSONG_PRATINJAU = '<p class="text-redup" data-pratinjau-kosong>Belum ada jawaban.</p>';
+
+    var semuaBaris = function () { return daftarTanya.querySelectorAll("[data-pertanyaan]"); };
+    var umumkan = function (teks) {
+      pengumuman.textContent = "";
+      setTimeout(function () { pengumuman.textContent = teks; }, 50);
+    };
+    var tandaiUbah = function () { editor.dispatchEvent(new Event("ubah-daftar")); };
+
+    var perbaruiSelesai = function () {
+      if (!kotakSelesai) return;
+      var baris = semuaBaris(), terjawab = 0;
+      Array.prototype.forEach.call(baris, function (b) {
+        if (b.querySelector("textarea[name=jawaban]").value.trim()) terjawab++;
+      });
+      var boleh = baris.length > 0 && terjawab === baris.length;
+      kotakSelesai.disabled = !boleh;
+      if (!boleh) kotakSelesai.checked = false;
+      infoSelesai.textContent = "Aktif bila semua pertanyaan sudah berjawaban (" + terjawab + " dari " + baris.length + " terjawab).";
+    };
+
+    var perbaruiNomor = function () {
+      var baris = semuaBaris();
+      Array.prototype.forEach.call(baris, function (b, i) {
+        b.querySelector("[data-nomor]").textContent = i + 1;
+        Array.prototype.forEach.call(b.querySelectorAll("[data-aksi-pertanyaan]"), function (tombol) {
+          tombol.querySelector("[data-label-teks]").textContent = tombol.dataset.label + " " + (i + 1);
+          if (tombol.dataset.aksiPertanyaan === "naik") tombol.disabled = i === 0;
+          if (tombol.dataset.aksiPertanyaan === "turun") tombol.disabled = i === baris.length - 1;
+        });
+      });
+      kosongTanya.hidden = baris.length > 0;
+      tombolTambah.disabled = baris.length >= maksTanya;
+      perbaruiSelesai();
+    };
+
+    var muatPratinjau = function (sumber) {
+      var target = document.getElementById(sumber.dataset.pratinjauSumber);
+      if (!target) return;
+      if (!sumber.value.trim()) { target.innerHTML = KOSONG_PRATINJAU; return; }
+      var data = new FormData();
+      data.append("csrf_token", csrfTanya);
+      data.append("teks", sumber.value);
+      var nomor = (sumber._permintaan || 0) + 1;
+      sumber._permintaan = nomor;
+      fetch(editor.dataset.pratinjauUrl, { method: "POST", body: data, credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+        .then(function (html) {
+          // HTML aman: dibuat server dari hasil penguraian, semua teks pengguna sudah di-escape
+          if (sumber._permintaan === nomor) target.innerHTML = html;
+        })
+        .catch(function () {
+          target.innerHTML = '<p class="text-bahaya-teks">Pratinjau gagal dimuat. Muat ulang halaman bila berlanjut.</p>';
+        });
+    };
+
+    var penunda = new WeakMap();
+    daftarTanya.addEventListener("input", function (e) {
+      var sumber = e.target.closest("[data-pratinjau-sumber]");
+      if (!sumber) return;
+      clearTimeout(penunda.get(sumber));
+      penunda.set(sumber, setTimeout(function () { muatPratinjau(sumber); }, 350));
+      perbaruiSelesai();
+    });
+
+    tombolTambah.addEventListener("click", function () {
+      penghitung++;
+      var wadahBaru = document.createElement("div");
+      wadahBaru.innerHTML = cetakanTanya.innerHTML.replace(/__KUNCI__/g, "b" + penghitung);
+      var baru = wadahBaru.firstElementChild;
+      daftarTanya.appendChild(baru);
+      perbaruiNomor();
+      tandaiUbah();
+      baru.querySelector("textarea[name=teks]").focus();
+      umumkan("Pertanyaan " + semuaBaris().length + " ditambahkan.");
+    });
+
+    daftarTanya.addEventListener("click", function (e) {
+      var tombol = e.target.closest("[data-aksi-pertanyaan]");
+      if (!tombol) return;
+      var b = tombol.closest("[data-pertanyaan]");
+      var aksi = tombol.dataset.aksiPertanyaan;
+      if (aksi === "hapus") {
+        var hapus = function () {
+          var tetangga = b.nextElementSibling || b.previousElementSibling;
+          b.remove();
+          perbaruiNomor();
+          tandaiUbah();
+          umumkan("Pertanyaan dihapus. Tekan Simpan untuk menyimpan perubahan.");
+          (tetangga ? tetangga.querySelector("textarea[name=teks]") : tombolTambah).focus();
+        };
+        var berisi = b.querySelector("textarea[name=teks]").value.trim() || b.querySelector("textarea[name=jawaban]").value.trim();
+        if (berisi) {
+          window.konfirmasi("Hapus pertanyaan " + b.querySelector("[data-nomor]").textContent +
+            " beserta jawabannya? Penghapusan tersimpan setelah Anda menekan Simpan.",
+            { judul: "Hapus pertanyaan", tombol: "Hapus" }, hapus);
+        } else {
+          hapus();
+        }
+        return;
+      }
+      if (aksi === "naik" && b.previousElementSibling) daftarTanya.insertBefore(b, b.previousElementSibling);
+      else if (aksi === "turun" && b.nextElementSibling) daftarTanya.insertBefore(b.nextElementSibling, b);
+      else return;
+      perbaruiNomor();
+      tandaiUbah();
+      umumkan("Pertanyaan dipindah ke urutan " + b.querySelector("[data-nomor]").textContent + ".");
+      // Tetap di tombol yang sama; bila kini di ujung (nonaktif), pindah ke tombol arah sebaliknya
+      (tombol.disabled ? b.querySelector('[data-aksi-pertanyaan="' + (aksi === "naik" ? "turun" : "naik") + '"]') : tombol).focus();
+      b.scrollIntoView({ block: "nearest", behavior: kurangiGerak.matches ? "auto" : "smooth" });
+    });
+
+    perbaruiNomor();
+  }
+
+  /* ---------- 18. Mode baca Materi Podcast ----------
+     Filter status, pencarian dengan sorotan <mark>, ukuran huruf (localStorage["ukuran-baca"]), dan cetak.
+     Semua di browser untuk satu materi; bagian yang disembunyikan filter juga tidak ikut dicetak. */
+  var alatBaca = document.querySelector("[data-alat-baca]");
+  if (alatBaca) {
+    var wadahBaca = document.querySelector("[data-baca]");
+    var bagianBaca = document.querySelectorAll("[data-instansi-baca]");
+    var inputCari = alatBaca.querySelector("[data-cari-baca]");
+    var hasilBaca = alatBaca.querySelector("[data-hasil-baca]");
+    var kosongBaca = document.querySelector("[data-baca-kosong]");
+    var statusPilih = "semua";
+    var UKURAN = ["kecil", "sedang", "besar"];
+
+    var aturUkuran = function (ukuran) {
+      if (UKURAN.indexOf(ukuran) < 0) ukuran = "sedang";
+      wadahBaca.dataset.ukuran = ukuran;
+      Array.prototype.forEach.call(alatBaca.querySelectorAll("[data-ukuran-baca]"), function (t) {
+        t.setAttribute("aria-pressed", t.dataset.ukuranBaca === ukuran ? "true" : "false");
+      });
+    };
+    var ukuranTersimpan = null;
+    try { ukuranTersimpan = localStorage.getItem("ukuran-baca"); } catch (e) {}
+    aturUkuran(ukuranTersimpan);
+
+    alatBaca.addEventListener("click", function (e) {
+      var t = e.target.closest("[data-ukuran-baca]");
+      if (t) {
+        aturUkuran(t.dataset.ukuranBaca);
+        try { localStorage.setItem("ukuran-baca", t.dataset.ukuranBaca); } catch (err) {}
+      }
+      if (e.target.closest("[data-cetak]")) window.print();
+    });
+
+    var hapusSorot = function () {
+      Array.prototype.forEach.call(wadahBaca.querySelectorAll("mark[data-sorot-cari]"), function (m) {
+        var induk = m.parentNode;
+        induk.replaceChild(document.createTextNode(m.textContent), m);
+        induk.normalize();
+      });
+    };
+    // Bungkus setiap kemunculan kata (tanpa membedakan huruf besar/kecil) dengan <mark>; kembalikan jumlahnya
+    var sorot = function (el, kata) {
+      if (!el) return 0;
+      var jumlah = 0, simpul = [], t, kecil = kata.toLowerCase();
+      var penjelajah = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      while ((t = penjelajah.nextNode())) simpul.push(t);
+      simpul.forEach(function (s) {
+        var teks = s.nodeValue, rendah = teks.toLowerCase(), i = rendah.indexOf(kecil);
+        if (i < 0) return;
+        var potongan = document.createDocumentFragment(), posisi = 0;
+        while (i >= 0) {
+          potongan.appendChild(document.createTextNode(teks.slice(posisi, i)));
+          var m = document.createElement("mark");
+          m.setAttribute("data-sorot-cari", "");
+          m.textContent = teks.slice(i, i + kata.length);
+          potongan.appendChild(m);
+          jumlah++;
+          posisi = i + kata.length;
+          i = rendah.indexOf(kecil, posisi);
+        }
+        potongan.appendChild(document.createTextNode(teks.slice(posisi)));
+        s.parentNode.replaceChild(potongan, s);
+      });
+      return jumlah;
+    };
+
+    var terapkan = function () {
+      hapusSorot();
+      var kata = inputCari.value.trim();
+      var cari = kata.length >= 2;
+      var totalHasil = 0, instansiCocok = 0, tampil = 0;
+      Array.prototype.forEach.call(bagianBaca, function (sec) {
+        var cocokStatus = statusPilih === "semua" || sec.dataset.status === statusPilih;
+        var nHasil = 0;
+        var pertanyaan = sec.querySelectorAll("[data-pertanyaan-baca]");
+        if (cocokStatus && cari) {
+          var namaCocok = sorot(sec.querySelector("h2 [data-cari-isi]"), kata) > 0;
+          nHasil += namaCocok ? 1 : 0;
+          Array.prototype.forEach.call(pertanyaan, function (art) {
+            var n = 0;
+            Array.prototype.forEach.call(art.querySelectorAll("[data-cari-isi]"), function (el) { n += sorot(el, kata); });
+            art.hidden = !(n > 0 || namaCocok);
+            nHasil += n;
+          });
+        } else {
+          Array.prototype.forEach.call(pertanyaan, function (art) { art.hidden = false; });
+        }
+        var terlihat = cocokStatus && (!cari || nHasil > 0);
+        sec.hidden = !terlihat;
+        Array.prototype.forEach.call(document.querySelectorAll('[data-isi-instansi="' + sec.dataset.instansiBaca + '"]'),
+          function (li) { li.hidden = !terlihat; });
+        if (terlihat) tampil++;
+        totalHasil += nHasil;
+        if (nHasil) instansiCocok++;
+      });
+      kosongBaca.hidden = tampil > 0;
+      if (cari) {
+        hasilBaca.textContent = totalHasil ? totalHasil + " hasil di " + instansiCocok + " instansi." : "Tidak ada hasil untuk “" + kata + "”.";
+      } else if (kata) {
+        hasilBaca.textContent = "Ketik minimal 2 huruf.";
+      } else {
+        hasilBaca.textContent = statusPilih === "semua" ? "" : "Menampilkan " + tampil + " dari " + bagianBaca.length + " instansi.";
+      }
+    };
+
+    var penundaCari = null;
+    inputCari.addEventListener("input", function () {
+      clearTimeout(penundaCari);
+      penundaCari = setTimeout(terapkan, 200);
+    });
+    alatBaca.addEventListener("change", function (e) {
+      if (!e.target.matches("[data-saring-status]")) return;
+      statusPilih = e.target.value;
+      terapkan();
     });
   }
 })();

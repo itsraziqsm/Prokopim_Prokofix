@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "komponen/ui.html" import breadcrumb, field %}
+{% block judul %}Materi baru · Materi Podcast · {{ nama_aplikasi }}{% endblock %}
+
+{% block konten %}
+<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Data Podcast", url_for('data_podcast.index')), ("Materi Podcast", url_for('materi_podcast.index')), ("Materi baru", None)]) }}</div>
+<h1 class="mb-6">Materi baru</h1>
+<form method="post" action="{{ url_for('materi_podcast.buat') }}" class="panel grid max-w-2xl gap-5" novalidate data-kirim-sekali>
+  {{ csrf_field() }}
+  {{ field("judul", "Judul", nilai=isian.judul or "", galat=galat.judul, autofocus=true,
+           petunjuk="Mis. Rekap Jawaban Podcast Mitigasi Bencana 2026.") }}
+  {{ field("keterangan", "Keterangan", nilai=isian.keterangan or "", galat=galat.keterangan, wajib=false,
+           petunjuk="Mis. Per 11 November. Tampil di bawah judul pada Word.") }}
+  <div class="flex flex-wrap gap-3">
+    <button type="submit" class="tombol tombol-primer">Buat materi</button>
+    <a href="{{ url_for('materi_podcast.index') }}" class="tombol tombol-teks">Batal</a>
+  </div>
+</form>
+{% endblock %}

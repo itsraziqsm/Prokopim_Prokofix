@@ -97,6 +97,36 @@ CREATE TABLE IF NOT EXISTS liputan_foto (
     diolah       INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_liputan_foto ON liputan_foto (liputan_id, urutan);
+
+-- Data Podcast > Materi Podcast: satu materi = satu rekap pertanyaan & jawaban per instansi (OPD)
+CREATE TABLE IF NOT EXISTS materi_podcast (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    pengguna_id    INTEGER REFERENCES pengguna(id) ON DELETE SET NULL,   -- pembuat
+    judul          TEXT NOT NULL,                     -- mis. "Rekap Jawaban Podcast Mitigasi Bencana 2026"
+    keterangan     TEXT NOT NULL DEFAULT '',          -- mis. "Per 11 November"
+    berkas_ekspor  TEXT,                              -- nama Word terakhir di folder ekspor/
+    diekspor       TEXT,
+    dibuat         TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    diubah         TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS materi_instansi (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    materi_id  INTEGER NOT NULL REFERENCES materi_podcast(id) ON DELETE CASCADE,
+    urutan     INTEGER NOT NULL,
+    nama       TEXT NOT NULL,
+    selesai    INTEGER NOT NULL DEFAULT 0          -- ditandai pengguna; status lain dihitung otomatis
+);
+CREATE INDEX IF NOT EXISTS idx_materi_instansi ON materi_instansi (materi_id, urutan);
+
+CREATE TABLE IF NOT EXISTS materi_pertanyaan (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    instansi_id  INTEGER NOT NULL REFERENCES materi_instansi(id) ON DELETE CASCADE,
+    urutan       INTEGER NOT NULL,
+    teks         TEXT NOT NULL,
+    jawaban      TEXT NOT NULL DEFAULT ''         -- teks berformat ringan (lihat pengurai.py), BUKAN HTML
+);
+CREATE INDEX IF NOT EXISTS idx_materi_pertanyaan ON materi_pertanyaan (instansi_id, urutan);
 """
 
 

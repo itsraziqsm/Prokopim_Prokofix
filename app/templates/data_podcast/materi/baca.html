@@ -1,0 +1,116 @@
+{#- Mode baca: daftar isi instansi (menempel saat digulir; di layar sempit bisa dilipat), nomor 1.1, 1.2, ...
+    Filter status, pencarian dengan sorotan, ukuran huruf, dan cetak berjalan di browser (app.js, bagian 18). -#}
+{% extends "base.html" %}
+{% from "komponen/ui.html" import breadcrumb %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}Mode baca · {{ materi.judul }} · {{ nama_aplikasi }}{% endblock %}
+
+{% macro daftar_isi() -%}
+<ol role="list" class="grid gap-0.5 text-sm">
+  {% for ins in instansi %}
+  <li data-isi-instansi="{{ loop.index }}">
+    <a href="#baca-instansi-{{ loop.index }}" class="-mx-2 flex items-start gap-2 rounded-md px-2 py-1.5 text-teks no-underline hover:bg-permukaan-2">
+      <span class="w-5 shrink-0 text-right text-redup">{{ loop.index }}.</span>
+      <span class="min-w-0 flex-1">
+        <span class="block wrap-break-word">{{ ins.nama }}</span>
+        <span class="lencana lencana-{{ ins.lencana }} mt-0.5">{{ ins.label_status }}</span>
+      </span>
+    </a>
+  </li>
+  {% endfor %}
+</ol>
+{%- endmacro %}
+
+{% block konten %}
+<div class="mb-6" data-tidak-dicetak>{{ breadcrumb([("Alat", url_for('utama.alat')), ("Data Podcast", url_for('data_podcast.index')), ("Materi Podcast", url_for('materi_podcast.index')), (materi.judul, url_for('materi_podcast.detail', materi_id=materi.id)), ("Mode baca", None)]) }}</div>
+
+<header class="mb-6">
+  <h1 class="wrap-break-word">{{ materi.judul }}</h1>
+  {% if materi.keterangan %}<p class="mt-1 text-redup">{{ materi.keterangan }}</p>{% endif %}
+  <p class="mt-2 text-sm"><span class="font-semibold">{{ materi.jumlah_terjawab }} dari {{ materi.jumlah_pertanyaan }} pertanyaan terjawab</span>
+    <span class="text-redup">· {{ selesai }} dari {{ instansi|length }} instansi selesai</span></p>
+</header>
+
+{% if instansi %}
+{# ===== Alat baca (tidak ikut dicetak) ===== #}
+<div class="panel mb-6 grid gap-4 p-4! sm:p-5!" data-tidak-dicetak data-alat-baca>
+  <div class="flex flex-wrap items-end gap-3">
+    <div class="min-w-0 flex-1 basis-60">
+      <label for="f-cari-baca" class="label">Cari dalam materi</label>
+      <input id="f-cari-baca" type="search" class="input" placeholder="Ketik minimal 2 huruf" data-cari-baca aria-describedby="hasil-cari-baca">
+    </div>
+    <div role="group" aria-label="Ukuran huruf" class="flex">
+      {% for kode, label, kelas in (("kecil", "Huruf kecil", "text-sm"), ("sedang", "Huruf sedang", "text-base"), ("besar", "Huruf besar", "text-lg")) %}
+      <button type="button" class="tombol tombol-sekunder {{ kelas }} {{ 'rounded-r-none' if loop.first else ('rounded-l-none' if loop.last else 'rounded-none') }} {{ '-ml-px' if not loop.first }}"
+              data-ukuran-baca="{{ kode }}" aria-pressed="{{ 'true' if kode == 'sedang' else 'false' }}" title="{{ label }}">
+        <span aria-hidden="true">A</span><span class="sr-only">{{ label }}</span></button>
+      {% endfor %}
+    </div>
+    <button type="button" class="tombol tombol-sekunder" data-cetak>{{ ikon("cetak", "size-4") }}<span>Cetak</span></button>
+  </div>
+  <fieldset>
+    <legend class="label">Tampilkan instansi</legend>
+    <div class="flex flex-wrap gap-2">
+      {% for kode, label in [("semua", "Semua")] + status.items()|list %}
+      {% set n = instansi|length if kode == "semua" else instansi|selectattr("status", "equalto", kode)|list|length %}
+      <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-garis bg-permukaan px-3 py-1.5 text-sm transition-colors
+                    hover:border-garis-kuat has-checked:border-aksen has-checked:bg-aksen-lembut
+                    has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-aksen">
+        <input type="radio" name="saring-status" value="{{ kode }}" class="size-4 accent-aksen focus-visible:outline-none" data-saring-status {% if kode == "semua" %}checked{% endif %}>
+        <span class="font-medium">{{ label }}</span><span class="text-redup">({{ n }})</span>
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <p id="hasil-cari-baca" class="text-sm text-redup" aria-live="polite" data-hasil-baca></p>
+</div>
+
+<div class="grid items-start gap-6 lg:grid-cols-4 lg:gap-8">
+  {# ===== Daftar isi: lebar = menempel di samping; sempit = bisa dilipat ===== #}
+  <nav aria-label="Daftar isi instansi" class="hidden lg:sticky lg:top-0 lg:-mt-6 lg:block lg:max-h-dvh lg:overflow-y-auto lg:py-6" data-tidak-dicetak>
+    <p class="mb-2 font-semibold">Daftar isi</p>
+    {{ daftar_isi() }}
+  </nav>
+  <details class="panel p-4! lg:hidden" data-tidak-dicetak>
+    <summary class="cursor-pointer font-semibold">Daftar isi ({{ instansi|length }} instansi)</summary>
+    <nav aria-label="Daftar isi instansi" class="mt-3">{{ daftar_isi() }}</nav>
+  </details>
+
+  {# ===== Isi ===== #}
+  <div class="min-w-0 lg:col-span-3" data-baca data-ukuran="sedang">
+    <div class="max-w-3xl">
+      {% for ins in instansi %}
+      {% set n = loop.index %}
+      <section id="baca-instansi-{{ n }}" class="mb-12 scroll-mt-6" data-instansi-baca="{{ n }}" data-status="{{ ins.status }}"
+               aria-labelledby="judul-baca-{{ n }}" data-cetak-bagian>
+        <h2 id="judul-baca-{{ n }}" class="border-b-2 border-aksen pb-1 text-aksen">{{ n }}. <span data-cari-isi>{{ ins.nama }}</span></h2>
+        <p class="mb-5 mt-2 flex flex-wrap items-center gap-2 text-sm text-redup">
+          <span class="lencana lencana-{{ ins.lencana }}">{{ ins.label_status }}</span>
+          <span>{{ ins.terjawab }} dari {{ ins.jumlah }} pertanyaan terjawab</span>
+        </p>
+        {% for p in ins.pertanyaan %}
+        <article class="mb-7" data-pertanyaan-baca aria-labelledby="tanya-baca-{{ p.id }}">
+          <h3 id="tanya-baca-{{ p.id }}" class="flex gap-3 rounded-r-lg border-l-4 border-aksen bg-aksen-lembut px-4 py-2.5 font-semibold leading-snug"
+              {% if p.terjawab %}data-cetak-tetap{% endif %}>
+            <span class="shrink-0 text-aksen">{{ n }}.{{ loop.index }}</span>
+            <span class="min-w-0 wrap-break-word" data-cari-isi>{{ p.teks }}</span>
+          </h3>
+          {% if p.terjawab %}
+          <div class="isi-jawaban mt-3 pl-4 wrap-break-word" data-cari-isi>{{ p.jawaban|jawaban_html }}</div>
+          {% else %}
+          <p class="mt-2 pl-4 italic text-redup">Belum dijawab.</p>
+          {% endif %}
+        </article>
+        {% else %}
+        <p class="italic text-redup">Belum ada pertanyaan.</p>
+        {% endfor %}
+      </section>
+      {% endfor %}
+      <p class="text-redup" data-baca-kosong hidden>Tidak ada instansi yang cocok dengan filter atau pencarian.</p>
+    </div>
+  </div>
+</div>
+{% else %}
+<p class="text-redup">Materi ini belum berisi instansi. <a href="{{ url_for('materi_podcast.detail', materi_id=materi.id) }}">Tambah instansi</a></p>
+{% endif %}
+{% endblock %}

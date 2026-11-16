@@ -44,7 +44,7 @@ def create_app(konfigurasi=None, instance_path=None):
     db.siapkan_db(app)
 
     from . import auth, routes
-    from .modul import arsip_liputan, pemecah_spt
+    from .modul import arsip_liputan, data_podcast, pemecah_spt
 
     # Batas unggahan khusus per rute. Harus dipasang SEBELUM penjaga login (yang membaca formulir untuk
     # cek CSRF), karena batas ukuran berlaku saat formulir pertama kali dibaca.
@@ -59,6 +59,8 @@ def create_app(konfigurasi=None, instance_path=None):
     app.register_blueprint(routes.bp)
     app.register_blueprint(pemecah_spt.bp)
     app.register_blueprint(arsip_liputan.bp)
+    for bp in data_podcast.SEMUA_BLUEPRINT:   # induk Data Podcast + fitur anaknya
+        app.register_blueprint(bp)
 
     # Tersedia otomatis di SEMUA template Jinja
     from .keamanan import csrf_field

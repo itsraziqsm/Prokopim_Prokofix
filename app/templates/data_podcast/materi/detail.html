@@ -1,0 +1,131 @@
+{#- Halaman kerja satu materi: ringkasan instansi (urut ulang naik/turun), tambah instansi,
+    ubah judul/keterangan, Word (ekspor & unduh), duplikat, hapus. -#}
+{% extends "base.html" %}
+{% from "komponen/ui.html" import breadcrumb, field, alert %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}{{ materi.judul }} · Materi Podcast · {{ nama_aplikasi }}{% endblock %}
+
+{% block konten %}
+<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat')), ("Data Podcast", url_for('data_podcast.index')), ("Materi Podcast", url_for('materi_podcast.index')), (materi.judul, None)]) }}</div>
+
+<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+  <div class="min-w-0">
+    <h1 class="wrap-break-word">{{ materi.judul }}</h1>
+    {% if materi.keterangan %}<p class="mt-1 text-redup">{{ materi.keterangan }}</p>{% endif %}
+    <p class="mt-2 text-sm">
+      <span class="font-semibold">{{ materi.jumlah_terjawab }} dari {{ materi.jumlah_pertanyaan }} pertanyaan terjawab</span>
+      <span class="text-redup">· {{ selesai }} dari {{ instansi|length }} instansi selesai</span>
+    </p>
+  </div>
+  <a href="{{ url_for('materi_podcast.baca', materi_id=materi.id) }}" class="tombol tombol-sekunder">{{ ikon("buku", "size-4") }}<span>Mode baca</span></a>
+</div>
+
+<div class="grid items-start gap-6 lg:grid-cols-3 lg:gap-8">
+  {# ===== Kiri: instansi ===== #}
+  <div class="grid min-w-0 gap-6 lg:col-span-2">
+    <section class="panel p-0! overflow-hidden" aria-labelledby="judul-instansi">
+      <h2 id="judul-instansi" class="px-5 pt-5 sm:px-6">Instansi</h2>
+      {% if instansi %}
+      <div class="relative mt-3 overflow-x-auto" tabindex="0" role="region" aria-label="Ringkasan instansi">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-permukaan-2 text-redup">
+            <tr>
+              <th scope="col" class="px-4 py-3 font-semibold">No</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Instansi</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Terjawab</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Status</th>
+              <th scope="col" class="px-4 py-3 font-semibold"><span class="sr-only">Urutan</span></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-garis">
+            {% for ins in instansi %}
+            <tr id="instansi-{{ ins.id }}" class="align-middle">
+              <td class="px-4 py-3 text-redup">{{ loop.index }}</td>
+              <td class="px-4 py-3">
+                <a href="{{ url_for('materi_podcast.instansi', materi_id=materi.id, instansi_id=ins.id) }}" class="font-medium wrap-break-word">{{ ins.nama }}</a>
+              </td>
+              <td class="whitespace-nowrap px-4 py-3">{{ ins.terjawab }} dari {{ ins.jumlah }}</td>
+              <td class="px-4 py-3"><span class="lencana lencana-{{ ins.lencana }}">{{ ins.label_status }}</span></td>
+              <td class="px-2 py-2">
+                <div class="flex justify-end gap-1">
+                  {# Tombol di ujung daftar dinonaktifkan; setelah bergeser fokus kembali ke tombol yang sama #}
+                  {% for arah, label in (("naik", "Naikkan"), ("turun", "Turunkan")) %}
+                  <form method="post" action="{{ url_for('materi_podcast.geser_instansi', materi_id=materi.id, instansi_id=ins.id) }}">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="arah" value="{{ arah }}">
+                    <button type="submit" id="geser-{{ arah }}-{{ ins.id }}" class="tombol tombol-teks min-h-9 px-2"
+                            aria-label="{{ label }} {{ ins.nama }}" title="{{ label }}"
+                            {% if (arah == "naik" and instansi[0].id == ins.id) or (arah == "turun" and instansi[-1].id == ins.id) %}disabled{% endif %}>
+                      {{ ikon(arah, "size-4") }}
+                    </button>
+                  </form>
+                  {% endfor %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="px-5 pt-2 text-redup sm:px-6">Belum ada instansi. Tambahkan instansi pertama di bawah.</p>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('materi_podcast.tambah_instansi', materi_id=materi.id) }}" novalidate
+            class="flex flex-wrap items-end gap-3 border-t border-garis p-5 sm:px-6 {{ 'mt-4' if not instansi }}">
+        {{ csrf_field() }}
+        <div class="min-w-0 flex-1 basis-56">
+          <label for="f-nama-instansi" class="label">Tambah instansi</label>
+          <input id="f-nama-instansi" name="nama" class="input" placeholder="Mis. Dinas Sosial" maxlength="200" required
+                 {% if galat_instansi %}aria-invalid="true" aria-describedby="g-nama-instansi" autofocus{% endif %}>
+          {% if galat_instansi %}<p id="g-nama-instansi" class="galat-field">{{ galat_instansi }}</p>{% endif %}
+        </div>
+        <button type="submit" class="tombol tombol-primer">{{ ikon("plus", "size-4") }}<span>Tambah instansi</span></button>
+      </form>
+    </section>
+  </div>
+
+  {# ===== Kanan: Word, judul, tindakan ===== #}
+  <aside class="grid min-w-0 content-start gap-6" aria-label="Word dan pengaturan materi">
+    <section id="bagian-word" class="panel grid gap-3 p-5!" aria-labelledby="judul-word">
+      <h2 id="judul-word" class="text-lg">Word</h2>
+      {% if ada_ekspor %}
+      <p class="text-sm text-redup"><span class="wrap-anywhere">{{ materi.berkas_ekspor }}</span><br>dibuat {{ materi.diekspor|waktu_singkat }}</p>
+      {% endif %}
+      {% if perlu_ekspor_ulang %}{{ alert("Ada perubahan setelah Word terakhir dibuat. Ekspor ulang agar Word memuat perubahan terbaru.", "peringatan") }}{% endif %}
+      <form method="post" action="{{ url_for('materi_podcast.ekspor', materi_id=materi.id) }}" data-kirim-sekali data-teks-proses="Membuat Word...">
+        {{ csrf_field() }}
+        <button type="submit" class="tombol w-full {{ 'tombol-primer' if not ada_ekspor or perlu_ekspor_ulang else 'tombol-sekunder' }}">
+          {{ ikon("dokumen-pecah", "size-4") }}<span>{{ "Ekspor ulang Word" if ada_ekspor else "Ekspor Word" }}</span></button>
+      </form>
+      {% if ada_ekspor %}
+      <a href="{{ url_for('materi_podcast.unduh', materi_id=materi.id) }}" class="tombol w-full {{ 'tombol-sekunder' if perlu_ekspor_ulang else 'tombol-primer' }}">{{ ikon("unduh", "size-4") }}<span>Unduh Word</span></a>
+      {% endif %}
+      <p class="text-xs text-redup">A4, berisi ringkasan instansi lalu pertanyaan dan jawaban.</p>
+    </section>
+
+    <form method="post" action="{{ url_for('materi_podcast.simpan', materi_id=materi.id) }}" class="panel grid gap-4 p-5!" novalidate
+          aria-labelledby="judul-ubah">
+      {{ csrf_field() }}
+      <h2 id="judul-ubah" class="text-lg">Judul & keterangan</h2>
+      {{ field("judul", "Judul", nilai=isian.judul or "", galat=galat.judul) }}
+      {{ field("keterangan", "Keterangan", nilai=isian.keterangan or "", galat=galat.keterangan, wajib=false) }}
+      <button type="submit" class="tombol tombol-sekunder">Simpan judul</button>
+    </form>
+
+    <section class="panel grid gap-2 p-5!" aria-label="Tindakan lain">
+      <form method="post" action="{{ url_for('materi_podcast.duplikat', materi_id=materi.id) }}" data-kirim-sekali>
+        {{ csrf_field() }}
+        <button type="submit" class="tombol tombol-teks w-full justify-start">{{ ikon("salin", "size-4") }}<span>Duplikat materi</span></button>
+      </form>
+      <p class="-mt-1 mb-1 px-4 text-xs text-redup">Salinan berisi semua instansi, pertanyaan, dan jawaban, untuk rekap versi berikutnya.</p>
+      <form method="post" action="{{ url_for('materi_podcast.hapus', materi_id=materi.id) }}" class="border-t border-garis pt-2"
+            data-konfirmasi="Hapus materi ini beserta {{ instansi|length }} instansi, {{ materi.jumlah_pertanyaan }} pertanyaan, dan berkas Word-nya? Tindakan ini tidak dapat dibatalkan."
+            data-konfirmasi-judul="Hapus materi" data-konfirmasi-tombol="Hapus">
+        {{ csrf_field() }}
+        <button type="submit" class="tombol tombol-teks w-full justify-start text-bahaya-teks">{{ ikon("hapus", "size-4") }}<span>Hapus materi</span></button>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}
