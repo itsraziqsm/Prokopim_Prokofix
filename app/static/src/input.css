@@ -21,6 +21,7 @@
   --latar: #f5f7fa;
   --permukaan: #ffffff;
   --permukaan-2: #eef2f6;
+  --latar-logo: #ffffff;           /* alas logo bertulisan hitam (tetap putih di mode gelap) */
   --teks: #1b2430;
   --teks-redup: #4f5b69;
   --garis: #d8dee6;
@@ -47,6 +48,7 @@
   --latar: #0f141b;
   --permukaan: #171e27;
   --permukaan-2: #1f2834;
+  --latar-logo: #f5f7fa;
   --teks: #e6ebf1;
   --teks-redup: #a7b2bf;
   --garis: #2c3745;
@@ -73,6 +75,7 @@
   --color-latar: var(--latar);
   --color-permukaan: var(--permukaan);
   --color-permukaan-2: var(--permukaan-2);
+  --color-latar-logo: var(--latar-logo);
   --color-teks: var(--teks);
   --color-redup: var(--teks-redup);
   --color-garis: var(--garis);

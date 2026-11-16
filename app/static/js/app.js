@@ -1,4 +1,4 @@
-/* Super App Kerja — JS: tema, sidebar ringkas, notifikasi pop-up, tombol salin. */
+/* Super App Prokopim — JS: tema, sidebar ringkas, notifikasi pop-up, tombol salin. */
 (function () {
   "use strict";
 

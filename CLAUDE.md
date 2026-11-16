@@ -1,9 +1,9 @@
-# CLAUDE.md — Super App Kerja
+# CLAUDE.md — Super App Prokopim
 
 Konteks untuk asisten AI yang bekerja di repo ini. Baca seluruhnya sebelum mengubah kode.
 
 ## Tentang proyek
-"Super App Kerja": kumpulan tools kerja pribadi untuk pegawai instansi pemerintah (Bagian Prokopim),
+"Super App Prokopim": kumpulan tools kerja pribadi untuk pegawai instansi pemerintah (Bagian Prokopim),
 berjalan **lokal** di komputer pengguna (Windows), dibuka lewat browser di `http://127.0.0.1:<port>`.
 Rencana: aplikasi akan dipindah ke **server Ubuntu** — lihat "Catatan pindah ke server".
 Setiap fitur = satu **modul** yang terdaftar di registry dan tampil sebagai kartu di dashboard.
@@ -112,8 +112,9 @@ app/templates/auth/            _kartu.html (tata letak 60/40), masuk, siapkan, a
 app/templates/                 dashboard, log, modul_dev, pengaturan, galat
 app/static/src/input.css       SUMBER CSS (edit ini)
 app/static/css/app.css         HASIL BUILD (jangan diedit manual)
-app/static/img/                logo.png (logo aplikasi = logo Pemko Medan, latar transparan; dipakai sidebar & halaman
-                               masuk), favicon.png (64 px), gambar halaman masuk opsional: masuk.jpg/.png/.webp
+app/static/img/                logo.png (logo Prokopim polos, latar transparan; sidebar & halaman masuk), logo-teks.png
+                               (logo + tulisan PROKOPIM; panel kanan halaman masuk di atas alas --latar-logo karena
+                               tulisannya hitam), favicon.png (64 px), gambar halaman masuk opsional: masuk.jpg/.png/.webp
 instance/                      superapp.db + secret_key (tidak ikut git; backup = salin folder ini)
 instance/data/spt/<id_batch>/  berkas hasil Pemecah SPT
 instance/tmp/                  unggahan sementara selama pratinjau (<token>.docx + .json), dihapus >24 jam

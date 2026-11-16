@@ -15,7 +15,7 @@ Keterangan kolom:
     rencana    : daftar rencana fitur (3-5 butir).
 """
 
-NAMA_APLIKASI = "Super App Kerja"
+NAMA_APLIKASI = "Super App Prokopim"
 
 # Label lencana untuk tiap status
 STATUS_LABEL = {

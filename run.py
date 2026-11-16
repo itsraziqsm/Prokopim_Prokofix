@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     # Cetak alamat sekali saja (bukan di proses kedua mode debug)
     if not os.environ.get("WERKZEUG_RUN_MAIN"):
-        print(f"\n  Super App Kerja berjalan di:  http://{HOST}:{port}\n  Tekan Ctrl+C untuk berhenti.\n")
+        print(f"\n  Super App Prokopim berjalan di:  http://{HOST}:{port}\n  Tekan Ctrl+C untuk berhenti.\n")
 
     # debug=True = server otomatis memuat ulang saat kode diubah (khusus pengembangan)
     app.run(host=HOST, port=port, debug=True)

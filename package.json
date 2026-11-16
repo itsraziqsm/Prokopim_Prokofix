@@ -1,7 +1,7 @@
 {
   "name": "super-app-kerja",
   "private": true,
-  "description": "Build CSS Tailwind untuk Super App Kerja (Flask). Node hanya dibutuhkan saat mengubah tampilan.",
+  "description": "Build CSS Tailwind untuk Super App Prokopim (Flask). Node hanya dibutuhkan saat mengubah tampilan.",
   "scripts": {
     "build:css": "tailwindcss -i ./app/static/src/input.css -o ./app/static/css/app.css --minify",
     "watch:css": "tailwindcss -i ./app/static/src/input.css -o ./app/static/css/app.css --watch"

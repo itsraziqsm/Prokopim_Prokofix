@@ -1,6 +1,6 @@
 {#- Tata letak halaman autentikasi: formulir 60% kiri, gambar 40% kanan,
     satu layar penuh tanpa scroll halaman (h-dvh + overflow-hidden).
-    Gambar diambil dari app/static/img/masuk.jpg (atau .png/.webp); bila tidak ada, tampil pola polos. -#}
+    Gambar diambil dari app/static/img/masuk.jpg (atau .png/.webp); bila tidak ada, tampil pola titik + logo bertulisan (img/logo-teks.png). -#}
 {% extends "base.html" %}
 {% from "komponen/ikon.html" import ikon %}
 {% from "komponen/ui.html" import field %}
@@ -38,6 +38,11 @@
       </defs>
       <rect width="100%" height="100%" fill="url(#pola-titik)"/>
     </svg>
+    <div class="absolute inset-0 flex items-center justify-center p-8">
+      <div class="w-full max-w-xs rounded-2xl border border-garis bg-latar-logo p-8 shadow-sm">
+        <img src="{{ url_for('static', filename='img/logo-teks.png') }}" alt="" width="404" height="378" class="h-auto w-full">
+      </div>
+    </div>
     {% endif %}
   </div>
 </div>

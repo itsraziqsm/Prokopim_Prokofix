@@ -1,4 +1,4 @@
-# Super App Kerja
+# Super App Prokopim
 
 Kumpulan tools kerja pribadi yang berjalan **lokal** di komputer sendiri (tanpa internet).
 Python + Flask + python-docx + Pillow + Jinja2, tampilan dengan **Tailwind CSS v4** (paket npm), JS biasa.
