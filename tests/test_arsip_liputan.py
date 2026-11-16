@@ -152,6 +152,25 @@ class UjiDokumen(unittest.TestCase):
         self.assertTrue(any(b.get(f"{W}val") == "dashed" for b in doc.element.body.iter(f"{W}top")))
         self.assertTrue(all(tr.find(f"{W}trPr/{W}cantSplit") is not None for tr in doc.element.body.iter(f"{W}tr")))
 
+    def test_lembar_baru_tanpa_page_break_manual(self):
+        """Regresi halaman kosong di Microsoft Word: tiap lembar mulai di halaman baru lewat
+        'Page break before' di baris pertama tabel, bukan page break manual di paragraf terpisah."""
+        foto = self.foto_siap(fl.tujuh_foto()[:3])
+        tujuan = self.folder / "tiga.docx"
+        ekspor.buat_dokumen({"judul": "J", "isi": "Isi", "foto_per_lembar": 2}, foto, tujuan)
+        body = Document(str(tujuan)).element.body
+        self.assertFalse(any(b.get(f"{W}type") == "page" for b in body.iter(f"{W}br")))
+        tabel = body.findall(f"{W}tbl")
+        self.assertEqual(len(tabel), 2)
+        for t in tabel:
+            p_pertama = t.find(f"{W}tr/{W}tc/{W}p")
+            self.assertIsNotNone(p_pertama.find(f"{W}pPr/{W}pageBreakBefore"))
+        # Tinggi tabel per halaman menyisakan cadangan yang cukup untuk paragraf penutup
+        area = 33.0 - 2 * 2.54
+        for t in tabel:
+            tinggi = sum(int(h.get(f"{W}val")) for h in t.iter(f"{W}trHeight")) / 567
+            self.assertLessEqual(tinggi, area - 1.4)
+
     def test_tanpa_foto_hanya_berita(self):
         tujuan = self.folder / "berita.docx"
         info = ekspor.buat_dokumen({"judul": "J", "isi": "Satu\nDua"}, [], tujuan)

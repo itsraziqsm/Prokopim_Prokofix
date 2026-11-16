@@ -14,7 +14,7 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -26,7 +26,9 @@ JALUR_TEMPLAT = Path(__file__).resolve().parents[2] / "templat_docx" / "berita.d
 
 FOTO_PER_LEMBAR_MAKS = 3
 JEDA_CM = 0.6               # baris kosong antar kotak (untuk gunting)
-CADANGAN_CM = 0.8           # ruang cadangan per halaman agar tabel tidak meluber ke halaman kosong
+CADANGAN_CM = 1.5           # ruang cadangan per halaman: Word menghitung tinggi tabel sedikit lebih besar
+                            # daripada LibreOffice (garis tepi, pembulatan); tanpa cadangan cukup, paragraf
+                            # setelah tabel terdorong ke halaman baru dan muncul halaman kosong
 MARGIN_SEL_CM = 0.25        # jarak isi kotak ke garis putus-putus
 UKURAN_KETERANGAN, UKURAN_SUMBER = 11, 10   # pt
 GARIS_POTONG = {"val": "dashed", "sz": "8", "space": "0", "color": "7F7F7F"}
@@ -164,13 +166,11 @@ def _rapat(paragraf, ukuran_pt=None, rata=WD_ALIGN_PARAGRAPH.CENTER):
     return paragraf
 
 
-def _paragraf_kecil(wadah, ganti_halaman=False):
+def _paragraf_kecil(wadah):
     """Paragraf setinggi 1 pt (pemisah/penutup tabel) agar tidak memakan tempat dan memicu halaman kosong."""
     p = wadah.add_paragraph()
     _rapat(p, 1)
     p.paragraph_format.line_spacing = Pt(1)
-    if ganti_halaman:
-        p.add_run().add_break(WD_BREAK.PAGE)
     return p
 
 
@@ -223,6 +223,11 @@ def _tabel_lembar(doc, isi_lembar, area_lebar, area_tinggi_cm):
         keterangan, sumber = (foto.get("keterangan") or "").strip(), (foto.get("sumber") or "").strip()
         lebar, tinggi = ukuran_foto(foto["lebar"], foto["tinggi"], kotak_cm, isi_lebar_cm, keterangan, sumber)
         p_foto = _rapat(sel.paragraphs[0])
+        if k == 0:
+            # Lembar selalu mulai di halaman baru lewat "Page break before" pada baris pertama tabel,
+            # BUKAN page break manual di paragraf terpisah (di Word, paragraf itu bisa terdorong ke
+            # halaman berikutnya lalu page break-nya menghasilkan halaman kosong).
+            p_foto.paragraph_format.page_break_before = True
         p_foto.add_run().add_picture(str(foto["jalur"]), width=Cm(lebar), height=Cm(tinggi))
         if keterangan:
             p = _rapat(sel.add_paragraph(), UKURAN_KETERANGAN)
@@ -248,8 +253,9 @@ def buat_dokumen(liputan, foto, tujuan):
         doc.add_paragraph(teks, style="Normal")
 
     lembar = bagi_lembar(foto, liputan.get("foto_per_lembar", 2))
-    for isi_lembar in lembar:
-        _paragraf_kecil(doc, ganti_halaman=True)   # lembar foto selalu di halaman baru
+    for ke, isi_lembar in enumerate(lembar):
+        if ke:
+            _paragraf_kecil(doc)   # pemisah 1 pt agar dua tabel tidak menyatu (tanpa page break)
         _tabel_lembar(doc, isi_lembar, area_lebar, area_tinggi_cm)
     if lembar:
         _paragraf_kecil(doc)   # Word mewajibkan paragraf setelah tabel terakhir

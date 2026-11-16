@@ -83,7 +83,9 @@ app/modul/arsip_liputan/       Fitur 2 — blueprint "arsip_liputan" di /liputan
                                  sectPr F4 11907x18711 margin 1440 dipertahankan; templat_sementara() bila berkas
                                  belum ada). BERITA (Title/Normal) lalu LEMBAR FOTO: tiap lembar = tabel 1 kolom,
                                  kotak garis putus-putus (tinggi baris exact + cantSplit), jeda 0,6 cm, maks. 3 foto;
-                                 bagi_lembar() menghormati "Mulai lembar baru"; paragraf pemisah 1 pt
+                                 bagi_lembar() menghormati "Mulai lembar baru". Lembar baru = "Page break before"
+                                 di baris pertama tabel, JANGAN page break manual (di Word memicu halaman kosong);
+                                 CADANGAN_CM 1,5 di bawah tabel; paragraf pemisah/penutup 1 pt
   layanan.py                     DB, folder instance/data/liputan/<id>/{foto,ekspor}, cari(), jalur_aman()
   routes.py                      /liputan (cari & filter), /liputan/baru, /liputan/<id> (+ /simpan, /ekspor,
                                  /unduh, /paket, /hapus), /liputan/<id>/foto (+ /<fid>, /simpan, /<fid>/simpan|
