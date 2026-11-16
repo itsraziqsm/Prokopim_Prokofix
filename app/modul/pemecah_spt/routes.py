@@ -1,17 +1,20 @@
 """Halaman web Pemecah SPT (alamat diawali /spt).
 
 Alur: unggah (/spt) -> analisis (POST /spt/analisis) -> pratinjau (/spt/pratinjau/<token>)
-      -> proses (POST /spt/proses) -> hasil batch (/spt/batch/<id>) -> unduh per berkas / ZIP.
+      -> proses (POST /spt/proses, berjalan di latar) -> hasil batch (/spt/batch/<id>, progres lewat
+      /spt/batch/<id>/status) -> unduh per berkas / ZIP.
 """
 import io
 import zipfile
+from dataclasses import asdict
 from pathlib import Path
 
-from flask import Blueprint, abort, flash, g, redirect, render_template, request, send_file, url_for
+from flask import (Blueprint, abort, current_app, flash, g, jsonify, redirect, render_template, request,
+                   send_file, url_for)
 
 from ... import log_proses
-from . import layanan, pdf
-from .pemecah import GalatBerkas, HasilAnalisis, analisis, pecah_satu, rapikan, validasi_berkas
+from . import layanan, pdf, pekerja
+from .pemecah import GalatBerkas, HasilAnalisis, analisis, rapikan, validasi_berkas
 from .penamaan import beri_nama
 
 bp = Blueprint("pemecah_spt", __name__, url_prefix="/spt")
@@ -88,6 +91,8 @@ def pratinjau(token):
 # ---------- 3. Proses ----------
 @bp.route("/proses", methods=["POST"])
 def proses():
+    """Membuat batch lalu menjalankan pemrosesan di latar; pengguna langsung diarahkan ke halaman hasil
+    yang menampilkan progres."""
     token = request.form.get("token", "")
     meta = _ambil_unggahan(token)
     if meta is None:
@@ -100,77 +105,12 @@ def proses():
         return redirect(url_for(".pratinjau", token=token))
 
     format_keluaran = meta["format"]
-    batch_id, folder = layanan.buat_batch(g.pengguna["id"], meta["nama_asli"], format_keluaran)
-    try:
-        status_batch, catatan, jumlah_berhasil = _pecah_dan_simpan(meta["jalur"], daftar, folder, batch_id, format_keluaran)
-    except Exception as e:  # jaring pengaman: batch ditandai gagal, bukan halaman galat mentah
-        layanan.selesaikan_batch(batch_id, 0, "gagal", f"Galat tak terduga: {e}")
-        log_proses.catat(ID_MODUL, "Pecah batch", status="gagal", detail=f"Galat tak terduga: {e}",
-                         lokasi=str(folder))
-        flash("Pemrosesan gagal karena galat tak terduga.", "galat")
-        return redirect(url_for(".batch", batch_id=batch_id))
-    finally:
-        layanan.hapus_sementara(token)
-
-    detail = f"{jumlah_berhasil} dari {len(daftar)} SPT → {layanan.FORMAT_LABEL[format_keluaran].replace(' ', '')}"
-    if catatan:
-        detail += f"; {catatan}"
-    log_proses.catat(ID_MODUL, "Pecah batch", status="gagal" if status_batch == "gagal" else "sukses",
-                     detail=detail, lokasi=str(folder))
-    pesan = {"sukses": (f"{len(daftar)} SPT berhasil dipecah.", "sukses"),
-             "sebagian": (catatan or "Sebagian berkas tidak berhasil dibuat.", "galat"),
-             "gagal": ("Semua SPT gagal diproses. Lihat rinciannya di tabel.", "galat")}[status_batch]
-    flash(*pesan)
+    langkah = len(daftar) * (2 if format_keluaran in ("pdf", "keduanya") else 1)
+    batch_id, folder = layanan.buat_batch(g.pengguna["id"], meta["nama_asli"], format_keluaran, langkah)
+    sumber = layanan.ambil_alih_sementara(token, batch_id)
+    pekerja.jalankan_latar(current_app._get_current_object(), batch_id, g.pengguna["id"],
+                           sumber, [asdict(i) for i in daftar], folder, format_keluaran)
     return redirect(url_for(".batch", batch_id=batch_id))
-
-
-def _pecah_dan_simpan(jalur_asli, daftar, folder, batch_id, format_keluaran):
-    """Pecah tiap SPT (kegagalan satu SPT tidak menghentikan yang lain), lalu buat PDF bila diminta."""
-    hasil = []   # (info, nama_docx | None, galat | None)
-    for info in daftar:
-        tujuan = folder / f"{info.nama}.docx"
-        try:
-            pecah_satu(jalur_asli, info, tujuan)
-            hasil.append((info, tujuan.name, None))
-        except Exception as e:
-            tujuan.unlink(missing_ok=True)
-            hasil.append((info, None, f"Gagal memecah: {e}"))
-
-    catatan = None
-    perlu_pdf = format_keluaran in ("pdf", "keduanya")
-    if perlu_pdf:
-        konversi = pdf.konversi_ke_pdf([folder / n for _, n, _ in hasil if n], folder)
-        catatan = konversi.galat
-
-    jumlah_gagal = jumlah_sebagian = 0
-    for info, nama_docx, galat in hasil:
-        nama_pdf, status = None, "sukses"
-        if nama_docx is None:
-            status = "gagal"
-        elif perlu_pdf:
-            calon = folder / f"{Path(nama_docx).stem}.pdf"
-            if calon.is_file():
-                nama_pdf = calon.name
-                if format_keluaran == "pdf":   # hanya PDF yang diminta: Word sementara dihapus
-                    (folder / nama_docx).unlink(missing_ok=True)
-                    nama_docx = None
-            else:
-                status = "sebagian"
-                galat = "PDF tidak dibuat; berkas Word tetap tersedia."
-        jumlah_gagal += status == "gagal"
-        jumlah_sebagian += status == "sebagian"
-        layanan.simpan_spt(batch_id, info.urutan, info.nomor, nama_docx, nama_pdf, info.cuplikan, status, galat)
-
-    if jumlah_gagal == len(hasil):
-        status_batch = "gagal"
-    elif jumlah_gagal or jumlah_sebagian:
-        status_batch = "sebagian"
-    else:
-        status_batch = "sukses"
-    if jumlah_gagal and not catatan:
-        catatan = f"{jumlah_gagal} SPT gagal dipecah."
-    layanan.selesaikan_batch(batch_id, len(hasil), status_batch, catatan)
-    return status_batch, catatan, len(hasil) - jumlah_gagal
 
 
 # ---------- 4. Hasil ----------
@@ -185,6 +125,24 @@ def _batch_milik_pengguna(batch_id):
 def batch(batch_id):
     data = _batch_milik_pengguna(batch_id)
     return render_template("pemecah_spt/batch.html", batch=data, daftar=layanan.spt_dalam_batch(batch_id))
+
+
+@bp.route("/batch/<int:batch_id>/status")
+def status_batch(batch_id):
+    """Progres batch dalam JSON, ditanyakan halaman hasil tiap detik selama status "proses"."""
+    data = _batch_milik_pengguna(batch_id)
+    total = max(data["total_langkah"], 1)
+    jawaban = {
+        "status": data["status"],
+        "selesai": data["status"] != "proses",
+        "progres": data["progres"],
+        "total": data["total_langkah"],
+        "persen": min(100, round(data["progres"] * 100 / total)),
+        "tahap": data["tahap"] or "",
+    }
+    if jawaban["selesai"]:
+        jawaban["pesan"], jawaban["jenis"] = pekerja.pesan_selesai(data)
+    return jsonify(jawaban)
 
 
 @bp.route("/unduh/<int:spt_id>/<jenis>")

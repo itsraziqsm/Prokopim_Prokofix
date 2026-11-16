@@ -73,7 +73,8 @@
             <td class="px-4 py-3">
               <a href="{{ url_for('pemecah_spt.batch', batch_id=b.id) }}" class="font-medium wrap-anywhere">{{ b.nama_berkas_asli }}</a>
               {% if b.status == "gagal" %}<span class="lencana lencana-gagal ml-1">Gagal</span>
-              {% elif b.status == "sebagian" %}<span class="lencana lencana-peringatan ml-1">Sebagian</span>{% endif %}
+              {% elif b.status == "sebagian" %}<span class="lencana lencana-peringatan ml-1">Sebagian</span>
+              {% elif b.status == "proses" %}<span class="lencana lencana-pengembangan ml-1">Diproses</span>{% endif %}
             </td>
             <td class="px-4 py-3">{{ b.jumlah }}</td>
             <td class="whitespace-nowrap px-4 py-3">{{ label_format(b.format_keluaran) }}</td>

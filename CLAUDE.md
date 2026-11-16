@@ -61,8 +61,10 @@ app/modul/pemecah_spt/         Fitur 1 — blueprint "pemecah_spt" di /spt:
   penamaan.py                    nama berkas dari nomor (sanitasi, duplikat → (1),(2) untuk SEMUA anggota)
   pdf.py                         konversi PDF (Word COM / LibreOffice), deteksi otomatis
   layanan.py                     DB & berkas; daftar_spt(), ambil_spt(id) untuk modul lain (Arsip Liputan)
+  pekerja.py                     pemrosesan batch di thread latar + laporan progres ke DB
   routes.py                      /spt, /spt/analisis, /spt/pratinjau/<token>, /spt/proses, /spt/batch/<id>,
-                                 /spt/batch/<id>/zip, /spt/batch/<id>/buka, /spt/unduh/<spt_id>/<docx|pdf>
+                                 /spt/batch/<id>/status (JSON progres), /spt/batch/<id>/zip,
+                                 /spt/batch/<id>/buka, /spt/unduh/<spt_id>/<docx|pdf>
 app/templates/pemecah_spt/     index (unggah + riwayat), pratinjau, batch (hasil)
 app/templates/base.html        kerangka: sidebar + konten; wadah notifikasi; skrip tema/sidebar di <head>
 app/templates/komponen/        sidebar.html, ui.html (makro), ikon.html (SVG)
@@ -97,6 +99,13 @@ tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .
   jalurnya di dalam folder data modul (lihat `layanan.jalur_berkas_aman`) → `send_file(as_attachment=True)`.
   ZIP dibuat di memori. "Buka folder" hanya dari lokasi yang tercatat. Unggahan: validasi ekstensi, signature,
   isi ZIP & batas ukuran; simpan dengan nama acak; token sementara terikat ke pengguna.
+- **Proses lama + progres**: kerjakan di thread latar (`threading.Thread(daemon=True)` dengan
+  `app.app_context()`, kirim `current_app._get_current_object()`), simpan progres di DB (kolom `status="proses"`,
+  `progres`, `total_langkah`, `tahap`), sediakan endpoint JSON `{selesai, progres, total, persen, tahap, pesan, jenis}`,
+  lalu tampilkan makro `progres(url_status, ...)` dari `ui.html`. app.js menanyakan status tiap detik, lalu memuat
+  ulang halaman dengan notifikasi. Di thread tidak ada `g.pengguna`: panggil `catat(..., pengguna_id=...)`.
+  Batch yang tertinggal berstatus "proses" ditandai gagal saat aplikasi dinyalakan (`db.siapkan_db`).
+  Kolom baru pada tabel lama: tambahkan ke `KOLOM_SUSULAN` di `db.py` (ALTER TABLE otomatis).
 - **Notifikasi**: server `flash(pesan, "sukses"|"info"|"galat")`; JS `window.notifikasi(pesan, jenis)`.
   Tampil pop-up kanan atas (fixed), jangan pakai alert inline untuk pesan umum. Galat per-field tetap inline (makro `field`).
 - **Komponen ulang-pakai** di `komponen/ui.html`: `lencana`, `kartu_modul`, `breadcrumb`, `tombol`, `toast`, `field`,
@@ -117,7 +126,9 @@ tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .
   Teks panjang berisi garis miring (nomor surat, jalur) pakai filter `|jalur` + `wrap-break-word`.
 - **Perilaku JS siap pakai** (app.js): `<form data-kirim-sekali data-teks-proses="Memproses...">` (cegah kirim ganda),
   `data-pilih-semua` + `data-pilih-item` + `data-jumlah-dipilih` (centang semua), `data-pilih-berkas` +
-  `data-nama-berkas` (input berkas bergaya tombol), `data-salin="teks"` (salin ke clipboard).
+  `data-nama-berkas` (input berkas bergaya tombol), `data-salin="teks"` (salin ke clipboard),
+  `data-pantau-progres="url"` (dipasang makro `progres`), notifikasi titipan lewat
+  `sessionStorage["notifikasi-tertunda"]` agar tetap tampil setelah halaman dimuat ulang.
 
 ## Standar UI/UX
 - Rapi, tenang, profesional (kantor pemerintahan); satu warna aksen biru tua + netral; tanpa gradasi mencolok.
@@ -138,7 +149,8 @@ Keputusan "hanya 127.0.0.1, satu pengguna" belum cocok untuk server Ubuntu. Sebe
 host/port & reverse proxy (nginx) + HTTPS, server WSGI (mis. gunicorn) menggantikan `python run.py` (debug=True),
 `SESSION_COOKIE_SECURE`, multi-pengguna (saat ini hanya /siapkan untuk akun pertama), pembatas percobaan login,
 tombol "Buka folder" (membuka folder di mesin SERVER, bukan di komputer pengguna — sembunyikan atau ganti dengan unduhan),
-proses PDF sinkron (pertimbangkan antrean bila batch besar), dan LibreOffice terpasang di server.
+proses latar memakai thread di dalam proses web (dengan gunicorn: worker harus tetap hidup selama proses,
+pertimbangkan antrean bila batch besar/banyak pengguna), dan LibreOffice terpasang di server.
 
 ## Verifikasi sebelum selesai
 1. `npm run build:css` bila ada kelas Tailwind baru.

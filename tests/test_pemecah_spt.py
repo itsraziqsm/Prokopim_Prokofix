@@ -4,6 +4,7 @@ import re
 import shutil
 import sqlite3
 import tempfile
+import time
 import unittest
 import zipfile
 from pathlib import Path
@@ -138,6 +139,39 @@ class UjiPemecahan(DasarBerkas):
         self.assertEqual(len(hasil.sections), 1)
 
 
+class UjiMigrasi(DasarBerkas):
+    def test_kolom_progres_ditambahkan_ke_database_lama(self):
+        instance = self.folder / "lama"
+        instance.mkdir()
+        db = sqlite3.connect(instance / "superapp.db")
+        db.execute("CREATE TABLE spt_batch (id INTEGER PRIMARY KEY, pengguna_id INTEGER, nama_berkas_asli TEXT, "
+                   "format_keluaran TEXT, jumlah INTEGER, folder TEXT, status TEXT, catatan TEXT, dibuat TEXT)")
+        db.commit()
+        db.close()
+        create_app({"TESTING": True}, instance_path=str(instance))
+        db = sqlite3.connect(instance / "superapp.db")
+        kolom = {b[1] for b in db.execute("PRAGMA table_info(spt_batch)")}
+        db.close()
+        self.assertTrue({"progres", "total_langkah", "tahap"} <= kolom)
+
+
+class UjiPdfProgres(DasarBerkas):
+    @unittest.skipUnless(pdf.pengonversi_tersedia(), "Microsoft Word / LibreOffice tidak tersedia")
+    def test_progres_dilaporkan(self):
+        sumber = fx.batch_contoh(self.folder / "batch.docx")
+        daftar = []
+        for info in analisis(sumber).daftar[:3]:
+            tujuan = self.folder / f"{info.urutan}.docx"
+            pecah_satu(sumber, info, tujuan)
+            daftar.append(tujuan)
+        laporan = []
+        hasil = pdf.konversi_ke_pdf(daftar, self.folder, lambda jadi, nama: laporan.append(jadi))
+        self.assertIsNone(hasil.galat)
+        self.assertTrue(laporan)
+        self.assertEqual(laporan[-1], 3)
+        self.assertEqual(laporan, sorted(laporan))
+
+
 class UjiPenamaan(unittest.TestCase):
     def test_sanitasi(self):
         self.assertEqual(bersihkan("800 / 12 \\ Prokopim/2026"), "800-12-Prokopim-2026")
@@ -204,10 +238,24 @@ class UjiAlurWeb(DasarBerkas):
                 "berkas": (io.BytesIO(Path(jalur or self.sumber).read_bytes()), nama)}
         return self.klien.post("/spt/analisis", data=data, content_type="multipart/form-data")
 
-    def proses(self, lokasi_pratinjau, pilih):
+    def proses(self, lokasi_pratinjau, pilih, tunggu=True):
         token = lokasi_pratinjau.rsplit("/", 1)[1]
-        return self.klien.post("/spt/proses", data={"csrf_token": self.token(lokasi_pratinjau),
-                                                    "token": token, "pilih": [str(p) for p in pilih]})
+        r = self.klien.post("/spt/proses", data={"csrf_token": self.token(lokasi_pratinjau),
+                                                 "token": token, "pilih": [str(p) for p in pilih]})
+        if tunggu and "/spt/batch/" in (r.location or ""):
+            self.tunggu_selesai(r.location)
+        return r
+
+    def tunggu_selesai(self, lokasi_batch, batas=120):
+        """Proses berjalan di thread latar; tanya status seperti yang dilakukan halaman hasil."""
+        url = f"{lokasi_batch}/status"
+        mulai = time.monotonic()
+        while time.monotonic() - mulai < batas:
+            data = self.klien.get(url).get_json()
+            if data["selesai"]:
+                return data
+            time.sleep(0.1)
+        self.fail("Proses latar tidak selesai")
 
     def db(self):
         if not hasattr(self, "_db"):
@@ -234,6 +282,7 @@ class UjiAlurWeb(DasarBerkas):
                                                  "800.1.11.1-102-Prokopim-2026.docx",
                                                  "800.1.11.1-101-Prokopim-2026 (2).docx", "SPT_urut-6.docx"])
         unduh = self.klien.get(f"/spt/unduh/{baris[0][0]}/docx")
+        self.addCleanup(unduh.close)
         self.assertEqual(unduh.status_code, 200)
         Document(io.BytesIO(unduh.data))   # berkas unduhan valid
         self.assertEqual(self.klien.get(f"/spt/unduh/{baris[0][0]}/pdf").status_code, 404)
@@ -264,6 +313,7 @@ class UjiAlurWeb(DasarBerkas):
         baris = self.db().execute("SELECT id, nama_docx, nama_pdf, status FROM spt").fetchall()
         self.assertTrue(all(b[1] is None and b[2].endswith(".pdf") and b[3] == "sukses" for b in baris))
         unduh = self.klien.get(f"/spt/unduh/{baris[0][0]}/pdf")
+        self.addCleanup(unduh.close)
         self.assertTrue(unduh.data.startswith(b"%PDF"))
         self.assertIn("/batch/", r.location)
 
@@ -299,6 +349,48 @@ class UjiAlurWeb(DasarBerkas):
         r = lain.get(lokasi)
         self.assertTrue(r.location.endswith("/spt"))
         self.assertEqual(lain.get("/spt/batch/1").status_code, 404)
+
+    def test_progres_dan_status(self):
+        r = self.proses(self.unggah("keduanya").location, [1, 2, 3], tunggu=False)
+        html = self.klien.get(r.location).get_data(as_text=True)
+        # Halaman hasil langsung terbuka: masih memproses (progress bar) atau sudah selesai
+        self.assertTrue("data-pantau-progres" in html or "Hasil pemecahan" in html)
+        data = self.tunggu_selesai(r.location)
+        self.assertEqual(data["status"], "sukses" if pdf.pengonversi_tersedia() else "sebagian")
+        self.assertEqual((data["progres"], data["total"], data["persen"]), (6, 6, 100))
+        self.assertTrue(data["pesan"])
+        self.assertNotIn("data-pantau-progres", self.klien.get(r.location).get_data(as_text=True))
+        self.assertEqual(self.klien.get("/spt/batch/999/status").status_code, 404)
+
+    def test_halaman_proses_menampilkan_progress_bar(self):
+        db = self.db()
+        db.execute("INSERT INTO spt_batch (pengguna_id, nama_berkas_asli, format_keluaran, status, "
+                   "progres, total_langkah, tahap) VALUES (1, 'x.docx', 'word', 'proses', 2, 4, 'Memecah SPT 3 dari 4')")
+        db.commit()
+        html = self.klien.get("/spt/batch/1").get_data(as_text=True)
+        self.assertIn('role="progressbar"', html)
+        self.assertIn('aria-valuenow="50"', html)
+        self.assertIn("Memecah SPT 3 dari 4", html)
+        self.assertIn("Diproses", self.klien.get("/spt").get_data(as_text=True))
+        status = self.klien.get("/spt/batch/1/status").get_json()
+        self.assertEqual((status["selesai"], status["persen"]), (False, 50))
+
+    def test_token_hanya_bisa_diproses_sekali(self):
+        lokasi = self.unggah().location
+        token = lokasi.rsplit("/", 1)[1]
+        csrf = self.token(lokasi)
+        self.proses(lokasi, [1])
+        r = self.klien.post("/spt/proses", data={"csrf_token": csrf, "token": token, "pilih": ["1"]})
+        self.assertTrue(r.location.endswith("/spt"))
+        self.assertEqual(self.db().execute("SELECT COUNT(*) FROM spt_batch").fetchone()[0], 1)
+
+    def test_batch_tertinggal_ditandai_gagal_saat_aplikasi_dinyalakan(self):
+        db = self.db()
+        db.execute("INSERT INTO spt_batch (pengguna_id, nama_berkas_asli, format_keluaran, status) "
+                   "VALUES (1, 'x.docx', 'word', 'proses')")
+        db.commit()
+        create_app({"TESTING": True}, instance_path=str(self.folder / "instance"))
+        self.assertEqual(self.db().execute("SELECT status FROM spt_batch").fetchone()[0], "gagal")
 
     def test_tanpa_centang_ditolak(self):
         lokasi = self.unggah().location

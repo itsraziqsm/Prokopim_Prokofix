@@ -39,8 +39,11 @@ CREATE TABLE IF NOT EXISTS spt_batch (
     format_keluaran   TEXT NOT NULL,            -- word | pdf | keduanya
     jumlah            INTEGER NOT NULL DEFAULT 0,
     folder            TEXT NOT NULL DEFAULT '', -- instance/data/spt/<id>
-    status            TEXT NOT NULL DEFAULT 'sukses',  -- sukses | sebagian | gagal
+    status            TEXT NOT NULL DEFAULT 'sukses',  -- proses | sukses | sebagian | gagal
     catatan           TEXT,                     -- mis. alasan PDF tidak dibuat
+    progres           INTEGER NOT NULL DEFAULT 0,      -- langkah yang sudah selesai
+    total_langkah     INTEGER NOT NULL DEFAULT 0,      -- jumlah SPT (x2 bila PDF dibuat)
+    tahap             TEXT,                            -- teks tahap saat status "proses"
     dibuat            TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_spt_batch_pengguna ON spt_batch (pengguna_id, id DESC);
@@ -77,10 +80,33 @@ def tutup_db(_error=None):
         db.close()
 
 
+# Kolom yang ditambahkan setelah tabelnya pertama kali dibuat. CREATE TABLE IF NOT EXISTS tidak
+# menambah kolom ke tabel lama, jadi kolom ini ditambahkan lewat ALTER TABLE bila belum ada.
+KOLOM_SUSULAN = {
+    "spt_batch": {
+        "progres": "INTEGER NOT NULL DEFAULT 0",
+        "total_langkah": "INTEGER NOT NULL DEFAULT 0",
+        "tahap": "TEXT",
+    },
+}
+
+
+def _tambah_kolom_susulan(db):
+    for tabel, kolom in KOLOM_SUSULAN.items():
+        ada = {baris[1] for baris in db.execute(f"PRAGMA table_info({tabel})")}
+        for nama, tipe in kolom.items():
+            if nama not in ada:
+                db.execute(f"ALTER TABLE {tabel} ADD COLUMN {nama} {tipe}")
+
+
 def siapkan_db(app):
-    """Membuat tabel (bila belum ada) dan mendaftarkan penutupan koneksi."""
+    """Membuat tabel (bila belum ada), menambah kolom susulan, dan mendaftarkan penutupan koneksi."""
+    app.teardown_appcontext(tutup_db)   # daftar dulu, agar koneksi di bawah juga ikut ditutup
     with app.app_context():
         db = ambil_db()
         db.executescript(SKEMA)
+        _tambah_kolom_susulan(db)
+        # Proses latar tidak bertahan bila aplikasi dimatikan; tandai batch yang tertinggal
+        db.execute("UPDATE spt_batch SET status = 'gagal', tahap = NULL, "
+                   "catatan = 'Proses terhenti karena aplikasi ditutup sebelum selesai.' WHERE status = 'proses'")
         db.commit()
-    app.teardown_appcontext(tutup_db)

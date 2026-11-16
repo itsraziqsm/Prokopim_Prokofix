@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -105,30 +106,49 @@ def pengonversi_tersedia():
     return None
 
 
-def _konversi_word(daftar, folder_kerja):
+def _jalankan(argumen, batas_waktu, pantau=None):
+    """Jalankan program luar dan tunggu selesai. Selama menunggu, `pantau()` dipanggil tiap 0,5 detik
+    (dipakai untuk melaporkan progres). Melempar subprocess.TimeoutExpired bila melewati batas waktu."""
+    proses = subprocess.Popen(argumen, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    mulai = time.monotonic()
+    while True:
+        try:
+            proses.wait(timeout=0.5)
+            break
+        except subprocess.TimeoutExpired:
+            if pantau:
+                pantau()
+            if time.monotonic() - mulai > batas_waktu:
+                proses.kill()
+                proses.wait()
+                raise
+    if pantau:
+        pantau()
+
+
+def _konversi_word(daftar, folder_kerja, pantau):
     berkas_daftar = folder_kerja / "daftar.txt"
     berkas_daftar.write_text(
         "\n".join(f"{d.resolve()}\t{d.with_suffix('.pdf').resolve()}" for d in daftar), encoding="utf-8")
     berkas_skrip = folder_kerja / "konversi.ps1"
     berkas_skrip.write_text(SKRIP_WORD, encoding="utf-8-sig")
-    subprocess.run(
-        ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-         "-File", str(berkas_skrip), "-Daftar", str(berkas_daftar)],
-        capture_output=True, timeout=_batas_waktu(len(daftar)), check=False)
+    _jalankan(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+               "-File", str(berkas_skrip), "-Daftar", str(berkas_daftar)],
+              _batas_waktu(len(daftar)), pantau)
 
 
-def _konversi_soffice(soffice, daftar, folder_keluar, folder_kerja):
+def _konversi_soffice(soffice, daftar, folder_keluar, folder_kerja, pantau):
     profil = folder_kerja / "profil"  # profil terpisah agar tidak bentrok dengan LibreOffice yang sedang dibuka
-    subprocess.run(
-        [str(soffice), f"-env:UserInstallation={profil.resolve().as_uri()}",
-         "--headless", "--norestore", "--convert-to", "pdf", "--outdir", str(folder_keluar),
-         *[str(d) for d in daftar]],
-        capture_output=True, timeout=_batas_waktu(len(daftar)), check=False)
+    _jalankan([str(soffice), f"-env:UserInstallation={profil.resolve().as_uri()}",
+               "--headless", "--norestore", "--convert-to", "pdf", "--outdir", str(folder_keluar),
+               *[str(d) for d in daftar]],
+              _batas_waktu(len(daftar)), pantau)
 
 
-def konversi_ke_pdf(daftar_docx, folder_keluar):
+def konversi_ke_pdf(daftar_docx, folder_keluar, saat_progres=None):
     """Konversi semua berkas sekaligus. PDF ditulis di folder_keluar dengan nama yang sama.
-    Keberhasilan per berkas diperiksa pemanggil lewat keberadaan berkas .pdf."""
+    Keberhasilan per berkas diperiksa pemanggil lewat keberadaan berkas .pdf.
+    saat_progres(jumlah_pdf_jadi, nama_pengonversi) dipanggil berkala selama konversi berjalan."""
     daftar = [Path(d) for d in daftar_docx]
     if not daftar:
         return HasilKonversi(None, None)
@@ -137,13 +157,18 @@ def konversi_ke_pdf(daftar_docx, folder_keluar):
     def belum():
         return [d for d in daftar if not (folder_keluar / f"{d.stem}.pdf").exists()]
 
+    def pantau_dengan(nama):
+        if saat_progres is None:
+            return None
+        return lambda: saat_progres(len(daftar) - len(belum()), nama)
+
     dipakai, galat = None, None
     with tempfile.TemporaryDirectory(prefix="superapp-pdf-") as tmp:
         kerja = Path(tmp)
         if word_tersedia():
             dipakai = "Microsoft Word"
             try:
-                _konversi_word(daftar, kerja)
+                _konversi_word(daftar, kerja, pantau_dengan("Microsoft Word"))
             except subprocess.TimeoutExpired:
                 galat = "Waktu konversi PDF lewat Microsoft Word habis."
             except OSError as e:
@@ -152,7 +177,7 @@ def konversi_ke_pdf(daftar_docx, folder_keluar):
         if belum() and soffice:   # tanpa Word, atau Word gagal untuk sebagian berkas
             dipakai = "LibreOffice" if dipakai is None else f"{dipakai} + LibreOffice"
             try:
-                _konversi_soffice(soffice, belum(), folder_keluar, kerja)
+                _konversi_soffice(soffice, belum(), folder_keluar, kerja, pantau_dengan("LibreOffice"))
                 galat = None
             except subprocess.TimeoutExpired:
                 galat = "Waktu konversi PDF lewat LibreOffice habis."

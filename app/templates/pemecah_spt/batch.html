@@ -1,10 +1,19 @@
 {% extends "base.html" %}
-{% from "komponen/ui.html" import breadcrumb, alert %}
+{% from "komponen/ui.html" import breadcrumb, alert, progres %}
 {% from "komponen/ikon.html" import ikon %}
-{% block judul %}Hasil pemecahan · Pemecah SPT · {{ nama_aplikasi }}{% endblock %}
+{% block judul %}{{ "Memproses" if batch.status == "proses" else "Hasil pemecahan" }} · Pemecah SPT · {{ nama_aplikasi }}{% endblock %}
 
 {% block konten %}
 <div class="mb-6">{{ breadcrumb([("Dashboard", url_for('utama.dashboard')), ("Pemecah SPT", url_for('pemecah_spt.index')), ("Hasil", None)]) }}</div>
+{% if batch.status == "proses" %}
+<h1 class="mb-1">Memproses</h1>
+<p class="mb-6 text-redup">
+  <span class="wrap-anywhere">{{ batch.nama_berkas_asli }}</span> · Keluaran {{ label_format(batch.format_keluaran) }}
+</p>
+<section class="panel max-w-2xl" aria-label="Progres pemrosesan">
+  {{ progres(url_for('pemecah_spt.status_batch', batch_id=batch.id), batch.progres, batch.total_langkah, batch.tahap) }}
+</section>
+{% else %}
 <h1 class="mb-1">Hasil pemecahan</h1>
 <p class="mb-6 text-redup">
   <span class="wrap-anywhere">{{ batch.nama_berkas_asli }}</span> · {{ batch.dibuat|waktu_singkat }} · {{ batch.jumlah }} SPT · Keluaran {{ label_format(batch.format_keluaran) }}
@@ -62,4 +71,5 @@
     </table>
   </div>
 </div>
+{% endif %}
 {% endblock %}

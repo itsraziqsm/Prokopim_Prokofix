@@ -62,6 +62,25 @@
 </div>
 {%- endmacro %}
 
+{# Progress bar yang memantau proses latar. url_status = endpoint JSON berisi
+   {selesai, progres, total, persen, tahap, pesan, jenis}; app.js menanyakannya tiap detik,
+   lalu memuat ulang halaman setelah selesai. #}
+{% macro progres(url_status, progres, total, tahap, label="Progres pemrosesan") -%}
+{% set persen = ((progres * 100 / total)|round|int) if total else 0 %}
+<div class="grid gap-3" data-pantau-progres="{{ url_status }}">
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <p class="font-semibold" aria-live="polite" data-progres-tahap>{{ tahap or "Menyiapkan..." }}</p>
+    <p class="text-sm text-redup" data-progres-angka>{{ persen }}%</p>
+  </div>
+  <div class="h-2.5 overflow-hidden rounded-full bg-permukaan-2" role="progressbar" aria-label="{{ label }}"
+       aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ persen }}" data-progres-bilah>
+    <div class="h-full rounded-full bg-aksen transition-all duration-500" style="width: {{ persen }}%" data-progres-isi></div>
+  </div>
+  <p class="text-sm text-redup" data-progres-catatan>Halaman ini diperbarui otomatis. Anda boleh membuka halaman lain; proses tetap berjalan.</p>
+  <noscript><p class="text-sm">Muat ulang halaman ini untuk melihat progres terbaru.</p></noscript>
+</div>
+{%- endmacro %}
+
 {# Isian formulir: label, petunjuk, dan pesan galat yang terhubung lewat ARIA #}
 {% macro field(nama, label, tipe="text", nilai="", galat=None, petunjuk=None, autocomplete=None, wajib=true, autofocus=false) -%}
 <div>

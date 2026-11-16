@@ -99,6 +99,16 @@
     pasang(el);
   };
 
+  // Notifikasi yang dititipkan sebelum halaman dimuat ulang (lihat bagian progres)
+  try {
+    var titipan = sessionStorage.getItem("notifikasi-tertunda");
+    if (titipan) {
+      sessionStorage.removeItem("notifikasi-tertunda");
+      titipan = JSON.parse(titipan);
+      setTimeout(function () { window.notifikasi(titipan.pesan, titipan.jenis); }, 150);
+    }
+  } catch (e) { /* sessionStorage bisa diblokir; abaikan */ }
+
   var awal = document.getElementById("notifikasi-awal");
   if (awal && wadah) {
     // Ditunda sedikit agar pembaca layar sempat mendaftarkan wadah aria-live
@@ -190,4 +200,50 @@
       if (nama) nama.textContent = input.files.length ? input.files[0].name : awal;
     });
   });
+
+  /* ---------- 8. Progres proses latar ----------
+     <div data-pantau-progres="URL status JSON">: tanya progres tiap detik, perbarui bilah,
+     lalu muat ulang halaman (dengan notifikasi) setelah selesai. */
+  var pantau = document.querySelector("[data-pantau-progres]");
+  if (pantau && window.fetch) {
+    var urlStatus = pantau.getAttribute("data-pantau-progres");
+    var elTahap = pantau.querySelector("[data-progres-tahap]");
+    var elAngka = pantau.querySelector("[data-progres-angka]");
+    var elBilah = pantau.querySelector("[data-progres-bilah]");
+    var elIsi = pantau.querySelector("[data-progres-isi]");
+    var elCatatan = pantau.querySelector("[data-progres-catatan]");
+    var gagalBeruntun = 0;
+
+    var tampilkan = function (d) {
+      var tahap = d.selesai ? "Selesai" : d.tahap;
+      if (tahap && elTahap.textContent !== tahap) elTahap.textContent = tahap;
+      elAngka.textContent = d.persen + "%";
+      elIsi.style.width = d.persen + "%";
+      elBilah.setAttribute("aria-valuenow", d.persen);
+    };
+
+    var tanya = function () {
+      fetch(urlStatus, { headers: { "Accept": "application/json" }, credentials: "same-origin", cache: "no-store" })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (d) {
+          gagalBeruntun = 0;
+          tampilkan(d);
+          if (d.selesai) {
+            try { sessionStorage.setItem("notifikasi-tertunda", JSON.stringify({ pesan: d.pesan, jenis: d.jenis })); } catch (e) {}
+            setTimeout(function () { window.location.reload(); }, 400);
+          } else {
+            setTimeout(tanya, 1000);
+          }
+        })
+        .catch(function () {
+          gagalBeruntun += 1;
+          if (gagalBeruntun < 30) {
+            setTimeout(tanya, 2000);
+          } else {
+            elCatatan.textContent = "Progres tidak dapat dimuat. Muat ulang halaman ini secara manual.";
+          }
+        });
+    };
+    setTimeout(tanya, 500);
+  }
 })();

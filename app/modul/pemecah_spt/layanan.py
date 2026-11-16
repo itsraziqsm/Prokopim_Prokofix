@@ -94,6 +94,16 @@ def baca_sementara(token, pengguna_id=None):
     return meta
 
 
+def ambil_alih_sementara(token, batch_id):
+    """Pindahkan unggahan ke tmp/proses-<batch_id>.docx dan hapus metadatanya.
+    Token langsung habis terpakai, sehingga batch yang sama tidak bisa diproses dua kali."""
+    sumber = _jalur_token(token, ".docx")
+    tujuan = folder_sementara() / f"proses-{batch_id}.docx"
+    sumber.replace(tujuan)
+    hapus_sementara(token)
+    return tujuan
+
+
 def hapus_sementara(token):
     for akhiran in (".docx", ".json"):
         jalur = _jalur_token(token, akhiran)
@@ -113,11 +123,13 @@ def bersihkan_sementara():
 
 
 # ---------- Batch ----------
-def buat_batch(pengguna_id, nama_asli, format_keluaran):
-    """Membuat rekaman batch + foldernya. Mengembalikan (id, folder)."""
+def buat_batch(pengguna_id, nama_asli, format_keluaran, total_langkah=0):
+    """Membuat rekaman batch (status "proses") + foldernya. Mengembalikan (id, folder)."""
     db = ambil_db()
-    cur = db.execute("INSERT INTO spt_batch (pengguna_id, nama_berkas_asli, format_keluaran) VALUES (?, ?, ?)",
-                     (pengguna_id, nama_asli, format_keluaran))
+    cur = db.execute(
+        "INSERT INTO spt_batch (pengguna_id, nama_berkas_asli, format_keluaran, status, total_langkah, tahap) "
+        "VALUES (?, ?, ?, 'proses', ?, 'Menyiapkan...')",
+        (pengguna_id, nama_asli, format_keluaran, total_langkah))
     folder = folder_data() / str(cur.lastrowid)
     folder.mkdir(parents=True, exist_ok=True)
     db.execute("UPDATE spt_batch SET folder = ? WHERE id = ?", (str(folder.resolve()), cur.lastrowid))
@@ -132,10 +144,16 @@ def simpan_spt(batch_id, urutan, nomor, nama_docx, nama_pdf, cuplikan, status, g
         (batch_id, urutan, nomor, nama_docx, nama_pdf, cuplikan, status, galat))
 
 
+def perbarui_progres(batch_id, progres, tahap):
+    db = ambil_db()
+    db.execute("UPDATE spt_batch SET progres = ?, tahap = ? WHERE id = ?", (progres, tahap, batch_id))
+    db.commit()
+
+
 def selesaikan_batch(batch_id, jumlah, status, catatan):
     db = ambil_db()
-    db.execute("UPDATE spt_batch SET jumlah = ?, status = ?, catatan = ? WHERE id = ?",
-               (jumlah, status, catatan, batch_id))
+    db.execute("UPDATE spt_batch SET jumlah = ?, status = ?, catatan = ?, tahap = NULL, progres = total_langkah "
+               "WHERE id = ?", (jumlah, status, catatan, batch_id))
     db.commit()
 
 
