@@ -393,4 +393,54 @@
       if (kosong) kosong.classList.toggle("hidden", tampil > 0 || !kata);
     });
   });
+
+  /* ---------- 12. Panel kelengkapan: perbarui centang/silang langsung dari isian formulir ----------
+     <li data-kelengkapan data-cek="isi:ID_ELEMEN | pilih:NAMA_RADIO | nilai:NAMA_RADIO=NILAI">.
+     Butir tanpa data-cek (foto, Word) hanya mengikuti data yang sudah tersimpan. */
+  var butirCek = document.querySelectorAll("[data-kelengkapan][data-cek]");
+  if (butirCek.length) {
+    var hitungParagraf = function (teks) {
+      return teks.replace(/[\u200b-\u200d\u2060\ufeff]/g, "").split(/\r?\n|\r/)
+        .filter(function (b) { return b.replace(/\s/g, "") !== ""; }).length;
+    };
+    var nilaiRadio = function (nama) {
+      var el = document.querySelector('input[name="' + nama + '"]:checked');
+      return el ? el.value : "";
+    };
+    var periksaButir = function (li) {
+      var aturan = li.dataset.cek, jenis = aturan.split(":")[0], isi = aturan.slice(jenis.length + 1);
+      var lengkap = false, detail = null;
+      if (jenis === "isi") {
+        var el = document.getElementById(isi);
+        if (!el) return;
+        if (li.dataset.kelengkapan === "isi") {
+          var n = hitungParagraf(el.value);
+          lengkap = n > 0;
+          detail = n ? n + " paragraf" : "";
+        } else {
+          lengkap = el.value.trim() !== "";
+        }
+      } else if (jenis === "pilih") {
+        lengkap = nilaiRadio(isi) !== "";
+      } else if (jenis === "nilai") {
+        var bagian = isi.split("=");
+        lengkap = nilaiRadio(bagian[0]) === bagian[1];
+      }
+      li.dataset.lengkap = lengkap ? "1" : "0";
+      li.querySelector("[data-tanda-lengkap]").hidden = !lengkap;
+      li.querySelector("[data-tanda-belum]").hidden = lengkap;
+      li.querySelector("[data-teks-status]").textContent = lengkap ? ": lengkap" : ": belum";
+      var elDetail = li.querySelector("[data-detail]");
+      if (detail !== null && elDetail) { elDetail.textContent = detail; elDetail.hidden = !detail; }
+    };
+    var perbaruiPanel = function () {
+      Array.prototype.forEach.call(butirCek, periksaButir);
+      var penghitung = document.querySelector("[data-jumlah-wajib-lengkap]");
+      if (penghitung) {
+        penghitung.textContent = document.querySelectorAll('[data-kelengkapan][data-wajib][data-lengkap="1"]').length;
+      }
+    };
+    document.addEventListener("input", perbaruiPanel);
+    document.addEventListener("change", perbaruiPanel);
+  }
 })();

@@ -15,6 +15,7 @@ from werkzeug.test import EnvironBuilder
 from app import create_app
 from app.modul.arsip_liputan import ekspor
 from app.modul.arsip_liputan.foto import BATAS_OLAH, GalatFoto, olah_foto
+from app.modul.arsip_liputan.kelengkapan import daftar_kelengkapan
 from app.modul.arsip_liputan.teks import nama_ekspor, paragraf_berita
 from tests import fixture_liputan as fl
 from tests import fixture_spt as fx
@@ -38,6 +39,41 @@ class UjiTeks(unittest.TestCase):
         self.assertEqual(nama_ekspor("2026-03-05", "Wakil", "", "Rapat"), "5 Maret Wakil - Rapat")
         self.assertEqual(nama_ekspor("2026-10-13", "Wali", 'Rapat: "A/B" <C>?'), "13 Oktober Wali - Rapat A-B C")
         self.assertLessEqual(len(nama_ekspor("2026-10-13", "Wali", "x" * 300)), 100)
+
+
+class UjiKelengkapan(unittest.TestCase):
+    def status(self, *a, **k):
+        return {b["kunci"]: b["lengkap"] for b in daftar_kelengkapan(*a, **k)}
+
+    def test_kosong_semua_belum_kecuali_tanggal(self):
+        hasil = self.status({"tanggal": "2026-10-13", "status": "draf"})
+        self.assertTrue(hasil["tanggal"])
+        self.assertFalse(any(v for k, v in hasil.items() if k != "tanggal"))
+
+    def test_lengkap(self):
+        foto = [{"keterangan": "a", "sumber": "IG"}, {"keterangan": "b", "sumber": "Web"}]
+        hasil = self.status({"tanggal": "2026-10-13", "judul": "J", "isi": "x", "kegiatan": "Rapat",
+                             "spt_id": 3, "status": "final"}, foto, ada_ekspor=True)
+        self.assertTrue(all(hasil.values()), hasil)
+
+    def test_keterangan_sebagian_dan_isi_hanya_spasi(self):
+        foto = [{"keterangan": "a", "sumber": ""}, {"keterangan": " ", "sumber": ""}]
+        daftar = daftar_kelengkapan({"tanggal": "2026-10-13", "judul": "J", "isi": " \n\u00a0\n"}, foto)
+        butir = {b["kunci"]: b for b in daftar}
+        self.assertFalse(butir["isi"]["lengkap"])
+        self.assertFalse(butir["keterangan"]["lengkap"])
+        self.assertEqual(butir["keterangan"]["detail"], "1 dari 2 foto")
+        self.assertTrue(butir["foto"]["lengkap"])
+
+    def test_word_perlu_dibuat_ulang(self):
+        hasil = daftar_kelengkapan({"tanggal": "2026-10-13"}, ada_ekspor=True, perlu_ekspor_ulang=True)
+        word = next(b for b in hasil if b["kunci"] == "word")
+        self.assertFalse(word["lengkap"])
+        self.assertEqual(word["detail"], "perlu dibuat ulang")
+
+    def test_wajib_dan_pelengkap(self):
+        wajib = {b["kunci"] for b in daftar_kelengkapan({}) if b["wajib"]}
+        self.assertEqual(wajib, {"tanggal", "judul", "isi", "foto", "keterangan"})
 
 
 class UjiFoto(unittest.TestCase):
@@ -370,6 +406,32 @@ class UjiWeb(unittest.TestCase):
         self.assertFalse(folder.exists())
         self.assertEqual(self.db().execute("SELECT COUNT(*) FROM liputan_foto").fetchone()[0], 0)
         self.assertEqual(self.klien.get(f"/liputan/{lid}").status_code, 404)
+
+    @staticmethod
+    def potong_panel(html):
+        awal = html.index('id="panel-laporan"')
+        return html[awal:html.index("</aside>", awal)]
+
+    def test_panel_kelengkapan_dan_ekspor(self):
+        html = self.klien.get("/liputan/baru").get_data(as_text=True)
+        self.assertIn('id="panel-laporan"', html)
+        self.assertIn("Word dapat dibuat setelah kegiatan disimpan", html)
+        self.assertNotIn("Buat Word", html)
+        _, lid = self.buat()
+        html = self.klien.get(f"/liputan/{lid}").get_data(as_text=True)
+        panel = self.potong_panel(html)
+        for teks in ("Kelengkapan", "Buat Word", "Hapus kegiatan"):
+            self.assertIn(teks, panel)
+        self.assertRegex(panel, r">3</span> dari 5 wajib")
+        self.assertNotIn("Unduh Word", panel)
+        self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
+        self.klien.post(f"/liputan/{lid}/ekspor", data={"csrf_token": self.token(f"/liputan/{lid}")})
+        html = self.klien.get(f"/liputan/{lid}").get_data(as_text=True)
+        panel = self.potong_panel(html)
+        for teks in ("Buat ulang Word", "Unduh Word", "Unduh paket ZIP"):
+            self.assertIn(teks, panel)
+        self.assertRegex(panel, r">4</span> dari 5 wajib")   # foto ada, keterangan belum
+        self.assertRegex(panel, r'data-kelengkapan="word"\s+data-lengkap="1"')
 
     def test_tanda_perlu_ekspor_ulang(self):
         _, lid = self.buat()

@@ -12,6 +12,7 @@ from ...waktu import BULAN
 from ..pemecah_spt import layanan as layanan_spt
 from . import layanan
 from .ekspor import FOTO_PER_LEMBAR_MAKS, bagi_lembar
+from .kelengkapan import daftar_kelengkapan
 from .foto import UKURAN_MAKS, GalatFoto
 
 bp = Blueprint("arsip_liputan", __name__, url_prefix="/liputan")
@@ -80,11 +81,15 @@ def _render_form(liputan=None, isian=None, galat=None, status_kode=200):
     per_lembar = (isian or liputan or {}).get("foto_per_lembar", 2) if not liputan else liputan["foto_per_lembar"]
     lembar_ke = {f["id"]: n for n, isi in enumerate(bagi_lembar([dict(f) for f in foto], per_lembar), start=1)
                  for f in isi}
+    perlu_ekspor_ulang = bool(liputan and liputan["diekspor"] and liputan["diubah"] > liputan["diekspor"])
+    ada_ekspor = bool(liputan and layanan.jalur_ekspor(liputan))
+    isian = isian or (dict(liputan) if liputan else {"tanggal": date.today().isoformat(), "foto_per_lembar": 2,
+                                                     "status": "draf"})
     return render_template(
         "arsip_liputan/form.html",
         liputan=liputan,
-        isian=isian or (dict(liputan) if liputan else {"tanggal": date.today().isoformat(), "foto_per_lembar": 2,
-                                                       "status": "draf"}),
+        isian=isian,
+        kelengkapan=daftar_kelengkapan(isian, foto, ada_ekspor, perlu_ekspor_ulang),
         galat=galat or {},
         foto=foto,
         lembar_ke=lembar_ke,
@@ -93,8 +98,8 @@ def _render_form(liputan=None, isian=None, galat=None, status_kode=200):
         foto_maks=layanan.FOTO_MAKS,
         ukuran_maks_mb=UKURAN_MAKS // (1024 * 1024),
         per_lembar_maks=FOTO_PER_LEMBAR_MAKS,
-        perlu_ekspor_ulang=bool(liputan and liputan["diekspor"] and liputan["diubah"] > liputan["diekspor"]),
-        ada_ekspor=bool(liputan and layanan.jalur_ekspor(liputan)),
+        perlu_ekspor_ulang=perlu_ekspor_ulang,
+        ada_ekspor=ada_ekspor,
     ), status_kode
 
 

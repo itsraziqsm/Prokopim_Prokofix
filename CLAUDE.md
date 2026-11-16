@@ -86,11 +86,14 @@ app/modul/arsip_liputan/       Fitur 2 — blueprint "arsip_liputan" di /liputan
                                  bagi_lembar() menghormati "Mulai lembar baru". Lembar baru = "Page break before"
                                  di baris pertama tabel, JANGAN page break manual (di Word memicu halaman kosong);
                                  CADANGAN_CM 1,5 di bawah tabel; paragraf pemisah/penutup 1 pt
+  kelengkapan.py                 daftar_kelengkapan(): butir wajib (tanggal, judul, isi, foto, keterangan foto) &
+                                 pelengkap (kegiatan, SPT, sumber foto, status final, Word terbaru) untuk panel samping
   layanan.py                     DB, folder instance/data/liputan/<id>/{foto,ekspor}, cari(), jalur_aman()
   routes.py                      /liputan (cari & filter), /liputan/baru, /liputan/<id> (+ /simpan, /ekspor,
                                  /unduh, /paket, /hapus), /liputan/<id>/foto (+ /<fid>, /simpan, /<fid>/simpan|
                                  geser|hapus), /liputan/spt/<spt_id>/<docx|pdf>
-app/templates/arsip_liputan/   index (tabel arsip), form (Data kegiatan, Isi berita, Foto, Word)
+app/templates/arsip_liputan/   index (tabel arsip), form (konten kiri: Data kegiatan, Isi berita, Foto; panel kanan
+                               #panel-laporan: Word/ekspor di atas + Kelengkapan ✓/✗; sticky setinggi layar)
 app/templat_docx/berita.docx   TEMPLAT berita (taruh berkas asli di sini; lihat README di folder itu)
 app/templates/base.html        kerangka: sidebar + konten; wadah notifikasi; skrip tema/sidebar di <head>
 app/templates/komponen/        sidebar.html, ui.html (makro), ikon.html (SVG)
@@ -172,7 +175,8 @@ tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membu
   `data-pantau-progres="url"` (dipasang makro `progres`), `data-konfirmasi` (dialog konfirmasi),
   `data-perlu-pilihan` (tombol nonaktif bila belum ada `data-pilih-item` tercentang),
   `data-zona-unggah` + `data-pratinjau-unggah` + `data-tombol-unggah` (unggah foto), `data-saring="#wadah"` +
-  `data-saring-teks` + `data-saring-kosong` (saring daftar di sisi klien), notifikasi titipan lewat
+  `data-saring-teks` + `data-saring-kosong` (saring daftar di sisi klien), `data-kelengkapan` + `data-cek=
+  "isi:ID | pilih:NAMA | nilai:NAMA=NILAI"` (centang/silang panel diperbarui langsung dari isian formulir), notifikasi titipan lewat
   `sessionStorage["notifikasi-tertunda"]` agar tetap tampil setelah halaman dimuat ulang.
 
 ## Standar UI/UX
