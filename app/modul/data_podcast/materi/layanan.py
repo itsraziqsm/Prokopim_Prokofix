@@ -40,7 +40,7 @@ def _db():
 
 # ---------- Folder ----------
 def folder_data():
-    """instance/data/podcast — semua berkas Data Podcast di bawah folder ini."""
+    """instance/data/podcast — semua berkas fitur Podcast di bawah folder ini."""
     folder = Path(current_app.instance_path) / "data" / "podcast"
     folder.mkdir(parents=True, exist_ok=True)
     return folder

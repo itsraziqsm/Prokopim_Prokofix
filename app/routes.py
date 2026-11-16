@@ -53,7 +53,7 @@ def dashboard():
 
 @bp.route("/alat")
 def alat():
-    """Kartu semua alat; modul induk (mis. Data Podcast) menjadi judul kelompok di atas kartu anaknya."""
+    """Kartu semua alat; modul induk (mis. Berita, Podcast) menjadi judul kelompok di atas kartu anaknya."""
     kelompok = kelompok_alat()
     daftar = [m for k in kelompok for m in k["modul"]]
     return render_template(

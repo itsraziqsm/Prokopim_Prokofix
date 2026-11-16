@@ -51,7 +51,8 @@ package.json                   skrip build Tailwind
 app/__init__.py                create_app(): config, secret key di instance/, blueprint, halaman galat
 app/modules_registry.py        DAFTAR MODUL (sumber tunggal) + STATUS_LABEL; field `induk` (None = tingkat atas). Modul yang
                                punya anak = JUDUL KELOMPOK di halaman Alat (bukan kartu, tanpa halaman sendiri), kartu
-                               anaknya tampil di bawah judul itu; kelompok_alat(), modul_utama(), anak_dari(induk_id)
+                               anaknya tampil di bawah judul itu. Kelompok saat ini: "Berita" (id berita: Pemecah SPT, Arsip
+                               Liputan) dan "Podcast" (id data_podcast: Materi Podcast); kelompok_alat(), modul_utama(), anak_dari()
 app/routes.py                  blueprint "utama": / (Dashboard), /alat (kartu modul), /log, /log/<id>/buka, /modul/<id>,
                                /pengaturan
 app/ringkasan.py               data Dashboard: angka liputan bulan ini/draf, SPT bulan ini, 5 liputan & 5 log terakhir
@@ -104,7 +105,7 @@ app/modul/arsip_liputan/       Fitur 2 — blueprint "arsip_liputan" di /liputan
   routes.py                      /liputan (cari & filter), /liputan/baru, /liputan/<id> (+ /simpan, /ekspor,
                                  /unduh, /paket, /hapus), /liputan/<id>/foto (+ /<fid>, /simpan, /<fid>/simpan|
                                  geser|hapus), /liputan/spt/<spt_id>/<docx|pdf>
-app/modul/data_podcast/        Fitur 3 — INDUK "Data Podcast" = judul kelompok di halaman Alat (#data-podcast); blueprint
+app/modul/data_podcast/        Fitur 3 — INDUK "Podcast" (id data_podcast) = judul kelompok di halaman Alat (#data-podcast); blueprint
                                "data_podcast" hanya mengalihkan /podcast ke /alat#data-podcast, cli_group "podcast"
                                (flask --app run podcast contoh = materi contoh FIKTIF), SEMUA_BLUEPRINT didaftarkan di create_app.
                                Fitur anak baru = sub-paket baru di sini + modul registry dengan "induk": "data_podcast".

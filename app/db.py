@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS liputan_foto (
 );
 CREATE INDEX IF NOT EXISTS idx_liputan_foto ON liputan_foto (liputan_id, urutan);
 
--- Data Podcast > Materi Podcast: satu materi = satu rekap pertanyaan & jawaban per instansi (OPD)
+-- Podcast > Materi Podcast: satu materi = satu rekap pertanyaan & jawaban per instansi (OPD)
 CREATE TABLE IF NOT EXISTS materi_podcast (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     pengguna_id    INTEGER REFERENCES pengguna(id) ON DELETE SET NULL,   -- pembuat

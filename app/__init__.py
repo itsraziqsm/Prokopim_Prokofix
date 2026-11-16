@@ -59,7 +59,7 @@ def create_app(konfigurasi=None, instance_path=None):
     app.register_blueprint(routes.bp)
     app.register_blueprint(pemecah_spt.bp)
     app.register_blueprint(arsip_liputan.bp)
-    for bp in data_podcast.SEMUA_BLUEPRINT:   # induk Data Podcast + fitur anaknya
+    for bp in data_podcast.SEMUA_BLUEPRINT:   # induk Podcast + fitur anaknya
         app.register_blueprint(bp)
 
     # Tersedia otomatis di SEMUA template Jinja

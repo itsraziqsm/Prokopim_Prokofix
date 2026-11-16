@@ -1,4 +1,4 @@
-"""Modul induk Data Podcast.
+"""Modul induk "Podcast" (id data_podcast).
 
 Induk TIDAK punya halaman sendiri: di halaman Alat ia menjadi judul kelompok dengan kartu fitur anaknya
 (dari registry: modul dengan induk "data_podcast"). Alamat /podcast dialihkan ke bagian itu.
@@ -23,7 +23,7 @@ SEMUA_BLUEPRINT = [bp, materi.bp]
 
 @bp.route("")
 def index():
-    """Tautan lama /podcast -> kelompok "Data Podcast" di halaman Alat."""
+    """Tautan lama /podcast -> kelompok "Podcast" di halaman Alat."""
     return redirect(url_for("utama.alat", _anchor="data-podcast"))
 
 

@@ -1,4 +1,4 @@
-"""Fitur Materi Podcast (anak dari Data Podcast; alamat /podcast/materi).
+"""Fitur Materi Podcast (anak dari kelompok Podcast; alamat /podcast/materi).
 
 Isi paket:
     pengurai.py  penguraian teks jawaban berformat ringan -> struktur blok / HTML aman (tanpa Flask)

@@ -13,7 +13,7 @@ Keterangan kolom:
     url        : alamat tujuan bila status "siap"; None = pakai halaman /modul/<id>.
     urutan     : urutan pengerjaan (1 = dikerjakan pertama).
     rencana    : daftar rencana fitur (3-5 butir).
-    induk      : id modul induk, atau None untuk modul tingkat atas. Modul yang PUNYA anak (mis. "Data Podcast")
+    induk      : id modul induk, atau None untuk modul tingkat atas. Modul yang PUNYA anak (mis. "Berita", "Podcast")
                  tidak tampil sebagai kartu, melainkan sebagai JUDUL KELOMPOK di halaman Alat; kartu anak-anaknya
                  (mis. "Materi Podcast") tampil di bawah judul itu. Fitur anak baru cukup diberi induk yang sama.
 """
@@ -28,6 +28,19 @@ STATUS_LABEL = {
 
 MODUL = [
     {
+        # Kelompok (judul di halaman Alat), tanpa halaman sendiri: /alat#berita
+        "id": "berita",
+        "nama": "Berita",
+        "deskripsi": "Alat untuk berita kegiatan: SPT dan arsip liputan.",
+        "tujuan": "Kelompok alat untuk menyiapkan berita kegiatan.",
+        "ikon": "kamera",
+        "status": "siap",
+        "url": "/alat#berita",
+        "urutan": 1,
+        "induk": None,
+        "rencana": [],
+    },
+    {
         "id": "pemecah_spt",
         "nama": "Pemecah SPT",
         "deskripsi": "Memecah satu file Word berisi banyak SPT menjadi satu file per SPT.",
@@ -39,7 +52,7 @@ MODUL = [
         "status": "siap",
         "url": "/spt",
         "urutan": 1,
-        "induk": None,
+        "induk": "berita",
         "rencana": [
             "Deteksi judul SPT bercetak tebal dan bergaris bawah",
             "Pratinjau dan pilih SPT sebelum diproses",
@@ -59,7 +72,7 @@ MODUL = [
         "status": "siap",
         "url": "/liputan",
         "urutan": 2,
-        "induk": None,
+        "induk": "berita",
         "rencana": [
             "Data kegiatan, isi berita, dan SPT terkait",
             "Foto dengan keterangan & sumber; unggah, seret, atau tempel",
@@ -69,13 +82,13 @@ MODUL = [
     },
     {
         "id": "data_podcast",
-        "nama": "Data Podcast",
+        "nama": "Podcast",   # id tetap "data_podcast" (blueprint & perintah CLI); yang tampil hanya nama
         "deskripsi": "Kumpulan alat persiapan podcast: materi pertanyaan dan jawaban per instansi.",
-        "tujuan": "Induk untuk fitur-fitur persiapan podcast. Setiap fitur anak tampil sebagai kartu di halamannya.",
+        "tujuan": "Kelompok alat persiapan podcast. Setiap fitur anak tampil sebagai kartu di bawah judul ini.",
         "ikon": "mikrofon",
         "status": "siap",
         "url": "/podcast",
-        "urutan": 3,
+        "urutan": 2,
         "induk": None,
         "rencana": [
             "Materi Podcast: pertanyaan & jawaban per instansi",

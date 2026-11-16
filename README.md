@@ -3,11 +3,11 @@
 Kumpulan tools kerja pribadi yang berjalan **lokal** di komputer sendiri (tanpa internet).
 Python + Flask + python-docx + Pillow + Jinja2, tampilan dengan **Tailwind CSS v4** (paket npm), JS biasa.
 
-> Status: **Fitur 1 Pemecah SPT**, **Fitur 2 Arsip Liputan**, dan **Fitur 3 Data Podcast › Materi Podcast** siap.
+> Status: **Fitur 1 Pemecah SPT**, **Fitur 2 Arsip Liputan**, dan **Fitur 3 Podcast › Materi Podcast** siap.
 
-## Data Podcast › Materi Podcast
+## Podcast › Materi Podcast
 Menyimpan pertanyaan untuk tiap instansi (OPD) beserta jawabannya per tema podcast.
-1. **Alat → (kelompok Data Podcast) Materi Podcast → Materi baru**: isi judul (mis. "Rekap Jawaban Podcast ... 2026") dan keterangan ("Per 11 November").
+1. **Alat → (kelompok Podcast) Materi Podcast → Materi baru**: isi judul (mis. "Rekap Jawaban Podcast ... 2026") dan keterangan ("Per 11 November").
 2. **Tambah instansi**, lalu buka instansinya: tulis pertanyaan & jawaban (pratinjau tampil langsung), klik **Simpan**.
    Format jawaban: `1. ` daftar bernomor, `- ` poin, indentasi 2 spasi = bersarang, `**tebal**`, `*miring*`,
    baris `**judul**` = judul kecil, baris `| a | b |` = tabel (`|---|---|` menandai header).
@@ -123,7 +123,7 @@ app/
     js/app.js               # tema, sidebar, notifikasi, konfirmasi, unggah foto, editor pertanyaan, mode baca
 app/modul/pemecah_spt/      # Fitur 1: pemecah, penamaan, pdf, layanan, routes
 app/modul/arsip_liputan/    # Fitur 2: teks, foto, ekspor, layanan, routes
-app/modul/data_podcast/     # Fitur 3 (induk): materi/ = Materi Podcast (pengurai, ekspor, layanan, routes)
+app/modul/data_podcast/     # Fitur 3 (induk Podcast): materi/ = Materi Podcast (pengurai, ekspor, layanan, routes)
 app/templat_docx/           # templat Word berita (berita.docx)
 tests/                      # uji otomatis: python -m unittest -v
 ```

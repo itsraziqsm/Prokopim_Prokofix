@@ -227,6 +227,11 @@ class UjiHalaman(DasarWeb):
         self.assertNotIn('href="/podcast"', alat)
         self.assertLess(alat.index("Arsip Liputan"), alat.index('id="data-podcast"'))
         self.assertLess(alat.index('id="data-podcast"'), alat.index("Materi Podcast"))
+        # dua judul kelompok: Berita (Pemecah SPT, Arsip Liputan) lalu Podcast
+        judul = re.findall(r'<h2 id="kelompok-[^"]+"[^>]*>([^<]+)</h2>', alat)
+        self.assertEqual(judul, ["Berita", "Podcast"])
+        self.assertLess(alat.index(">Berita<"), alat.index("Pemecah SPT"))
+        self.assertLess(alat.index("Arsip Liputan"), alat.index(">Podcast<"))
         r = self.klien.get("/podcast")
         self.assertEqual(r.status_code, 302)
         self.assertTrue(r.location.endswith("/alat#data-podcast"))
