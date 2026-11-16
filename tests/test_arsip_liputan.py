@@ -280,6 +280,34 @@ class UjiWeb(unittest.TestCase):
             pembangun.close()
         return r
 
+    def ekspor(self, lid, siapkan_foto=True):
+        if siapkan_foto and not self.db().execute("SELECT COUNT(*) FROM liputan_foto WHERE liputan_id=?", (lid,)).fetchone()[0]:
+            self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
+        return self.klien.post(f"/liputan/{lid}/ekspor", data={"csrf_token": self.token(f"/liputan/{lid}")})
+
+    def test_word_ditolak_bila_wajib_belum_lengkap(self):
+        _, lid = self.buat(kegiatan="")
+        html = self.klien.get(f"/liputan/{lid}").get_data(as_text=True)
+        self.assertRegex(html, r"data-butuh-wajib[^>]*disabled")
+        self.assertRegex(html, r'id="syarat-word"[^>]*data-syarat-word\s*>')   # pesan syarat terlihat
+        r = self.ekspor(lid, siapkan_foto=False)
+        self.assertIn("#panel-laporan", r.location)
+        html = self.klien.get(f"/liputan/{lid}").get_data(as_text=True)
+        self.assertIn("Word belum dapat dibuat. Lengkapi dulu: foto dokumentasi, nama kegiatan.", html)
+        self.assertIsNone(self.db().execute("SELECT berkas_ekspor FROM liputan").fetchone()[0])
+        self.assertFalse((self.folder / "instance" / "data" / "liputan" / str(lid) / "ekspor").exists())
+        # Isian yang dikirim bersama tombol tetap tersimpan walau Word ditolak
+        data = {"csrf_token": self.token(f"/liputan/{lid}"), "tanggal": "2026-10-13", "tokoh": "Wali", "kegiatan": "Rapat",
+                "judul": "Judul Baru", "isi": "Isi", "foto_per_lembar": "2", "status": "draf", "spt_id": ""}
+        self.klien.post(f"/liputan/{lid}/ekspor", data=data)
+        self.assertEqual(self.db().execute("SELECT judul, kegiatan FROM liputan").fetchone(), ("Judul Baru", "Rapat"))
+        self.assertIsNone(self.db().execute("SELECT berkas_ekspor FROM liputan").fetchone()[0])   # foto masih kurang
+        # Setelah lengkap, Word dibuat dan tombol aktif
+        self.ekspor(lid)
+        self.assertIsNotNone(self.db().execute("SELECT berkas_ekspor FROM liputan").fetchone()[0])
+        html = self.klien.get(f"/liputan/{lid}").get_data(as_text=True)
+        self.assertNotRegex(html, r"data-butuh-wajib[^>]*disabled")
+
     def test_alur_lengkap(self):
         r, lid = self.buat()
         self.assertEqual(r.status_code, 302)
@@ -291,7 +319,7 @@ class UjiWeb(unittest.TestCase):
         self.assertTrue(all(re.fullmatch(r"[0-9a-f]{24}\.(jpg|png|gif)", f[0]) for f in foto))
         html = self.klien.get(f"/liputan/{lid}").get_data(as_text=True)
         self.assertIn("Lembar 3", html)
-        r = self.klien.post(f"/liputan/{lid}/ekspor", data={"csrf_token": self.token(f"/liputan/{lid}")})
+        r = self.ekspor(lid)
         self.assertEqual(r.status_code, 302)
         unduh = self.klien.get(f"/liputan/{lid}/unduh")
         self.addCleanup(unduh.close)
@@ -349,7 +377,7 @@ class UjiWeb(unittest.TestCase):
 
     def test_unduhan_di_luar_folder_ditolak(self):
         _, lid = self.buat()
-        self.klien.post(f"/liputan/{lid}/ekspor", data={"csrf_token": self.token(f"/liputan/{lid}")})
+        self.ekspor(lid)
         db = self.db()
         for nama in ("../../../secret_key", "../foto/../../../superapp.db"):
             db.execute("UPDATE liputan SET berkas_ekspor = ?", (nama,))
@@ -383,7 +411,7 @@ class UjiWeb(unittest.TestCase):
         spt_id, nomor = self.db().execute("SELECT id, nomor FROM spt").fetchone()
         r, lid = self.buat(spt_id=str(spt_id), q=nomor)
         self.assertIn(nomor, self.klien.get(f"/liputan?q={nomor}").get_data(as_text=True))
-        self.klien.post(f"/liputan/{lid}/ekspor", data={"csrf_token": self.token(f"/liputan/{lid}")})
+        self.ekspor(lid)
         paket = self.klien.get(f"/liputan/{lid}/paket")
         nama = zipfile.ZipFile(io.BytesIO(paket.data)).namelist()
         self.assertEqual(len(nama), 2)
@@ -398,7 +426,7 @@ class UjiWeb(unittest.TestCase):
     def test_hapus_kegiatan_menghapus_berkas(self):
         _, lid = self.buat()
         self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
-        self.klien.post(f"/liputan/{lid}/ekspor", data={"csrf_token": self.token(f"/liputan/{lid}")})
+        self.ekspor(lid)
         folder = self.folder / "instance" / "data" / "liputan" / str(lid)
         self.assertTrue((folder / "ekspor").is_dir() and (folder / "foto").is_dir())
         r = self.klien.post(f"/liputan/{lid}/hapus", data={"csrf_token": self.token(f"/liputan/{lid}")})
@@ -425,7 +453,7 @@ class UjiWeb(unittest.TestCase):
         self.assertRegex(panel, r">4</span> dari 5 wajib")   # tanggal, judul, isi, kegiatan; foto belum
         self.assertNotIn("Unduh Word", panel)
         self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
-        self.klien.post(f"/liputan/{lid}/ekspor", data={"csrf_token": self.token(f"/liputan/{lid}")})
+        self.ekspor(lid)
         html = self.klien.get(f"/liputan/{lid}").get_data(as_text=True)
         panel = self.potong_panel(html)
         for teks in ("Buat ulang Word", "Unduh Word", "Unduh paket ZIP"):
@@ -435,8 +463,7 @@ class UjiWeb(unittest.TestCase):
 
     def test_tanda_perlu_ekspor_ulang(self):
         _, lid = self.buat()
-        tok = self.token(f"/liputan/{lid}")
-        self.klien.post(f"/liputan/{lid}/ekspor", data={"csrf_token": tok})
+        self.ekspor(lid)
         self.assertNotIn("Ada perubahan setelah Word", self.klien.get(f"/liputan/{lid}").get_data(as_text=True))
         db = self.db()
         db.execute("UPDATE liputan SET diekspor = '2000-01-01 00:00:00'")

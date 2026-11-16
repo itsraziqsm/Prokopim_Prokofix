@@ -44,3 +44,8 @@ def daftar_kelengkapan(isian, foto=(), ada_ekspor=False, perlu_ekspor_ulang=Fals
          "detail": "perlu dibuat ulang" if ada_ekspor and perlu_ekspor_ulang else "",
          "wajib": False, "target": "panel-laporan", "cek": None},
     ]
+
+
+def wajib_belum(daftar):
+    """Label butir wajib yang belum lengkap (kosong = Word boleh dibuat)."""
+    return [b["label"] for b in daftar if b["wajib"] and not b["lengkap"]]

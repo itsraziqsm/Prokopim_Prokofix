@@ -32,12 +32,16 @@
     <p class="text-sm text-redup"><span class="wrap-anywhere">{{ liputan.berkas_ekspor }}</span><br>dibuat {{ liputan.diekspor|waktu_singkat }}</p>
     {% endif %}
     {% if perlu_ekspor_ulang %}{{ alert("Ada perubahan setelah Word terakhir dibuat. Buat ulang agar Word memuat perubahan terbaru.", "peringatan") }}{% endif %}
+    {# Nonaktif selama butir wajib belum lengkap (diperbarui langsung oleh app.js; server juga memeriksa) #}
     <button type="submit" form="form-kegiatan" formaction="{{ url_for('arsip_liputan.ekspor', liputan_id=liputan.id) }}"
+            data-butuh-wajib aria-describedby="syarat-word" {% if wajib_kurang %}disabled{% endif %}
             class="tombol w-full {{ 'tombol-primer' if not ada_ekspor or perlu_ekspor_ulang else 'tombol-sekunder' }}">{{ ikon("dokumen-pecah", "size-4") }}<span>{{ "Buat ulang Word" if ada_ekspor else "Buat Word" }}</span></button>
     {% if ada_ekspor %}
     <a href="{{ url_for('arsip_liputan.unduh', liputan_id=liputan.id) }}" class="tombol w-full {{ 'tombol-sekunder' if perlu_ekspor_ulang else 'tombol-primer' }}">{{ ikon("unduh", "size-4") }}<span>Unduh Word</span></a>
     <a href="{{ url_for('arsip_liputan.paket', liputan_id=liputan.id) }}" class="tombol tombol-sekunder w-full">{{ ikon("unduh", "size-4") }}<span>Unduh paket ZIP{{ " (Word + SPT)" if liputan.spt_id else "" }}</span></a>
     {% endif %}
+    <p id="syarat-word" class="text-xs font-medium text-bahaya-teks" data-syarat-word {% if not wajib_kurang %}hidden{% endif %}>
+      Lengkapi semua butir wajib di Kelengkapan untuk membuat Word.</p>
     <p class="text-xs text-redup">Berisi berita lalu lembar foto (F4). "Buat Word" juga menyimpan isian formulir.</p>
     <form method="post" action="{{ url_for('arsip_liputan.hapus', liputan_id=liputan.id) }}" class="border-t border-garis pt-3"
           data-konfirmasi="Hapus kegiatan ini beserta {{ foto|length }} foto dan berkas Word-nya? Tindakan ini tidak dapat dibatalkan."

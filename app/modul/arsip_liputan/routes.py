@@ -12,7 +12,7 @@ from ...waktu import BULAN
 from ..pemecah_spt import layanan as layanan_spt
 from . import layanan
 from .ekspor import FOTO_PER_LEMBAR_MAKS, bagi_lembar
-from .kelengkapan import daftar_kelengkapan
+from .kelengkapan import daftar_kelengkapan, wajib_belum
 from .foto import UKURAN_MAKS, GalatFoto
 
 bp = Blueprint("arsip_liputan", __name__, url_prefix="/liputan")
@@ -85,11 +85,13 @@ def _render_form(liputan=None, isian=None, galat=None, status_kode=200):
     ada_ekspor = bool(liputan and layanan.jalur_ekspor(liputan))
     isian = isian or (dict(liputan) if liputan else {"tanggal": date.today().isoformat(), "foto_per_lembar": 2,
                                                      "status": "draf"})
+    daftar_cek = daftar_kelengkapan(isian, foto, ada_ekspor, perlu_ekspor_ulang)
     return render_template(
         "arsip_liputan/form.html",
         liputan=liputan,
         isian=isian,
-        kelengkapan=daftar_kelengkapan(isian, foto, ada_ekspor, perlu_ekspor_ulang),
+        kelengkapan=daftar_cek,
+        wajib_kurang=wajib_belum(daftar_cek),
         galat=galat or {},
         foto=foto,
         lembar_ke=lembar_ke,
@@ -173,6 +175,11 @@ def ekspor(liputan_id):
         if respons:
             return respons
         liputan = layanan.ambil(liputan_id)
+    # Pengaman: Word hanya dibuat bila semua butir wajib terpenuhi (isian di atas tetap tersimpan)
+    kurang = wajib_belum(daftar_kelengkapan(dict(liputan), layanan.daftar_foto(liputan_id)))
+    if kurang:
+        flash(f"Word belum dapat dibuat. Lengkapi dulu: {', '.join(kurang).lower()}.", "galat")
+        return redirect(url_for(".detail", liputan_id=liputan_id) + "#panel-laporan")
     try:
         jalur, info = layanan.ekspor(liputan)
     except Exception as e:  # berkas foto/templat rusak, disk penuh, dsb.

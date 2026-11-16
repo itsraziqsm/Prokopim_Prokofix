@@ -438,9 +438,14 @@
     var perbaruiPanel = function () {
       Array.prototype.forEach.call(butirCek, periksaButir);
       var penghitung = document.querySelector("[data-jumlah-wajib-lengkap]");
-      if (penghitung) {
-        penghitung.textContent = document.querySelectorAll('[data-kelengkapan][data-wajib][data-lengkap="1"]').length;
-      }
+      var wajibLengkap = document.querySelectorAll('[data-kelengkapan][data-wajib][data-lengkap="1"]').length;
+      var semuaWajib = document.querySelectorAll("[data-kelengkapan][data-wajib]").length;
+      if (penghitung) penghitung.textContent = wajibLengkap;
+      // Tombol "Buat Word" hanya aktif bila semua butir wajib lengkap (server tetap memeriksa ulang)
+      var kurang = wajibLengkap < semuaWajib;
+      Array.prototype.forEach.call(document.querySelectorAll("[data-butuh-wajib]"), function (t) { t.disabled = kurang; });
+      var syarat = document.querySelector("[data-syarat-word]");
+      if (syarat) syarat.hidden = !kurang;
     };
     document.addEventListener("input", perbaruiPanel);
     document.addEventListener("change", perbaruiPanel);
