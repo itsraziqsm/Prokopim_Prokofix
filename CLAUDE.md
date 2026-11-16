@@ -82,8 +82,8 @@ app/modul/arsip_liputan/       Fitur 2 — blueprint "arsip_liputan" di /liputan
   ekspor.py                      Word dari app/templat_docx/berita.docx (isi & gambar contoh + relasinya dibuang,
                                  sectPr F4 11907x18711 margin 1440 dipertahankan; templat_sementara() bila berkas
                                  belum ada). BERITA (Title, satu paragraf kosong, lalu Normal) lalu LEMBAR FOTO: tiap
-                                 lembar = tabel 1 kolom, kotak garis putus-putus (tinggi baris exact + cantSplit), jeda
-                                 0,6 cm, maks. 3 foto; DUA garis potong: kotak luar + tabel dalam 0,4 cm dari tepi foto
+                                 lembar = tabel 1 kolom, kotak luar garis LURUS tipis (tinggi baris exact + cantSplit), jeda
+                                 0,6 cm, maks. 3 foto; garis POTONG putus-putus = tabel dalam 0,4 cm dari tepi foto
                                  (ruangnya diambil dari ukuran foto, tinggi kotak luar tidak berubah);
                                  bagi_lembar() menghormati "Mulai lembar baru". Lembar baru = "Page break before"
                                  di baris pertama tabel, JANGAN page break manual (di Word memicu halaman kosong);

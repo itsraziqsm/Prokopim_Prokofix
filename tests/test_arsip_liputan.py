@@ -209,7 +209,7 @@ class UjiDokumen(unittest.TestCase):
             self.assertLessEqual(tinggi, area - 1.4)
 
     def test_dua_garis_potong_tanpa_mengubah_ukuran_kotak(self):
-        """Kotak luar tetap; di dalamnya kotak putus-putus 0,4 cm dari tepi foto yang muat di kotak luar."""
+        """Kotak luar (garis lurus) tetap; di dalamnya garis potong putus-putus 0,4 cm dari tepi foto."""
         emu_cm, twip_cm = 360000, 567
         for per in (1, 2, 3):
             foto = self.foto_siap(fl.tujuh_foto()[:per])
@@ -226,6 +226,8 @@ class UjiDokumen(unittest.TestCase):
                 tinggi = int(tr.find(f"{W}trPr/{W}trHeight").get(f"{W}val")) / twip_cm
                 self.assertAlmostEqual(tinggi, kotak_cm, delta=0.01)
                 sel = tr.find(f"{W}tc")
+                # kotak luar = garis lurus; garis potong (putus-putus) hanya di sekeliling foto
+                self.assertTrue(all(b.get(f"{W}val") == "single" for b in sel.find(f"{W}tcPr/{W}tcBorders")))
                 dalam = sel.find(f"{W}tbl")
                 self.assertIsNotNone(dalam, "kotak dalam di sekeliling foto")
                 tc_dalam = dalam.find(f".//{W}tc")

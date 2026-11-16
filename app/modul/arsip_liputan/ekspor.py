@@ -32,7 +32,9 @@ CADANGAN_CM = 1.5           # ruang cadangan per halaman: Word menghitung tinggi
 MARGIN_SEL_CM = 0.25        # jarak isi kotak luar ke garis putus-putus
 JARAK_POTONG_DALAM_CM = 0.4 # garis potong kedua: kotak putus-putus 0,4 cm dari tepi foto (di dalam kotak luar)
 UKURAN_KETERANGAN, UKURAN_SUMBER = 11, 10   # pt
-GARIS_POTONG = {"val": "dashed", "sz": "8", "space": "0", "color": "7F7F7F"}
+GARIS_POTONG = {"val": "dashed", "sz": "8", "space": "0", "color": "7F7F7F"}   # garis gunting: 0,4 cm dari foto
+GARIS_KOTAK = {"val": "single", "sz": "4", "space": "0", "color": "7F7F7F"}    # kotak luar: garis lurus tipis,
+                                                                               # agar tidak tertukar dengan garis potong
 
 
 # ---------- Templat ----------
@@ -221,7 +223,7 @@ def _tabel_lembar(doc, isi_lembar, area_lebar, area_tinggi_cm):
         sel = baris.cells[0]
         sel.width = area_lebar
         sel.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
-        _batas_sel(sel, GARIS_POTONG)
+        _batas_sel(sel, GARIS_KOTAK)
         _margin_sel(sel, MARGIN_SEL_CM)
 
         keterangan, sumber = (foto.get("keterangan") or "").strip(), (foto.get("sumber") or "").strip()
