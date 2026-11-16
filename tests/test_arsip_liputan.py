@@ -178,8 +178,9 @@ class UjiDokumen(unittest.TestCase):
         self.assertTrue(all(pgmar.get(f"{W}{s}") == "1440" for s in ("top", "bottom", "left", "right")))
         self.assertEqual(doc.paragraphs[0].style.name, "Title")
         self.assertEqual(doc.paragraphs[0].text, "Judul Berita")
-        self.assertEqual([p.text for p in doc.paragraphs[1:4]], paragraf_berita(fl.ISI_CONTOH))
-        self.assertTrue(all(p.style.name == "Normal" for p in doc.paragraphs[1:4]))
+        self.assertEqual(doc.paragraphs[1].text, "")   # satu "enter" antara judul dan isi
+        self.assertEqual([p.text for p in doc.paragraphs[2:5]], paragraf_berita(fl.ISI_CONTOH))
+        self.assertTrue(all(p.style.name == "Normal" for p in doc.paragraphs[1:5]))
         self.assertEqual(len(doc.tables), 3)
         with zipfile.ZipFile(tujuan) as z:
             media = [n for n in z.namelist() if n.startswith("word/media/")]
@@ -207,11 +208,40 @@ class UjiDokumen(unittest.TestCase):
             tinggi = sum(int(h.get(f"{W}val")) for h in t.iter(f"{W}trHeight")) / 567
             self.assertLessEqual(tinggi, area - 1.4)
 
+    def test_dua_garis_potong_tanpa_mengubah_ukuran_kotak(self):
+        """Kotak luar tetap; di dalamnya kotak putus-putus 0,4 cm dari tepi foto yang muat di kotak luar."""
+        emu_cm, twip_cm = 360000, 567
+        for per in (1, 2, 3):
+            foto = self.foto_siap(fl.tujuh_foto()[:per])
+            tujuan = self.folder / f"garis-{per}.docx"
+            ekspor.buat_dokumen({"judul": "J", "isi": "Isi", "foto_per_lembar": per}, foto, tujuan)
+            body = Document(str(tujuan)).element.body
+            tabel = body.find(f"{W}tbl")
+            baris = [tr for tr in tabel.findall(f"{W}tr") if tr.find(f".//{W}drawing") is not None]
+            self.assertEqual(len(baris), per)
+            area_cm = (18711 - 2 * 1440) / twip_cm   # 33,0 - 2 x 2,54 = 27,92 cm
+            kotak_cm = (area_cm - ekspor.CADANGAN_CM - (per - 1) * ekspor.JEDA_CM) / per
+            for tr in baris:
+                # tinggi kotak luar tidak berubah oleh garis potong kedua
+                tinggi = int(tr.find(f"{W}trPr/{W}trHeight").get(f"{W}val")) / twip_cm
+                self.assertAlmostEqual(tinggi, kotak_cm, delta=0.01)
+                sel = tr.find(f"{W}tc")
+                dalam = sel.find(f"{W}tbl")
+                self.assertIsNotNone(dalam, "kotak dalam di sekeliling foto")
+                tc_dalam = dalam.find(f".//{W}tc")
+                self.assertTrue(all(b.get(f"{W}val") == "dashed" for b in tc_dalam.find(f"{W}tcPr/{W}tcBorders")))
+                self.assertTrue(all(int(m.get(f"{W}w")) == round(0.4 * twip_cm)
+                                    for m in tc_dalam.find(f"{W}tcPr/{W}tcMar")))
+                ext = tc_dalam.find(".//{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}extent")
+                lebar_cm, tinggi_cm = int(ext.get("cx")) / emu_cm, int(ext.get("cy")) / emu_cm
+                self.assertLessEqual(tinggi_cm + 2 * 0.4 + 2 * ekspor.MARGIN_SEL_CM, kotak_cm)
+                self.assertLessEqual(lebar_cm + 2 * 0.4 + 2 * ekspor.MARGIN_SEL_CM, 15.92)
+
     def test_tanpa_foto_hanya_berita(self):
         tujuan = self.folder / "berita.docx"
         info = ekspor.buat_dokumen({"judul": "J", "isi": "Satu\nDua"}, [], tujuan)
         doc = Document(str(tujuan))
-        self.assertEqual((info["lembar"], len(doc.tables), [p.text for p in doc.paragraphs]), (0, 0, ["J", "Satu", "Dua"]))
+        self.assertEqual((info["lembar"], len(doc.tables), [p.text for p in doc.paragraphs]), (0, 0, ["J", "", "Satu", "Dua"]))
 
     def test_gambar_contoh_templat_tidak_ikut(self):
         # Templat dengan gambar contoh: gambar & relasinya harus dibuang
@@ -233,7 +263,7 @@ class UjiDokumen(unittest.TestCase):
         with zipfile.ZipFile(tujuan) as z:
             self.assertEqual([n for n in z.namelist() if n.startswith("word/media/")], [])
             self.assertNotIn(b"image", z.read("word/_rels/document.xml.rels"))
-        self.assertEqual([p.text for p in Document(str(tujuan)).paragraphs], ["Baru", "Isi"])
+        self.assertEqual([p.text for p in Document(str(tujuan)).paragraphs], ["Baru", "", "Isi"])
 
 
 # ---------- Alur web ----------

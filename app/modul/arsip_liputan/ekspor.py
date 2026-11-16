@@ -29,7 +29,8 @@ JEDA_CM = 0.6               # baris kosong antar kotak (untuk gunting)
 CADANGAN_CM = 1.5           # ruang cadangan per halaman: Word menghitung tinggi tabel sedikit lebih besar
                             # daripada LibreOffice (garis tepi, pembulatan); tanpa cadangan cukup, paragraf
                             # setelah tabel terdorong ke halaman baru dan muncul halaman kosong
-MARGIN_SEL_CM = 0.25        # jarak isi kotak ke garis putus-putus
+MARGIN_SEL_CM = 0.25        # jarak isi kotak luar ke garis putus-putus
+JARAK_POTONG_DALAM_CM = 0.4 # garis potong kedua: kotak putus-putus 0,4 cm dari tepi foto (di dalam kotak luar)
 UKURAN_KETERANGAN, UKURAN_SUMBER = 11, 10   # pt
 GARIS_POTONG = {"val": "dashed", "sz": "8", "space": "0", "color": "7F7F7F"}
 
@@ -188,9 +189,12 @@ def ukuran_foto(lebar_px, tinggi_px, kotak_tinggi_cm, isi_lebar_cm, keterangan, 
         ruang_teks += _baris_teks(keterangan, isi_lebar_cm, UKURAN_KETERANGAN) * UKURAN_KETERANGAN * 0.0353 * 1.25 + 0.15
     if sumber:
         ruang_teks += _baris_teks(f"Sumber: {sumber}", isi_lebar_cm, UKURAN_SUMBER) * UKURAN_SUMBER * 0.0353 * 1.25
-    tinggi_maks = kotak_tinggi_cm - 2 * MARGIN_SEL_CM - ruang_teks - 0.3
+    # Ruang untuk garis potong dalam (0,4 cm tiap sisi + garis & paragraf 1 pt) diambil dari ukuran FOTO,
+    # bukan dari tinggi kotak, sehingga pembagian & tinggi kotak per lembar tidak berubah.
+    ruang_dalam = 2 * JARAK_POTONG_DALAM_CM + 0.15
+    tinggi_maks = kotak_tinggi_cm - 2 * MARGIN_SEL_CM - ruang_teks - 0.3 - ruang_dalam
     rasio = tinggi_px / lebar_px
-    lebar = min(isi_lebar_cm, tinggi_maks / rasio)
+    lebar = min(isi_lebar_cm - ruang_dalam, tinggi_maks / rasio)
     return lebar, lebar * rasio
 
 
@@ -222,17 +226,35 @@ def _tabel_lembar(doc, isi_lembar, area_lebar, area_tinggi_cm):
 
         keterangan, sumber = (foto.get("keterangan") or "").strip(), (foto.get("sumber") or "").strip()
         lebar, tinggi = ukuran_foto(foto["lebar"], foto["tinggi"], kotak_cm, isi_lebar_cm, keterangan, sumber)
-        p_foto = _rapat(sel.paragraphs[0])
+        # Paragraf pertama sel (1 pt): tempat "Page break before" untuk kotak pertama di lembar.
+        # Lembar selalu mulai di halaman baru lewat opsi ini, BUKAN page break manual di paragraf
+        # terpisah (di Word, paragraf itu bisa terdorong ke halaman berikutnya → halaman kosong).
+        p_awal = _rapat(sel.paragraphs[0], 1)
+        p_awal.paragraph_format.line_spacing = Pt(1)
         if k == 0:
-            # Lembar selalu mulai di halaman baru lewat "Page break before" pada baris pertama tabel,
-            # BUKAN page break manual di paragraf terpisah (di Word, paragraf itu bisa terdorong ke
-            # halaman berikutnya lalu page break-nya menghasilkan halaman kosong).
-            p_foto.paragraph_format.page_break_before = True
+            p_awal.paragraph_format.page_break_before = True
+
+        # Garis potong kedua: tabel 1x1 bergaris putus-putus di sekeliling foto, berjarak 0,4 cm dari tepinya
+        lebar_dalam = Cm(lebar + 2 * JARAK_POTONG_DALAM_CM + 0.05)
+        dalam = sel.add_table(rows=1, cols=1)          # python-docx menambah paragraf kosong setelahnya
+        dalam.alignment = WD_TABLE_ALIGNMENT.CENTER
+        dalam.autofit = False
+        dalam.columns[0].width = lebar_dalam
+        dalam.rows[0]._tr.get_or_add_trPr().insert(0, OxmlElement("w:cantSplit"))
+        sel_dalam = dalam.cell(0, 0)
+        sel_dalam.width = lebar_dalam
+        _batas_sel(sel_dalam, GARIS_POTONG)
+        _margin_sel(sel_dalam, JARAK_POTONG_DALAM_CM)
+        p_foto = _rapat(sel_dalam.paragraphs[0])
         p_foto.add_run().add_picture(str(foto["jalur"]), width=Cm(lebar), height=Cm(tinggi))
+
+        p_sesudah = sel.paragraphs[-1]                 # paragraf setelah tabel dalam (wajib ada di Word)
         if keterangan:
-            p = _rapat(sel.add_paragraph(), UKURAN_KETERANGAN)
+            p = _rapat(p_sesudah, UKURAN_KETERANGAN)
             p.paragraph_format.space_before = Pt(4)
             p.add_run(keterangan).font.size = Pt(UKURAN_KETERANGAN)
+        else:
+            _rapat(p_sesudah, 1).paragraph_format.line_spacing = Pt(1)
         if sumber:
             p = _rapat(sel.add_paragraph(), UKURAN_SUMBER)
             p.add_run(f"Sumber: {sumber}").font.size = Pt(UKURAN_SUMBER)
@@ -249,6 +271,7 @@ def buat_dokumen(liputan, foto, tujuan):
     area_tinggi_cm = Emu(seksi.page_height - seksi.top_margin - seksi.bottom_margin).cm
 
     doc.add_paragraph(liputan["judul"], style="Title")
+    doc.add_paragraph("", style="Normal")   # satu baris kosong ("enter") antara judul dan isi
     for teks in paragraf_berita(liputan.get("isi", "")):
         doc.add_paragraph(teks, style="Normal")
 
