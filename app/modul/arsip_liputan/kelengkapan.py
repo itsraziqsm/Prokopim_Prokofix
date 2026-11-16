@@ -26,13 +26,13 @@ def daftar_kelengkapan(isian, foto=(), ada_ekspor=False, perlu_ekspor_ulang=Fals
          "detail": f"{paragraf} paragraf" if paragraf else "", "wajib": True, "target": "f-isi", "cek": "isi:f-isi"},
         {"kunci": "foto", "label": "Foto dokumentasi", "lengkap": jumlah_foto > 0,
          "detail": f"{jumlah_foto} foto" if jumlah_foto else "", "wajib": True, "target": "bagian-foto", "cek": None},
+        {"kunci": "kegiatan", "label": "Nama kegiatan", "lengkap": ada("kegiatan"),
+         "detail": "untuk nama berkas", "wajib": True, "target": "f-kegiatan", "cek": "isi:f-kegiatan"},
+        # ---------- Pelengkap ----------
         {"kunci": "keterangan", "label": "Keterangan foto",
          "lengkap": jumlah_foto > 0 and berketerangan == jumlah_foto,
          "detail": f"{berketerangan} dari {jumlah_foto} foto" if jumlah_foto else "",
-         "wajib": True, "target": "bagian-foto", "cek": None},
-        # ---------- Pelengkap ----------
-        {"kunci": "kegiatan", "label": "Nama kegiatan", "lengkap": ada("kegiatan"),
-         "detail": "untuk nama berkas", "wajib": False, "target": "f-kegiatan", "cek": "isi:f-kegiatan"},
+         "wajib": False, "target": "bagian-foto", "cek": None},
         {"kunci": "spt", "label": "SPT terkait", "lengkap": bool(isian.get("spt_id")), "detail": "",
          "wajib": False, "target": "f-cari-spt", "cek": "pilih:spt_id"},
         {"kunci": "sumber", "label": "Sumber foto", "lengkap": jumlah_foto > 0 and bersumber == jumlah_foto,

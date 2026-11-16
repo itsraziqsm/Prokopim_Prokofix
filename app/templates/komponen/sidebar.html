@@ -25,12 +25,6 @@
     <span class="sidebar-label sr-only md:not-sr-only md:truncate">{{ nama_aplikasi }}</span>
   </a>
 
-  {# Tombol ciutkan/lebarkan (hanya md ke atas) #}
-  <button type="button" id="tombol-sidebar" aria-controls="sidebar" aria-expanded="true" aria-label="Ciutkan sidebar" title="Ciutkan sidebar"
-          class="absolute -right-3.5 top-12.5 hidden size-7 cursor-pointer place-items-center rounded-full border border-garis-kuat bg-permukaan text-redup shadow-kartu hover:text-teks md:grid">
-    <span class="sidebar-toggle-ikon inline-flex transition-transform">{{ ikon("panah-kiri", "size-4") }}</span>
-  </button>
-
   <nav aria-label="Navigasi utama" class="sidebar-nav flex flex-1 flex-col p-2 md:p-3">
     {# Bagian atas #}
     <ul role="list" class="grid gap-1">
@@ -40,8 +34,17 @@
       {{ item_nav("Log", url_for('utama.log'), "riwayat", request.endpoint == "utama.log") }}
     </ul>
 
+    {# Tombol ciutkan/lebarkan menu (hanya md ke atas; di layar kecil menu selalu ikon saja),
+       tepat di atas garis pemisah. Teks & aria-label diperbarui app.js sesuai keadaan. #}
+    <button type="button" id="tombol-sidebar" aria-controls="sidebar" aria-expanded="false"
+            aria-label="Lebarkan menu" title="Lebarkan menu"
+            class="sidebar-item mb-2 mt-auto hidden min-h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-lg px-3 py-2 text-redup hover:bg-permukaan-2 hover:text-teks md:flex md:justify-start">
+      <span class="sidebar-toggle-ikon inline-flex transition-transform">{{ ikon("panah-kiri") }}</span>
+      <span class="sidebar-label sr-only md:not-sr-only" data-label-sidebar>Ciutkan menu</span>
+    </button>
+
     {# Bagian bawah, dipisah garis #}
-    <ul role="list" class="mt-auto grid gap-1 border-t border-garis pt-2 md:pt-3">
+    <ul role="list" class="mt-auto grid gap-1 border-t border-garis pt-2 md:mt-0 md:pt-3">
       {{ item_nav("Pengaturan", url_for('utama.pengaturan'), "pengaturan", request.endpoint == "utama.pengaturan") }}
       {{ item_nav("Akun", url_for('auth.akun'), "pengguna", request.endpoint == "auth.akun", g.pengguna.nama_lengkap) }}
     </ul>

@@ -156,6 +156,13 @@ class UjiHalaman(DasarUji):
         with self.app.test_request_context(), self.assertRaises(ValueError):
             log_proses.catat("sistem", "x", status="proses", pengguna_id=1)
 
+    def test_menu_bawaan_tertutup_dan_tombol_di_atas_pemisah(self):
+        html = self.klien.get("/").get_data(as_text=True)
+        self.assertIn('sb === "lebar" ? "lebar" : "ringkas"', html)
+        tombol = html.index('id="tombol-sidebar"')
+        self.assertLess(html.index('aria-label="Navigasi utama"'), tombol)       # di dalam nav samping
+        self.assertLess(tombol, html.index('href="/pengaturan"'))               # tepat sebelum bagian bawah
+
     def test_lencana_disembunyikan_bila_semua_modul_siap(self):
         html = self.klien.get("/").get_data(as_text=True)
         self.assertNotIn("lencana-pengembangan", html)

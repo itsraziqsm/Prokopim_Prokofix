@@ -48,8 +48,10 @@
   function perbaruiTombolSidebar() {
     if (!tombolSidebar) return;
     var ringkas = akar.dataset.sidebar === "ringkas";
-    var label = ringkas ? "Lebarkan sidebar" : "Ciutkan sidebar";
+    var label = ringkas ? "Lebarkan menu" : "Ciutkan menu";
     tombolSidebar.setAttribute("aria-expanded", String(!ringkas));
+    var teks = tombolSidebar.querySelector("[data-label-sidebar]");
+    if (teks) teks.textContent = label;
     tombolSidebar.setAttribute("aria-label", label);
     tombolSidebar.title = label;
   }

@@ -73,7 +73,7 @@ class UjiKelengkapan(unittest.TestCase):
 
     def test_wajib_dan_pelengkap(self):
         wajib = {b["kunci"] for b in daftar_kelengkapan({}) if b["wajib"]}
-        self.assertEqual(wajib, {"tanggal", "judul", "isi", "foto", "keterangan"})
+        self.assertEqual(wajib, {"tanggal", "judul", "isi", "foto", "kegiatan"})
 
 
 class UjiFoto(unittest.TestCase):
@@ -422,7 +422,7 @@ class UjiWeb(unittest.TestCase):
         panel = self.potong_panel(html)
         for teks in ("Kelengkapan", "Buat Word", "Hapus kegiatan"):
             self.assertIn(teks, panel)
-        self.assertRegex(panel, r">3</span> dari 5 wajib")
+        self.assertRegex(panel, r">4</span> dari 5 wajib")   # tanggal, judul, isi, kegiatan; foto belum
         self.assertNotIn("Unduh Word", panel)
         self.unggah(lid, [("a.png", fl.foto(300, 200, "PNG"))])
         self.klien.post(f"/liputan/{lid}/ekspor", data={"csrf_token": self.token(f"/liputan/{lid}")})
@@ -430,7 +430,7 @@ class UjiWeb(unittest.TestCase):
         panel = self.potong_panel(html)
         for teks in ("Buat ulang Word", "Unduh Word", "Unduh paket ZIP"):
             self.assertIn(teks, panel)
-        self.assertRegex(panel, r">4</span> dari 5 wajib")   # foto ada, keterangan belum
+        self.assertRegex(panel, r">5</span> dari 5 wajib")   # foto ada (keterangan hanya pelengkap)
         self.assertRegex(panel, r'data-kelengkapan="word"\s+data-lengkap="1"')
 
     def test_tanda_perlu_ekspor_ulang(self):

@@ -14,7 +14,7 @@
       try { t = localStorage.getItem("tema"); sb = localStorage.getItem("sidebar"); } catch (e) {}
       if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
       akar.dataset.theme = t;
-      akar.dataset.sidebar = sb === "ringkas" ? "ringkas" : "lebar";
+      akar.dataset.sidebar = sb === "lebar" ? "lebar" : "ringkas";   // bawaan: menu tertutup
     })();
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">

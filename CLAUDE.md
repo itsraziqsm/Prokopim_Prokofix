@@ -86,8 +86,8 @@ app/modul/arsip_liputan/       Fitur 2 — blueprint "arsip_liputan" di /liputan
                                  bagi_lembar() menghormati "Mulai lembar baru". Lembar baru = "Page break before"
                                  di baris pertama tabel, JANGAN page break manual (di Word memicu halaman kosong);
                                  CADANGAN_CM 1,5 di bawah tabel; paragraf pemisah/penutup 1 pt
-  kelengkapan.py                 daftar_kelengkapan(): butir wajib (tanggal, judul, isi, foto, keterangan foto) &
-                                 pelengkap (kegiatan, SPT, sumber foto, status final, Word terbaru) untuk panel samping
+  kelengkapan.py                 daftar_kelengkapan(): butir wajib (tanggal, judul, isi, foto, nama kegiatan) &
+                                 pelengkap (keterangan foto, SPT, sumber foto, status final, Word terbaru) untuk panel samping
   layanan.py                     DB, folder instance/data/liputan/<id>/{foto,ekspor}, cari(), jalur_aman()
   routes.py                      /liputan (cari & filter), /liputan/baru, /liputan/<id> (+ /simpan, /ekspor,
                                  /unduh, /paket, /hapus), /liputan/<id>/foto (+ /<fid>, /simpan, /<fid>/simpan|
@@ -161,7 +161,7 @@ tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membu
   `--garis`, ...) yang dipetakan ke kelas Tailwind (`bg-aksen`, `text-redup`, `border-garis`, `bg-siap-latar`, ...).
   Jangan menulis warna hex langsung di template.
 - **Tema**: `<html data-theme="light|dark">`, dipilih di halaman Pengaturan (Terang/Gelap/Ikuti sistem),
-  disimpan di `localStorage["tema"]`. **Sidebar**: `<html data-sidebar="lebar|ringkas">`, `localStorage["sidebar"]`.
+  disimpan di `localStorage["tema"]`. **Sidebar**: `<html data-sidebar="lebar|ringkas">` (bawaan ringkas), `localStorage["sidebar"]`.
 - Tanggal/waktu tampil format Indonesia (`waktu.py`, filter Jinja `waktu_singkat`, `jalur` untuk path panjang).
   Sapaan & tanggal dihitung di server saja (server = komputer pengguna); jangan duplikasi di JS.
 - **Ukuran**: pakai skala bawaan Tailwind (`text-sm`, `size-4`, `min-h-10`, ...). Hindari nilai sembarang `[...]`.
@@ -183,7 +183,9 @@ tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membu
 - Rapi, tenang, profesional (kantor pemerintahan); satu warna aksen biru tua + netral; tanpa gradasi mencolok.
 - Kontras WCAG AA, fokus keyboard terlihat, elemen HTML semantik + ARIA seperlunya, hormati `prefers-reduced-motion`.
 - Responsif 1366×768 sampai monitor lebar; tetap rapi di tablet/ponsel (sidebar jadi ikon saja).
-- Navigasi **hanya sidebar**: atas = Dashboard (ikon jendela), Log; bawah (dipisah garis) = Pengaturan, Akun.
+- Navigasi **hanya sidebar**: atas = Dashboard (ikon jendela), Log; tombol "Lebarkan/Ciutkan menu" (`#tombol-sidebar`,
+  hanya md ke atas) tepat di atas garis pemisah; bawah = Pengaturan, Akun. Bawaan menu **tertutup** (ringkas)
+  kecuali `localStorage["sidebar"] == "lebar"`.
 - Tanpa footer. Halaman auth: formulir 60% kiri, gambar 40% kanan, satu layar tanpa scroll.
 - Jangan membuat form/tombol palsu yang seolah berfungsi.
 - **Hindari AI-slop**: tanpa ilustrasi/kartu pengisi, tanpa teks pengisi, tanpa instruksi developer di UI,
