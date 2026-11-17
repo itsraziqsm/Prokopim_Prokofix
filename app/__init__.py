@@ -44,11 +44,15 @@ def create_app(konfigurasi=None, instance_path=None):
     db.siapkan_db(app)
 
     from . import auth, routes
-    from .modul import arsip_liputan, data_podcast, pemecah_spt
+    from .modul import arsip_liputan, data_podcast, pemecah_spt, utilitas
 
     # Batas unggahan khusus per rute. Harus dipasang SEBELUM penjaga login (yang membaca formulir untuk
     # cek CSRF), karena batas ukuran berlaku saat formulir pertama kali dibaca.
-    batas_khusus = {"arsip_liputan.unggah_foto": arsip_liputan.routes.BATAS_UNGGAH_FOTO}
+    batas_khusus = {
+        "arsip_liputan.unggah_foto": arsip_liputan.routes.BATAS_UNGGAH_FOTO,
+        "gabung_dokumen.unggah": utilitas.gabung_dokumen.routes.BATAS_UNGGAH,
+        "gabung_dokumen.tambah": utilitas.gabung_dokumen.routes.BATAS_UNGGAH,
+    }
 
     @app.before_request
     def batas_unggahan():
@@ -59,7 +63,7 @@ def create_app(konfigurasi=None, instance_path=None):
     app.register_blueprint(routes.bp)
     app.register_blueprint(pemecah_spt.bp)
     app.register_blueprint(arsip_liputan.bp)
-    for bp in data_podcast.SEMUA_BLUEPRINT:   # induk Podcast + fitur anaknya
+    for bp in data_podcast.SEMUA_BLUEPRINT + utilitas.SEMUA_BLUEPRINT:   # induk + fitur anaknya
         app.register_blueprint(bp)
 
     # Tersedia otomatis di SEMUA template Jinja
@@ -75,7 +79,8 @@ def create_app(konfigurasi=None, instance_path=None):
         judul = {404: "Halaman tidak ditemukan", 400: "Permintaan tidak valid",
                  405: "Metode tidak diizinkan", 413: "Berkas terlalu besar"}.get(e.code, e.name)
         pesan = {404: "Alamat yang Anda buka tidak tersedia, atau modul tersebut belum terdaftar.",
-                 413: "Ukuran unggahan melebihi batas (berkas SPT maks. 25 MB, foto maks. 15 MB per berkas)."
+                 413: "Ukuran unggahan melebihi batas (berkas SPT maks. 25 MB, foto maks. 15 MB per berkas, "
+                      "PDF untuk digabung maks. 200 MB per penggabungan)."
                  }.get(e.code, e.description)
         return render_template("galat.html", kode=e.code, judul=judul, pesan=pesan), e.code
 

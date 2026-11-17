@@ -115,6 +115,36 @@ MODUL = [
             "Ekspor Word A4 dengan ringkasan dan tautan ke tiap instansi",
         ],
     },
+    {
+        # Kelompok (judul di halaman Alat), tanpa halaman sendiri: /utilitas dialihkan ke /alat#utilitas
+        "id": "utilitas",
+        "nama": "Utilitas",
+        "deskripsi": "Alat bantu umum untuk berkas.",
+        "tujuan": "Kelompok alat bantu umum untuk mengolah berkas.",
+        "ikon": "gabung",
+        "status": "siap",
+        "url": "/utilitas",
+        "urutan": 3,
+        "induk": None,
+        "rencana": [],
+    },
+    {
+        # Nama tampilan bisa diganti "Gabungkan Dokumen" setelah dukungan Word dibuat (cukup di sini)
+        "id": "gabung_dokumen",
+        "nama": "Gabungkan PDF",
+        "deskripsi": "Gabungkan beberapa file PDF menjadi satu.",
+        "tujuan": "Menggabungkan beberapa file PDF menjadi satu PDF dengan urutan dan rentang halaman per file.",
+        "ikon": "gabung",
+        "status": "siap",
+        "url": "/utilitas/gabung",
+        "urutan": 1,
+        "induk": "utilitas",
+        "rencana": [
+            "Urutan file dan rentang halaman per file",
+            "Daftar isi (bookmark) per file",
+            "Riwayat hasil yang bisa diunduh dan dihapus",
+        ],
+    },
 ]
 
 

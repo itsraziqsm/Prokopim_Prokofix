@@ -3,7 +3,15 @@
 Kumpulan tools kerja pribadi yang berjalan **lokal** di komputer sendiri (tanpa internet).
 Python + Flask + python-docx + Pillow + Jinja2, tampilan dengan **Tailwind CSS v4** (paket npm), JS biasa.
 
-> Status: **Fitur 1 Pemecah SPT**, **Fitur 2 Arsip Liputan**, dan **Fitur 3 Podcast › Materi Podcast** siap.
+> Status: **Fitur 1 Pemecah SPT**, **Fitur 2 Arsip Liputan**, **Fitur 3 Podcast › Materi Podcast**, dan
+> **Fitur 4 Utilitas › Gabungkan PDF** siap.
+
+## Utilitas › Gabungkan PDF
+Menggabungkan beberapa PDF menjadi satu, dengan urutan dan rentang halaman per file.
+1. **Alat → (kelompok Utilitas) Gabungkan PDF**: pilih atau seret beberapa PDF, klik **Unggah**.
+2. Atur urutan (Naik/Turun/Hapus), isi kolom **Halaman** bila perlu (mis. `1-3,5,8-`; kosong = semua halaman),
+   ubah nama berkas hasil, lalu **Gabungkan** → **Unduh**. Daftar isi (bookmark) per file bisa dimatikan.
+3. PDF bersandi atau rusak ditolak per file. Batas: 50 MB per file, 200 MB dan 30 file per penggabungan.
 
 ## Podcast › Materi Podcast
 Menyimpan pertanyaan untuk tiap instansi (OPD) beserta jawabannya per tema podcast.
@@ -124,6 +132,7 @@ app/
 app/modul/pemecah_spt/      # Fitur 1: pemecah, penamaan, pdf, layanan, routes
 app/modul/arsip_liputan/    # Fitur 2: teks, foto, ekspor, layanan, routes
 app/modul/data_podcast/     # Fitur 3 (induk Podcast): materi/ = Materi Podcast (pengurai, ekspor, layanan, routes)
+app/modul/utilitas/         # Fitur 4 (induk Utilitas): gabung_dokumen/ = Gabungkan PDF (penggabung, layanan, routes)
 app/templat_docx/           # templat Word berita (berita.docx)
 tests/                      # uji otomatis: python -m unittest -v
 ```

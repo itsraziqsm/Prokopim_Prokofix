@@ -88,9 +88,9 @@
 {%- endmacro %}
 
 {# Isian formulir: label, petunjuk, dan pesan galat yang terhubung lewat ARIA #}
-{% macro field(nama, label, tipe="text", nilai="", galat=None, petunjuk=None, autocomplete=None, wajib=true, autofocus=false, placeholder=None) -%}
+{% macro field(nama, label, tipe="text", nilai="", galat=None, petunjuk=None, autocomplete=None, wajib=true, autofocus=false, placeholder=None, label_tersembunyi=false) -%}
 <div>
-  <label for="f-{{ nama }}" class="label">{{ label }}</label>
+  <label for="f-{{ nama }}" class="{{ 'sr-only' if label_tersembunyi else 'label' }}">{{ label }}</label>
   <input id="f-{{ nama }}" name="{{ nama }}" type="{{ tipe }}" class="input"
          {% if tipe != "password" %}value="{{ nilai }}"{% endif %}
          {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}

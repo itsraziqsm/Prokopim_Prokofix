@@ -1,0 +1,87 @@
+{#- Gabungkan PDF: unggah beberapa PDF (pilih atau seret) lalu riwayat hasil milik pengguna. -#}
+{% extends "base.html" %}
+{% from "komponen/ui.html" import breadcrumb %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}Gabungkan PDF · {{ nama_aplikasi }}{% endblock %}
+
+{% block konten %}
+<div class="mb-6">{{ breadcrumb([("Alat", url_for('utama.alat', _anchor='utilitas')), ("Gabungkan PDF", None)]) }}</div>
+<h1 class="mb-6">Gabungkan PDF</h1>
+
+<section class="panel mb-10 max-w-3xl" aria-labelledby="judul-unggah">
+  <h2 id="judul-unggah" class="sr-only">Unggah PDF</h2>
+  <form method="post" action="{{ url_for('gabung_dokumen.unggah') }}" enctype="multipart/form-data" class="grid gap-5">
+    {{ csrf_field() }}
+    {# Zona seret-lepas: berkas yang dilepas dipasang ke input di dalamnya (app.js, bagian 20) #}
+    <div data-seret-berkas
+         class="grid justify-items-center gap-3 rounded-xl border-2 border-dashed border-garis-kuat px-4 py-8 text-center transition-colors data-seret:border-aksen data-seret:bg-aksen-lembut">
+      <input id="f-berkas" name="berkas" type="file" multiple class="peer sr-only" data-pilih-berkas
+             accept=".pdf,application/pdf" aria-describedby="p-berkas n-berkas">
+      <label for="f-berkas" class="tombol tombol-sekunder peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-aksen">
+        {{ ikon("folder", "size-4") }}<span>Pilih PDF</span>
+      </label>
+      <p id="n-berkas" class="min-w-0 text-sm font-medium wrap-anywhere" data-nama-berkas>Belum ada berkas dipilih</p>
+      <p id="p-berkas" class="text-sm text-redup">atau seret PDF ke sini · maks. 50 MB per file, {{ maks_berkas }} file</p>
+    </div>
+    <div><button type="submit" class="tombol tombol-primer" data-butuh-berkas="f-berkas" data-tombol-progres="Mengunggah…" disabled>
+      {{ ikon("unggah", "size-4") }}<span>Unggah</span></button></div>
+  </form>
+</section>
+
+<section aria-labelledby="judul-riwayat">
+  <h2 id="judul-riwayat" class="mb-4">Riwayat</h2>
+  {% if riwayat %}
+  <form method="post" action="{{ url_for('gabung_dokumen.hapus') }}"
+        data-konfirmasi="Hapus {n} hasil terpilih beserta berkas PDF-nya? Tindakan ini tidak dapat dibatalkan."
+        data-konfirmasi-judul="Hapus hasil" data-konfirmasi-tombol="Hapus">
+    {{ csrf_field() }}
+    <div class="panel overflow-hidden p-0!">
+      <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Riwayat hasil penggabungan">
+        <table class="w-full min-w-xl border-collapse text-left text-sm">
+          <thead class="bg-permukaan-2 text-redup">
+            <tr>
+              <th scope="col" class="w-12 px-4 py-3">
+                <input type="checkbox" class="size-4 accent-aksen" data-pilih-semua aria-label="Pilih semua hasil">
+              </th>
+              <th scope="col" class="px-4 py-3 font-semibold">Nama berkas</th>
+              <th scope="col" class="px-4 py-3 font-semibold">File</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Halaman</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Ukuran</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Waktu</th>
+              <th scope="col" class="px-4 py-3"><span class="sr-only">Unduh</span></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-garis">
+            {% for h in riwayat %}
+            <tr class="align-middle">
+              <td class="px-4 py-3">
+                <input type="checkbox" name="hasil" value="{{ h.id }}" class="size-4 accent-aksen" data-pilih-item
+                       aria-label="Pilih {{ h.nama_berkas }}">
+              </td>
+              <td class="px-4 py-3">
+                <a href="{{ url_for('gabung_dokumen.hasil', hasil_id=h.id) }}" class="font-medium wrap-break-word">{{ h.nama_berkas|jalur }}</a>
+              </td>
+              <td class="px-4 py-3">{{ h.jumlah_berkas }}</td>
+              <td class="px-4 py-3">{{ h.jumlah_halaman }}</td>
+              <td class="whitespace-nowrap px-4 py-3">{{ h.ukuran|ukuran_berkas }}</td>
+              <td class="whitespace-nowrap px-4 py-3 text-redup">{{ h.dibuat|waktu_singkat }}</td>
+              <td class="px-2 py-2 text-right">
+                <a href="{{ url_for('gabung_dokumen.unduh', hasil_id=h.id) }}" class="tombol tombol-teks min-h-9 px-2"
+                   aria-label="Unduh {{ h.nama_berkas }}">{{ ikon("unduh", "size-4") }}<span>Unduh</span></a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <button type="submit" class="tombol tombol-sekunder" data-perlu-pilihan>{{ ikon("hapus", "size-4") }}<span>Hapus terpilih</span></button>
+      <p class="text-sm text-redup" aria-live="polite"><span data-jumlah-dipilih>0</span> dipilih</p>
+    </div>
+  </form>
+  {% else %}
+  <p class="text-redup">Belum ada PDF yang digabung.</p>
+  {% endif %}
+</section>
+{% endblock %}

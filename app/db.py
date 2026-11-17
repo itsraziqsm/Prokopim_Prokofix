@@ -127,6 +127,19 @@ CREATE TABLE IF NOT EXISTS materi_pertanyaan (
     jawaban      TEXT NOT NULL DEFAULT ''         -- teks berformat ringan (lihat pengurai.py), BUKAN HTML
 );
 CREATE INDEX IF NOT EXISTS idx_materi_pertanyaan ON materi_pertanyaan (instansi_id, urutan);
+
+-- Utilitas > Gabungkan PDF: satu baris = satu berkas PDF hasil penggabungan
+CREATE TABLE IF NOT EXISTS gabung_hasil (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    pengguna_id     INTEGER NOT NULL REFERENCES pengguna(id) ON DELETE CASCADE,
+    nama_berkas     TEXT NOT NULL,                 -- nama PDF hasil (sudah disanitasi) di folder hasil
+    jumlah_berkas   INTEGER NOT NULL DEFAULT 0,    -- berapa file sumber yang digabung
+    jumlah_halaman  INTEGER NOT NULL DEFAULT 0,
+    ukuran          INTEGER NOT NULL DEFAULT 0,    -- byte
+    folder          TEXT NOT NULL DEFAULT '',      -- instance/data/gabung_dokumen/<id>
+    dibuat          TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_gabung_hasil_pengguna ON gabung_hasil (pengguna_id, id DESC);
 """
 
 

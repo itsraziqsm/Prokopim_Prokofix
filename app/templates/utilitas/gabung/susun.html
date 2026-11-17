@@ -1,0 +1,111 @@
+{#- Penyusunan penggabungan: satu formulir dengan banyak aksi (formaction): Tambah file, Naik/Turun/Hapus per file,
+    Periksa rentang, Gabungkan. Setiap aksi menyimpan isian (rentang, nama, daftar isi) dulu di server. -#}
+{% extends "base.html" %}
+{% from "komponen/ui.html" import kembali, field %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}Susun penggabungan · Gabungkan PDF · {{ nama_aplikasi }}{% endblock %}
+
+{% set url_aksi = url_for('gabung_dokumen.aksi', token=token) %}
+{% set jumlah = sesi.berkas|length %}
+
+{% block konten %}
+<div class="mb-6">{{ kembali("Gabungkan PDF", url_for('gabung_dokumen.index')) }}</div>
+<h1 class="mb-6">Susun penggabungan</h1>
+
+<form id="form-susun" method="post" enctype="multipart/form-data" novalidate data-kirim-sekali
+      action="{{ url_for('gabung_dokumen.gabungkan', token=token) }}">
+  {{ csrf_field() }}
+  {# Tombol bawaan untuk Enter di kolom isian = Periksa rentang (tombol kirim pertama dalam formulir dipakai browser) #}
+  <button type="submit" formaction="{{ url_aksi }}" name="aksi" value="periksa" class="sr-only" tabindex="-1" aria-hidden="true">Periksa rentang</button>
+
+  {# ===== Tambah file ===== #}
+  <section class="panel mb-6 p-5!" aria-label="Tambah file">
+    <div class="flex flex-wrap items-center gap-3 rounded-lg border-2 border-dashed border-garis px-3 py-3 transition-colors data-seret:border-aksen data-seret:bg-aksen-lembut" data-seret-berkas>
+      <input id="f-tambah" name="berkas" type="file" multiple class="peer sr-only" data-pilih-berkas
+             accept=".pdf,application/pdf" aria-label="Pilih PDF untuk ditambahkan" aria-describedby="n-tambah">
+      <label for="f-tambah" class="tombol tombol-sekunder peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-aksen">
+        {{ ikon("folder", "size-4") }}<span>Pilih PDF</span>
+      </label>
+      <p id="n-tambah" class="min-w-0 flex-1 basis-40 text-sm text-redup wrap-anywhere" data-nama-berkas>atau seret PDF ke sini</p>
+      <button type="submit" formaction="{{ url_for('gabung_dokumen.tambah', token=token) }}" class="tombol tombol-primer"
+              data-butuh-berkas="f-tambah" data-tombol-progres="Mengunggah…" disabled>{{ ikon("plus", "size-4") }}<span>Tambah file</span></button>
+    </div>
+  </section>
+
+  {# ===== Daftar file (urutan gabung) ===== #}
+  <section id="daftar-berkas" class="mb-6 scroll-mt-6" aria-labelledby="judul-daftar">
+    <h2 id="judul-daftar" class="mb-3">Urutan file</h2>
+    {% if sesi.berkas %}
+    <div class="panel overflow-hidden p-0!">
+      <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Urutan file yang digabung">
+        <table class="w-full min-w-2xl border-collapse text-left text-sm">
+          <thead class="bg-permukaan-2 text-redup">
+            <tr>
+              <th scope="col" class="w-12 px-4 py-3 font-semibold">No</th>
+              <th scope="col" class="px-4 py-3 font-semibold">File</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Hlm.</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Ukuran</th>
+              <th scope="col" class="w-60 px-4 py-3 font-semibold">Halaman</th>
+              <th scope="col" class="px-4 py-3"><span class="sr-only">Urutan dan hapus</span></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-garis">
+            {% for b in sesi.berkas %}
+            <tr class="align-top">
+              <td class="px-4 py-3 text-redup">{{ loop.index }}</td>
+              <td class="px-4 py-3 font-medium wrap-break-word">{{ b.nama|jalur }}</td>
+              <td class="px-4 py-3">{{ b.halaman }}</td>
+              <td class="whitespace-nowrap px-4 py-3">{{ b.ukuran|ukuran_berkas }}</td>
+              <td class="px-4 py-2">
+                {{ field("rentang_" ~ b.id, "Halaman yang diambil dari " ~ b.nama, nilai=b.rentang, galat=galat.get(b.id),
+                         wajib=false, placeholder="1-3,5,8-", label_tersembunyi=true) }}
+              </td>
+              <td class="px-2 py-2">
+                <div class="flex justify-end gap-1">
+                  <button type="submit" formaction="{{ url_aksi }}" name="aksi" value="naik:{{ b.id }}" id="naik-{{ b.id }}"
+                          class="tombol tombol-teks min-h-9 px-2" aria-label="Naikkan {{ b.nama }}" title="Naikkan" {% if loop.first %}disabled{% endif %}>{{ ikon("naik", "size-4") }}</button>
+                  <button type="submit" formaction="{{ url_aksi }}" name="aksi" value="turun:{{ b.id }}" id="turun-{{ b.id }}"
+                          class="tombol tombol-teks min-h-9 px-2" aria-label="Turunkan {{ b.nama }}" title="Turunkan" {% if loop.last %}disabled{% endif %}>{{ ikon("turun", "size-4") }}</button>
+                  <button type="submit" formaction="{{ url_aksi }}" name="aksi" value="hapus:{{ b.id }}"
+                          class="tombol tombol-teks min-h-9 px-2 text-bahaya-teks" aria-label="Hapus {{ b.nama }} dari penggabungan" title="Hapus">{{ ikon("hapus", "size-4") }}</button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <p class="panel text-redup">Belum ada file. Tambahkan PDF di atas.</p>
+    {% endif %}
+  </section>
+
+  {# ===== Hasil ===== #}
+  <section class="panel grid gap-5" aria-labelledby="judul-hasil">
+    <h2 id="judul-hasil" class="sr-only">Berkas hasil</h2>
+    <div class="grid gap-5 md:grid-cols-2 md:items-start">
+      {{ field("nama_hasil", "Nama berkas hasil", nilai=sesi.nama_hasil, wajib=false) }}
+      <div class="md:pt-8">
+        <input type="hidden" name="daftar_isi_dikirim" value="1">
+        <label class="flex cursor-pointer items-start gap-3">
+          <input type="checkbox" name="daftar_isi" value="1" class="mt-1 size-4 accent-aksen" {% if sesi.daftar_isi %}checked{% endif %}>
+          <span class="font-medium">Tambahkan daftar isi (bookmark) per file</span>
+        </label>
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-garis pt-5">
+      <p class="text-sm" aria-live="polite">
+        <span class="font-semibold">{{ jumlah }} file</span>
+        <span class="text-redup">·
+          {% if halaman_terpilih is not none %}{{ halaman_terpilih }} dari {{ total_halaman }} halaman{% else %}{{ total_halaman }} halaman (rentang belum benar){% endif %}</span>
+      </p>
+      <div class="ml-auto flex flex-wrap gap-3">
+        <button type="submit" formaction="{{ url_aksi }}" name="aksi" value="periksa" class="tombol tombol-sekunder" {% if not jumlah %}disabled{% endif %}>Periksa rentang</button>
+        <button type="submit" class="tombol tombol-primer" data-tombol-progres="Menggabungkan…" {% if not jumlah %}disabled{% endif %}>
+          {{ ikon("gabung", "size-4") }}<span>Gabungkan</span></button>
+      </div>
+    </div>
+  </section>
+</form>
+{% endblock %}

@@ -1,0 +1,26 @@
+{#- Hasil penggabungan: ringkasan, Unduh, Gabungkan lagi. -#}
+{% extends "base.html" %}
+{% from "komponen/ui.html" import kembali, alert %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}{{ hasil.nama_berkas }} · Gabungkan PDF · {{ nama_aplikasi }}{% endblock %}
+
+{% block konten %}
+<div class="mb-6">{{ kembali("Gabungkan PDF", url_for('gabung_dokumen.index')) }}</div>
+<h1 class="mb-6 wrap-break-word">{{ hasil.nama_berkas|jalur }}</h1>
+
+<section class="panel grid max-w-2xl gap-6" aria-label="Ringkasan hasil">
+  <dl class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+    <div><dt class="text-sm text-redup">File digabung</dt><dd class="text-lg font-semibold">{{ hasil.jumlah_berkas }}</dd></div>
+    <div><dt class="text-sm text-redup">Halaman</dt><dd class="text-lg font-semibold">{{ hasil.jumlah_halaman }}</dd></div>
+    <div><dt class="text-sm text-redup">Ukuran</dt><dd class="text-lg font-semibold">{{ hasil.ukuran|ukuran_berkas }}</dd></div>
+    <div><dt class="text-sm text-redup">Dibuat</dt><dd class="text-lg font-semibold">{{ hasil.dibuat|waktu_singkat }}</dd></div>
+  </dl>
+  {% if not ada_berkas %}{{ alert("Berkas hasil tidak ditemukan di penyimpanan. Gabungkan ulang file sumbernya.", "galat") }}{% endif %}
+  <div class="flex flex-wrap gap-3">
+    {% if ada_berkas %}
+    <a href="{{ url_for('gabung_dokumen.unduh', hasil_id=hasil.id) }}" class="tombol tombol-primer">{{ ikon("unduh", "size-4") }}<span>Unduh</span></a>
+    {% endif %}
+    <a href="{{ url_for('gabung_dokumen.index') }}" class="tombol tombol-sekunder">{{ ikon("gabung", "size-4") }}<span>Gabungkan lagi</span></a>
+  </div>
+</section>
+{% endblock %}

@@ -201,7 +201,8 @@ class UjiHalaman(DasarUji):
 class UjiTombolProgres(unittest.TestCase):
     """Setiap tombol ekspor/proses (sekarang & yang akan datang) wajib data-tombol-progres:
     tombol berubah menjadi bilah progres dan kiriman ganda ditolak (app.js bagian 5)."""
-    POLA_RUTE = r"url_for\('[\w.]*(ekspor|proses|analisis)[\w]*'"
+    # Dicocokkan pada NAMA FUNGSI rute (setelah titik), mis. 'materi_podcast.ekspor', 'gabung_dokumen.gabungkan'
+    POLA_RUTE = r"url_for\('(?:\w+\.)?\w*(ekspor|proses|analisis|gabungkan)\w*'"
 
     def test_semua_tombol_ekspor_memakai_tombol_progres(self):
         from pathlib import Path
@@ -216,7 +217,7 @@ class UjiTombolProgres(unittest.TestCase):
             for m in re.finditer(r'<button[^>]*formaction="\{\{ ' + self.POLA_RUTE + r'[^>]*>', html, re.S):
                 diperiksa += 1
                 self.assertIn("data-tombol-progres", m.group(0), f"{berkas}: {m.group(0)[:120]}")
-        self.assertGreaterEqual(diperiksa, 4)   # SPT analisis & proses, Word liputan, Word materi
+        self.assertGreaterEqual(diperiksa, 5)   # SPT analisis & proses, Word liputan, Word materi, Gabungkan PDF
 
 
 class UjiFilter(DasarUji):

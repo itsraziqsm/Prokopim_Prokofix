@@ -23,6 +23,12 @@ def tanggal_indonesia(waktu=None):
     return f"{HARI[waktu.weekday()]}, {waktu.day} {BULAN[waktu.month - 1]} {waktu.year}"
 
 
+def tanggal_tanpa_hari(waktu=None):
+    """Contoh hasil: '17 November 2026'."""
+    waktu = waktu or datetime.now()
+    return f"{waktu.day} {BULAN[waktu.month - 1]} {waktu.year}"
+
+
 def waktu_singkat(teks):
     """'2026-11-15 03:09:46' -> 'Hari ini, 03.09' / 'Kemarin, 03.09' / '12 Nov 2026, 03.09'."""
     try:

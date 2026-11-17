@@ -21,7 +21,9 @@ Setiap fitur = satu **modul** yang terdaftar di registry dan tampil sebagai kart
 
 ## Stack & batasan
 - Python 3.10+, Jinja2, SQLite (`sqlite3` bawaan). Dependensi Python yang **disetujui**: `flask`,
-  `python-docx` (membawa `lxml`), `Pillow`. Tidak ada yang lain (lihat `requirements.txt`).
+  `python-docx` (membawa `lxml`), `Pillow`, `pypdf` (Python murni; HANYA untuk membaca/menggabung PDF di
+  Gabungkan PDF — tanpa paket tambahan seperti `cryptography`, jadi PDF terenkripsi AES/bersandi ditolak sebagai
+  "terkunci kata sandi"). Tidak ada yang lain (lihat `requirements.txt`).
 - PDF dibuat **tanpa paket Python**: Windows → Microsoft Word lewat PowerShell/COM; Linux/Windows tanpa Word →
   LibreOffice `soffice --headless`. Bila keduanya tidak ada, hasil tetap Word dan batch berstatus "sebagian".
 - **Tailwind CSS v4 lewat paket npm** (`@tailwindcss/cli` 4.3.2) — BUKAN CDN.
@@ -52,7 +54,8 @@ app/__init__.py                create_app(): config, secret key di instance/, bl
 app/modules_registry.py        DAFTAR MODUL (sumber tunggal) + STATUS_LABEL; field `induk` (None = tingkat atas). Modul yang
                                punya anak = JUDUL KELOMPOK di halaman Alat (bukan kartu, tanpa halaman sendiri), kartu
                                anaknya tampil di bawah judul itu. Kelompok saat ini: "Berita" (id berita: Pemecah SPT, Arsip
-                               Liputan) dan "Podcast" (id data_podcast: Materi Podcast); kelompok_alat(), modul_utama(), anak_dari()
+                               Liputan), "Podcast" (id data_podcast: Materi Podcast), dan "Utilitas" (id utilitas:
+                               Gabungkan PDF); kelompok_alat(), modul_utama(), anak_dari()
 app/routes.py                  blueprint "utama": / (Dashboard), /alat (kartu modul), /log, /log/<id>/buka, /modul/<id>,
                                /pengaturan
 app/ringkasan.py               data Dashboard: angka liputan bulan ini/draf, SPT bulan ini, 5 liputan & 5 log terakhir
@@ -122,6 +125,32 @@ app/modul/data_podcast/        Fitur 3 — INDUK "Podcast" (id data_podcast) = j
     routes.py                      /podcast/materi (+ ?q=), /baru, /<id> (+ /simpan, /hapus, /duplikat, /ekspor, /unduh,
                                    /baca), /<id>/instansi (POST tambah), /<id>/instansi/<iid> (GET/POST simpan, /geser,
                                    /hapus), POST /pratinjau (fragmen HTML untuk pratinjau langsung)
+app/modul/utilitas/            Fitur 4 — INDUK "Utilitas" (id utilitas) = judul kelompok di halaman Alat (#utilitas); blueprint
+                               "utilitas" hanya mengalihkan /utilitas ke /alat#utilitas; SEMUA_BLUEPRINT didaftarkan di create_app.
+  gabung_dokumen/                Fitur anak "Gabungkan PDF" (id gabung_dokumen) — blueprint "gabung_dokumen" di /utilitas/gabung;
+                                 sesi & hasil HANYA milik pengguna yang masuk (milik orang lain → 404).
+    penggabung.py                  logika murni (pypdf): urai_rentang("1-3,5,8-", n) → indeks (urut sesuai tulisan; kosong/"semua"
+                                   = semua; tolak 0, terbalik, di luar halaman, teks lain → GalatRentang), tanda_pdf(), periksa_pdf()
+                                   (rusak/terkunci/kosong → GalatBerkas), siapkan_sumber() = TITIK PERLUASAN WORD (sekarang hanya
+                                   PDF; nanti .docx dikonversi lewat app/modul/pemecah_spt/pdf.py + tambah ".docx" ke
+                                   EKSTENSI_DIDUKUNG), gabungkan() (hanya halaman terpilih; OpenAction/JavaScript dokumen & /AA
+                                   halaman tidak ikut; bookmark per file = nama file tanpa ekstensi; Title = nama hasil; ditulis
+                                   langsung ke berkas), nama_berkas_hasil() (karakter terlarang Windows → "-", maks. 100, bukan
+                                   CON/PRN/COMn/LPTn, berakhiran .pdf, unik " (1)")
+    layanan.py                     sesi penyusunan instance/tmp/gabung_dokumen/<token>/ (<id acak>.pdf + sesi.json; token
+                                   secrets.token_urlsafe terikat pengguna; folder > 24 jam dihapus saat halaman awal dibuka —
+                                   pembersih sendiri karena pembersih tmp SPT hanya untuk berkas), unggahan per file (ekstensi
+                                   .pdf + "%PDF-" di 1 KB pertama, ditulis bertahap; maks. 50 MB/file, 200 MB/penyusunan, 30 file,
+                                   2000 halaman; penolakan per file tidak membatalkan file lain), gabungkan() (rekaman gabung_hasil
+                                   + folder instance/data/gabung_dokumen/<id>/; gagal → folder & rekaman dibersihkan; sesi dihapus
+                                   setelah berhasil), jalur_hasil_aman()/folder_hasil_aman() (pola jalur_berkas_aman/folder_batch_aman)
+    routes.py                      /utilitas/gabung (unggah + riwayat), POST /unggah, /<token> (susun), POST /<token>/tambah,
+                                   POST /<token>/aksi (aksi="naik|turun|hapus:<id>" atau "periksa"; simpan isian dulu; naik/turun
+                                   → ?fokus=), POST /<token>/gabung (fungsi gabungkan), /hasil/<id>, /hasil/<id>/unduh,
+                                   POST /hapus. Batas kiriman unggah & tambah di create_app (batas_khusus). Filter |ukuran_berkas.
+app/templates/utilitas/gabung/ index (zona seret [data-seret-berkas] + riwayat dengan pilih-semua & hapus), susun (SATU form
+                               multipart, banyak tombol formaction; tombol sr-only pertama = Periksa rentang untuk Enter; rentang
+                               per baris lewat field(label_tersembunyi=true) dengan galat inline), hasil (Unduh, Gabungkan lagi)
 app/templates/data_podcast/    materi/ index, baru, detail (tabel instansi + naik/turun, Word, judul, duplikat,
                                hapus), instansi (editor pertanyaan + pratinjau + "Tandai selesai"), baca (mode baca)
 app/templates/arsip_liputan/   index (arsip dikelompokkan per bulan kegiatan, terbaru di atas, satu tabel per bulan), form
@@ -144,10 +173,14 @@ instance/data/spt/<id_batch>/  berkas hasil Pemecah SPT
 instance/tmp/                  unggahan sementara selama pratinjau (<token>.docx + .json), dihapus >24 jam
 instance/data/liputan/<tahun>/<MM-Bulan>/<id>/  foto/ (nama acak, versi olahan) dan ekspor/ (satu Word terbaru)
 instance/data/podcast/<id>/ekspor/             satu Word terbaru Materi Podcast (nama dari judul + keterangan)
+instance/tmp/gabung_dokumen/<token>/           sesi penyusunan Gabungkan PDF (PDF sumber bernama acak + sesi.json), > 24 jam dihapus
+instance/data/gabung_dokumen/<id>/             PDF hasil Gabungkan PDF (satu berkas, nama tersanitasi dari pengguna)
 tests/test_aplikasi.py         uji inti (create_app(instance_path=folder_sementara))
 tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .docx contoh (batch_contoh())
 tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membuat foto contoh (tujuh_foto())
 tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD, N+1, ekspor Word, keamanan, CLI)
+tests/test_gabung_dokumen.py   uji Gabungkan PDF (rentang, nama, pypdf, alur web, batas, keamanan, kelompok Utilitas);
+                               tests/fixture_pdf.py membuat PDF contoh (lebar halaman = "sidik" urutan, terkunci, rusak)
 ```
 
 ## Pola & konvensi penting
@@ -213,7 +246,8 @@ tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD,
 - **Notifikasi**: server `flash(pesan, "sukses"|"info"|"galat")`; JS `window.notifikasi(pesan, jenis)`.
   Tampil pop-up kanan atas (fixed), jangan pakai alert inline untuk pesan umum. Galat per-field tetap inline (makro `field`).
 - **Komponen ulang-pakai** di `komponen/ui.html`: `lencana`, `kartu_modul`, `breadcrumb`, `kembali(label, url)` (satu tautan
-  kembali untuk halaman yang lebih dalam dari tingkat kedua, mis. halaman materi/instansi), `tombol`, `toast`, `field` (+ `placeholder`),
+  kembali untuk halaman yang lebih dalam dari tingkat kedua, mis. halaman materi/instansi), `tombol`, `toast`, `field` (+ `placeholder`,
+  `label_tersembunyi` untuk isian di dalam tabel yang sudah punya judul kolom),
   `alert` (peringatan inline yang menetap, jenis info|peringatan|galat). Kelas komponen CSS: `.tombol(-primer|-sekunder|-teks|-bahaya)`,
   `.lencana(-siap|-pengembangan|-peringatan|-gagal)`,
   `.panel`, `.input`, `.label`, `.petunjuk`, `.galat-field`, `.ikon`.
@@ -240,14 +274,17 @@ tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD,
   form/formaction ke rute berisi "ekspor", "proses", "analisis"). Proses yang punya progres nyata (thread latar) tetap
   memakai makro `progres` di halaman berikutnya.
 - **Perilaku JS siap pakai** (app.js): `<form data-kirim-sekali data-teks-proses="Memproses...">` (cegah kirim ganda untuk
-  formulir biasa; untuk ekspor pakai `data-tombol-progres`),
+  formulir biasa; tombol dinonaktifkan SETELAH formulir mulai terkirim agar name/value tombol pengirim — mis.
+  aksi="naik:<id>" — tetap ikut; untuk ekspor pakai `data-tombol-progres`),
   `data-pilih-semua` + `data-pilih-item` + `data-jumlah-dipilih` (centang semua), `data-pilih-berkas` +
-  `data-nama-berkas` (input berkas bergaya tombol), `data-salin="teks"` (salin ke clipboard),
+  `data-nama-berkas` (input berkas bergaya tombol; input multiple → "3 berkas: a.pdf, ..."), tombol
+  `data-butuh-berkas="<id input>"` (aktif hanya bila input berisi berkas), `<div data-seret-berkas>` (zona seret-lepas
+  umum untuk input file di dalamnya, menyaring sesuai `accept`; berbeda dari `data-zona-unggah` yang khusus foto), `data-salin="teks"` (salin ke clipboard),
   `data-pantau-progres="url"` (dipasang makro `progres`), `data-konfirmasi` (dialog konfirmasi),
   `data-perlu-pilihan` (tombol nonaktif bila belum ada `data-pilih-item` tercentang),
   `data-zona-unggah` + `data-pratinjau-unggah` + `data-tombol-unggah` (unggah foto), `window.konfirmasi(pesan,
   {judul, tombol}, lanjut)` (dialog konfirmasi dari JS), `?fokus=<id>` (fokus kembali ke tombol setelah dialihkan, mis.
-  naik/turun), `<form data-jaga-perubahan>` + `[data-tanda-berubah]` (peringatan beforeunload; event "ubah-daftar"),
+  naik/turun; dipasang setelah event load agar tidak ditimpa jangkar #... di alamat), `<form data-jaga-perubahan>` + `[data-tanda-berubah]` (peringatan beforeunload; event "ubah-daftar"),
   `[data-editor-pertanyaan]` (tambah/naik/turun/hapus pertanyaan di browser, pratinjau langsung lewat POST /pratinjau,
   `[data-tanda-selesai]` aktif hanya bila semua berjawaban), `[data-buka-editor="<id textarea>"]` + `<dialog data-editor-fokus>`
   (editor fokus layar penuh untuk satu jawaban: bilah format tebal/miring/judul/daftar/tabel/indentasi, Ctrl+B/I,

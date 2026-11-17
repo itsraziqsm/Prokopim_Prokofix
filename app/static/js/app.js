@@ -184,12 +184,16 @@
     }
     if (!form.matches("[data-kirim-sekali]")) return;
     form.dataset.terkirim = "1";
-    Array.prototype.forEach.call(form.querySelectorAll("button[type=submit]"), function (t) {
-      t.disabled = true;
-      t.setAttribute("aria-busy", "true");
-      var label = t.querySelector("span") || t;
-      label.textContent = form.dataset.teksProses || "Memproses...";
-    });
+    // Ditunda sampai formulir mulai terkirim: tombol yang dinonaktifkan saat event submit tidak ikut mengirim
+    // name/value-nya (mis. aksi="naik:<id>" pada formulir dengan banyak tombol aksi)
+    setTimeout(function () {
+      Array.prototype.forEach.call(form.querySelectorAll("button[type=submit]"), function (t) {
+        t.disabled = true;
+        t.setAttribute("aria-busy", "true");
+        var label = t.querySelector("span:not(.sr-only)") || t.querySelector("span");
+        if (label) label.textContent = form.dataset.teksProses || "Memproses...";
+      });
+    }, 0);
   });
   // Bila halaman dibuka lagi lewat tombol Kembali browser, kembalikan tombol & formulir seperti semula
   window.addEventListener("pageshow", function (e) {
@@ -229,13 +233,21 @@
     perbarui();
   }
 
-  /* ---------- 7. Nama berkas terpilih (input file bergaya tombol) ---------- */
+  /* ---------- 7. Nama berkas terpilih (input file bergaya tombol) ----------
+     Satu berkas: namanya; beberapa (input multiple): "3 berkas: a.pdf, b.pdf, c.pdf".
+     Tombol [data-butuh-berkas="<id input>"] aktif hanya bila input itu berisi berkas. */
   Array.prototype.forEach.call(document.querySelectorAll("[data-pilih-berkas]"), function (input) {
     var nama = input.parentNode.querySelector("[data-nama-berkas]");
     var awal = nama ? nama.textContent : "";
-    input.addEventListener("change", function () {
-      if (nama) nama.textContent = input.files.length ? input.files[0].name : awal;
-    });
+    var tombolButuh = input.id ? document.querySelectorAll('[data-butuh-berkas="' + input.id + '"]') : [];
+    var perbarui = function () {
+      var berkas = Array.prototype.map.call(input.files, function (f) { return f.name; });
+      if (nama) nama.textContent = !berkas.length ? awal
+        : berkas.length === 1 ? berkas[0] : berkas.length + " berkas: " + berkas.join(", ");
+      Array.prototype.forEach.call(tombolButuh, function (t) { t.disabled = !berkas.length; });
+    };
+    input.addEventListener("change", perbarui);
+    perbarui();
   });
 
   /* ---------- 8. Progres proses latar ----------
@@ -427,6 +439,43 @@
     gambarPratinjau();
   }
 
+  /* ---------- 20. Zona seret-lepas berkas umum: <div data-seret-berkas> berisi <input type=file> ----------
+     Berkas yang dilepas digabung dengan pilihan sebelumnya lalu dipasang ke input (event "change" agar nama
+     berkas & tombol [data-butuh-berkas] ikut diperbarui). Hanya berkas yang cocok dengan atribut accept
+     yang diambil. Berbeda dari [data-zona-unggah] yang khusus foto Arsip Liputan. */
+  if (window.DataTransfer) {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-seret-berkas]"), function (zonaBerkas) {
+      var input = zonaBerkas.querySelector("input[type=file]");
+      if (!input) return;
+      var akhiranBoleh = (input.accept || "").split(",").map(function (a) { return a.trim().toLowerCase(); })
+        .filter(function (a) { return a.charAt(0) === "."; });
+      var cocok = function (f) {
+        if (!akhiranBoleh.length) return true;
+        var nama = f.name.toLowerCase();
+        return akhiranBoleh.some(function (a) { return nama.slice(-a.length) === a; });
+      };
+      ["dragenter", "dragover"].forEach(function (jenis) {
+        zonaBerkas.addEventListener(jenis, function (e) { e.preventDefault(); zonaBerkas.dataset.seret = ""; });
+      });
+      ["dragleave", "drop"].forEach(function (jenis) {
+        zonaBerkas.addEventListener(jenis, function () { delete zonaBerkas.dataset.seret; });
+      });
+      zonaBerkas.addEventListener("drop", function (e) {
+        e.preventDefault();
+        if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+        var kumpulan = new DataTransfer();
+        Array.prototype.forEach.call(input.files, function (f) { kumpulan.items.add(f); });
+        var ditolak = [];
+        Array.prototype.forEach.call(e.dataTransfer.files, function (f) {
+          if (cocok(f)) kumpulan.items.add(f); else ditolak.push(f.name);
+        });
+        if (ditolak.length) window.notifikasi(ditolak.join(", ") + ": bukan berkas " + akhiranBoleh.join("/").toUpperCase().replace(/\./g, "") + ".", "galat");
+        input.files = kumpulan.files;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    });
+  }
+
   /* ---------- 11. Saring daftar: <input data-saring="#wadah">, item [data-saring-teks] ---------- */
   Array.prototype.forEach.call(document.querySelectorAll("[data-saring]"), function (masukanSaring) {
     var wadah = document.querySelector(masukanSaring.dataset.saring);
@@ -547,13 +596,19 @@
      Dipakai tombol Naik/Turun instansi agar pengguna keyboard tetap di tombol yang sama setelah halaman dimuat ulang. */
   var idFokus = new URLSearchParams(location.search).get("fokus");
   if (idFokus) {
-    var elFokus = document.getElementById(idFokus);
-    if (elFokus && elFokus.disabled) {
-      // Tombolnya kini nonaktif (sudah di ujung daftar): pindah ke tombol lain di baris yang sama
-      var baris = elFokus.closest("tr, li, section");
-      elFokus = baris ? baris.querySelector("button:not([disabled])") : null;
-    }
-    if (elFokus) elFokus.focus();
+    var pasangFokus = function () {
+      var elFokus = document.getElementById(idFokus);
+      if (elFokus && elFokus.disabled) {
+        // Tombolnya kini nonaktif (sudah di ujung daftar): pindah ke tombol lain di baris yang sama
+        var baris = elFokus.closest("tr, li, section");
+        elFokus = baris ? baris.querySelector("button:not([disabled])") : null;
+      }
+      if (elFokus) elFokus.focus();
+    };
+    // Dipasang setelah halaman selesai dimuat: bila alamat memuat jangkar (#...), browser memindahkan fokus ke
+    // jangkar itu saat memuat halaman dan akan menimpa fokus yang dipasang lebih awal.
+    if (document.readyState === "complete") setTimeout(pasangFokus, 0);
+    else window.addEventListener("load", function () { setTimeout(pasangFokus, 0); });
     if (history.replaceState) history.replaceState(null, "", location.pathname + location.hash);
   }
 

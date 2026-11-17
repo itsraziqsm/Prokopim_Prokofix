@@ -229,7 +229,7 @@ class UjiHalaman(DasarWeb):
         self.assertLess(alat.index('id="data-podcast"'), alat.index("Materi Podcast"))
         # dua judul kelompok: Berita (Pemecah SPT, Arsip Liputan) lalu Podcast
         judul = re.findall(r'<h2 id="kelompok-[^"]+"[^>]*>([^<]+)</h2>', alat)
-        self.assertEqual(judul, ["Berita", "Podcast"])
+        self.assertEqual(judul, ["Berita", "Podcast", "Utilitas"])
         self.assertLess(alat.index(">Berita<"), alat.index("Pemecah SPT"))
         self.assertLess(alat.index("Arsip Liputan"), alat.index(">Podcast<"))
         r = self.klien.get("/podcast")
