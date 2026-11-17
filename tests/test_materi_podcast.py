@@ -242,6 +242,15 @@ class UjiHalaman(DasarWeb):
         instansi = self.klien.get(f"/podcast/materi/{mid}/instansi/1").get_data(as_text=True)
         self.assertIn(f'href="/podcast/materi/{mid}"', instansi)
 
+    def test_editor_fokus_tersedia_untuk_setiap_jawaban(self):
+        mid = self.contoh()
+        html = self.klien.get(f"/podcast/materi/{mid}/instansi/1").get_data(as_text=True)
+        self.assertEqual(html.count('data-buka-editor="jawab-p'), 2)        # satu tombol per pertanyaan
+        self.assertIn('data-buka-editor="jawab-__KUNCI__"', html)             # juga untuk pertanyaan baru
+        self.assertEqual(html.count('id="editor-fokus"'), 1)                  # satu dialog dipakai bersama
+        self.assertIn('aria-valuemax="50"', html)                            # lebar pratinjau maks. 50%
+        self.assertIn('role="toolbar"', html)
+
     def test_pencarian_judul(self):
         self.contoh()
         self.buat_materi("Podcast Lain")

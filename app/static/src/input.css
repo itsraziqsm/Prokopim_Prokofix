@@ -202,6 +202,17 @@ mark { background: var(--tanda-latar); color: var(--tanda-teks); border-radius: 
 [data-baca] h2 { font-size: 1.4em; line-height: 1.3; }
 [data-baca] h3 { font-size: 1em; }
 
+/* Editor fokus jawaban: area tulis lega ala aplikasi catatan; lebar pratinjau = --lebar-pratinjau (20–50%, diseret) */
+.editor-fokus-teks { font-size: 1.0625rem; line-height: 1.8; tab-size: 2; }
+.editor-fokus-pratinjau { height: 40%; }
+@media (width >= 48rem) {
+  .editor-fokus-pratinjau { height: auto; width: var(--lebar-pratinjau, 50%); }
+  .editor-fokus-teks { padding-inline: max(2.5rem, calc((100% - 46rem) / 2)); }
+}
+[data-ef-badan][data-tanpa-pratinjau] .editor-fokus-pratinjau,
+[data-ef-badan][data-tanpa-pratinjau] .editor-fokus-pemisah { display: none; }
+[data-ef-badan][data-menyeret] { cursor: col-resize; user-select: none; }
+
 /* ---------- Cetak ---------- */
 @media print {
   /* Cetak selalu dengan warna tema terang, apa pun tema layar */

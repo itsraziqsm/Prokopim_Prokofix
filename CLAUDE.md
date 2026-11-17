@@ -241,7 +241,11 @@ tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD,
   {judul, tombol}, lanjut)` (dialog konfirmasi dari JS), `?fokus=<id>` (fokus kembali ke tombol setelah dialihkan, mis.
   naik/turun), `<form data-jaga-perubahan>` + `[data-tanda-berubah]` (peringatan beforeunload; event "ubah-daftar"),
   `[data-editor-pertanyaan]` (tambah/naik/turun/hapus pertanyaan di browser, pratinjau langsung lewat POST /pratinjau,
-  `[data-tanda-selesai]` aktif hanya bila semua berjawaban), `[data-alat-baca]` (mode baca: filter status, cari + sorot
+  `[data-tanda-selesai]` aktif hanya bila semua berjawaban), `[data-buka-editor="<id textarea>"]` + `<dialog data-editor-fokus>`
+  (editor fokus layar penuh untuk satu jawaban: bilah format tebal/miring/judul/daftar/tabel/indentasi, Ctrl+B/I,
+  Enter melanjutkan daftar, Tab/Shift+Tab menjorok; teks disalin langsung ke kolom asli; pratinjau kanan bisa
+  disembunyikan dan lebarnya diseret 20–50% — `--lebar-pratinjau`, localStorage "editor-pratinjau" &
+  "editor-lebar-pratinjau"; di ponsel pratinjau di bawah), `[data-alat-baca]` (mode baca: filter status, cari + sorot
   `<mark>`, ukuran huruf `localStorage["ukuran-baca"]`, cetak), `data-saring="#wadah"` +
   `data-saring-teks` + `data-saring-kosong` (saring daftar di sisi klien), `data-kelengkapan` + `data-cek=
   "isi:ID | pilih:NAMA | nilai:NAMA=NILAI"` (centang/silang panel diperbarui langsung dari isian formulir;

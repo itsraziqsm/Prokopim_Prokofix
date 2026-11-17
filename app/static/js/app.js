@@ -675,6 +675,215 @@
       b.scrollIntoView({ block: "nearest", behavior: kurangiGerak.matches ? "auto" : "smooth" });
     });
 
+
+    /* ---------- 19. Editor fokus jawaban (layar penuh, ala aplikasi catatan) ----------
+       Tombol [data-buka-editor="<id textarea>"] membuka <dialog id="editor-fokus">. Teks disalin langsung ke
+       kolom jawaban asli (event "input") sehingga pratinjau di halaman, tanda "belum disimpan", dan
+       "Tandai selesai" ikut diperbarui; tetap disimpan lewat tombol Simpan.
+       Pratinjau di kanan bisa disembunyikan (localStorage["editor-pratinjau"]) dan lebarnya diseret 20–50%
+       (localStorage["editor-lebar-pratinjau"]); pemisah juga bisa digeser dengan panah kiri/kanan. */
+    var ef = document.querySelector("[data-editor-fokus]");
+    if (ef && ef.showModal) {
+      var efTeks = ef.querySelector("[data-ef-teks]");
+      var efBadan = ef.querySelector("[data-ef-badan]");
+      var efPemisah = ef.querySelector("[data-ef-pemisah]");
+      var efInfo = ef.querySelector("[data-ef-info]");
+      var efTombolPratinjau = ef.querySelector("[data-ef-pratinjau-tombol]");
+      var LEBAR_MIN = 20, LEBAR_MAKS = 50;
+      var asal = null, tombolAsal = null;
+      efTeks.dataset.pratinjauSumber = "ef-hasil";
+
+      var simpanPilihan = function (kunci, nilai) { try { localStorage.setItem(kunci, nilai); } catch (e) {} };
+      var bacaPilihan = function (kunci) { try { return localStorage.getItem(kunci); } catch (e) { return null; } };
+
+      var aturLebar = function (persen) {
+        persen = Math.round(Math.min(LEBAR_MAKS, Math.max(LEBAR_MIN, persen)));
+        efBadan.style.setProperty("--lebar-pratinjau", persen + "%");
+        efPemisah.setAttribute("aria-valuenow", persen);
+        efPemisah.setAttribute("aria-valuetext", "Pratinjau " + persen + "% lebar layar");
+        return persen;
+      };
+      var aturPratinjau = function (tampil) {
+        if (tampil) efBadan.removeAttribute("data-tanpa-pratinjau");
+        else efBadan.setAttribute("data-tanpa-pratinjau", "");
+        efTombolPratinjau.setAttribute("aria-pressed", tampil ? "true" : "false");
+      };
+      aturLebar(parseFloat(bacaPilihan("editor-lebar-pratinjau")) || LEBAR_MAKS);
+      aturPratinjau(bacaPilihan("editor-pratinjau") !== "sembunyi");
+
+      var perbaruiInfo = function () {
+        var n = efTeks.value.length;
+        efInfo.textContent = n.toLocaleString("id-ID") + " / " + Number(efTeks.maxLength).toLocaleString("id-ID") + " karakter";
+      };
+      // Salin ke kolom asli + jadwalkan pratinjau editor
+      var sinkron = function () {
+        if (!asal) return;
+        asal.value = efTeks.value;
+        asal.dispatchEvent(new Event("input", { bubbles: true }));
+        clearTimeout(penunda.get(efTeks));
+        penunda.set(efTeks, setTimeout(function () { muatPratinjau(efTeks); }, 250));
+        perbaruiInfo();
+      };
+
+      // Ganti teks [awal, akhir) lewat execCommand agar Ctrl+Z tetap berfungsi; cadangan setRangeText
+      var ganti = function (awal, akhir, teks, pilihAwal, pilihAkhir) {
+        efTeks.focus();
+        efTeks.setSelectionRange(awal, akhir);
+        var ok = false;
+        try { ok = document.execCommand("insertText", false, teks); } catch (e) {}
+        if (!ok) efTeks.setRangeText(teks, awal, akhir, "end");
+        efTeks.setSelectionRange(pilihAwal, pilihAkhir === undefined ? pilihAwal : pilihAkhir);
+        sinkron();
+      };
+      // Rentang baris penuh yang tersentuh pilihan
+      var rentangBaris = function () {
+        var v = efTeks.value, a = efTeks.selectionStart, b = efTeks.selectionEnd;
+        if (b > a && v[b - 1] === "\n") b--;
+        var awal = v.lastIndexOf("\n", a - 1) + 1;
+        var akhir = v.indexOf("\n", b);
+        if (akhir < 0) akhir = v.length;
+        return { awal: awal, akhir: akhir, baris: v.slice(awal, akhir).split("\n") };
+      };
+      var bungkus = function (tanda) {
+        var a = efTeks.selectionStart, b = efTeks.selectionEnd, v = efTeks.value;
+        // Spasi di tepi pilihan diletakkan di luar tanda, karena "**teks **" tidak terbaca tebal
+        while (a < b && /\s/.test(v[a])) a++;
+        while (b > a && /\s/.test(v[b - 1])) b--;
+        ganti(a, b, tanda + v.slice(a, b) + tanda, a + tanda.length, b + tanda.length);
+      };
+      var ubahBaris = function (fungsi) {
+        var a = efTeks.selectionStart, b = efTeks.selectionEnd, r = rentangBaris();
+        var hasil = r.baris.map(fungsi).join("\n");
+        if (a === b) {
+          // Tanpa pilihan: kursor tetap di posisi yang sama relatif terhadap akhir baris
+          var posisi = Math.max(r.awal, r.awal + hasil.length - (r.akhir - a));
+          ganti(r.awal, r.akhir, hasil, posisi);
+        } else {
+          ganti(r.awal, r.akhir, hasil, r.awal, r.awal + hasil.length);
+        }
+      };
+      var PENANDA = /^(\s*)(\d+\.\s+|-\s+)?/;
+      var format = {
+        tebal: function () { bungkus("**"); },
+        miring: function () { bungkus("*"); },
+        judul: function () {
+          ubahBaris(function (b) { var t = b.trim(); return /^\*\*.+\*\*$/.test(t) ? t.slice(2, -2) : (t ? "**" + t + "**" : b); });
+        },
+        nomor: function () {
+          var n = 0;
+          ubahBaris(function (b) { var m = b.match(PENANDA); return b.trim() ? m[1] + (++n) + ". " + b.slice(m[0].length) : b; });
+        },
+        poin: function () {
+          ubahBaris(function (b) { var m = b.match(PENANDA); return b.trim() ? m[1] + "- " + b.slice(m[0].length) : b; });
+        },
+        // Menjorok: butir bernomor yang masuk menjadi anak daftar dimulai lagi dari "1."
+        masuk: function () {
+          var satuBaris = rentangBaris().baris.length === 1;
+          ubahBaris(function (b) { return "  " + (satuBaris ? b.replace(/^(\s*)\d+\.(\s+)/, "$11.$2") : b); });
+        },
+        keluar: function () { ubahBaris(function (b) { return b.replace(/^(\t| {1,2})/, ""); }); },
+        tabel: function () {
+          var a = efTeks.selectionStart, v = efTeks.value;
+          var awal = a > 0 && v[a - 1] !== "\n" ? "\n" : "";
+          var tabel = awal + "| Kolom 1 | Kolom 2 |\n|---|---|\n|  |  |\n";
+          var sel = a + tabel.indexOf("Kolom 1");
+          ganti(a, efTeks.selectionEnd, tabel, sel, sel + "Kolom 1".length);
+        },
+      };
+      ef.querySelector("[role=toolbar]").addEventListener("click", function (e) {
+        var t = e.target.closest("[data-format]");
+        if (t && format[t.dataset.format]) format[t.dataset.format]();
+      });
+
+      efTeks.addEventListener("input", sinkron);
+      efTeks.addEventListener("keydown", function (e) {
+        var mod = e.ctrlKey || e.metaKey;
+        if (mod && !e.shiftKey && (e.key === "b" || e.key === "B")) { e.preventDefault(); format.tebal(); return; }
+        if (mod && !e.shiftKey && (e.key === "i" || e.key === "I")) { e.preventDefault(); format.miring(); return; }
+        if (e.key === "Tab" && !mod && !e.altKey) { e.preventDefault(); (e.shiftKey ? format.keluar : format.masuk)(); return; }
+        if (e.key === "Enter" && !e.shiftKey && !mod && efTeks.selectionStart === efTeks.selectionEnd) {
+          // Lanjutkan daftar: "- " atau "N. " dengan indentasi yang sama; baris penanda kosong = akhiri daftar
+          var v = efTeks.value, a = efTeks.selectionStart;
+          var awalBaris = v.lastIndexOf("\n", a - 1) + 1, baris = v.slice(awalBaris, a);
+          var m = baris.match(/^(\s*)(\d+)\.\s+(.*)$/) || baris.match(/^(\s*)(-)\s+(.*)$/);
+          if (!m) return;
+          e.preventDefault();
+          if (!m[3].trim()) { ganti(awalBaris, a, "", awalBaris); return; }
+          var lanjut = m[2] === "-" ? "- " : (parseInt(m[2], 10) + 1) + ". ";
+          var sisip = "\n" + m[1] + lanjut;
+          ganti(a, a, sisip, a + sisip.length);
+        }
+      });
+
+      // Seret pemisah: lebar pratinjau = jarak dari pemisah ke tepi kanan, 20–50% lebar badan editor
+      efPemisah.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        efPemisah.setPointerCapture(e.pointerId);
+        efBadan.setAttribute("data-menyeret", "");
+      });
+      efPemisah.addEventListener("pointermove", function (e) {
+        if (!efPemisah.hasPointerCapture(e.pointerId)) return;
+        var kotak = efBadan.getBoundingClientRect();
+        aturLebar((kotak.right - e.clientX) / kotak.width * 100);
+      });
+      var selesaiSeret = function (e) {
+        if (!efPemisah.hasPointerCapture(e.pointerId)) return;
+        efPemisah.releasePointerCapture(e.pointerId);
+        efBadan.removeAttribute("data-menyeret");
+        simpanPilihan("editor-lebar-pratinjau", efPemisah.getAttribute("aria-valuenow"));
+      };
+      efPemisah.addEventListener("pointerup", selesaiSeret);
+      efPemisah.addEventListener("pointercancel", selesaiSeret);
+      efPemisah.addEventListener("dblclick", function () { simpanPilihan("editor-lebar-pratinjau", aturLebar(LEBAR_MAKS)); });
+      efPemisah.addEventListener("keydown", function (e) {
+        var kini = parseFloat(efPemisah.getAttribute("aria-valuenow")), baru = null;
+        if (e.key === "ArrowLeft") baru = kini + 2;        // pemisah ke kiri = pratinjau melebar
+        else if (e.key === "ArrowRight") baru = kini - 2;
+        else if (e.key === "Home") baru = LEBAR_MIN;
+        else if (e.key === "End") baru = LEBAR_MAKS;
+        if (baru === null) return;
+        e.preventDefault();
+        simpanPilihan("editor-lebar-pratinjau", aturLebar(baru));
+      });
+
+      efTombolPratinjau.addEventListener("click", function () {
+        var tampil = efTombolPratinjau.getAttribute("aria-pressed") !== "true";
+        aturPratinjau(tampil);
+        simpanPilihan("editor-pratinjau", tampil ? "tampil" : "sembunyi");
+        if (tampil) muatPratinjau(efTeks);
+      });
+      ef.querySelector("[data-ef-tutup]").addEventListener("click", function () { ef.close(); });
+
+      document.addEventListener("click", function (e) {
+        var t = e.target.closest("[data-buka-editor]");
+        if (!t) return;
+        var baris = t.closest("[data-pertanyaan]");
+        asal = document.getElementById(t.dataset.bukaEditor);
+        if (!asal) return;
+        tombolAsal = t;
+        ef.querySelector("[data-ef-nomor]").textContent = baris ? baris.querySelector("h2").textContent.replace("Pertanyaan", "").trim() : "";
+        ef.querySelector("[data-ef-pertanyaan]").textContent = baris ? baris.querySelector("textarea[name=teks]").value.trim() : "";
+        efTeks.value = asal.value;
+        perbaruiInfo();
+        var hasil = document.getElementById("ef-hasil");
+        var pratinjauAsal = document.getElementById(asal.dataset.pratinjauSumber);
+        hasil.innerHTML = pratinjauAsal ? pratinjauAsal.innerHTML : "";
+        ef.showModal();
+        efTeks.focus();
+        efTeks.setSelectionRange(asal.selectionStart || 0, asal.selectionEnd || 0);
+      });
+      ef.addEventListener("close", function () {
+        if (asal) {
+          // Pastikan pratinjau di halaman langsung sesuai isi terakhir
+          clearTimeout(penunda.get(asal));
+          muatPratinjau(asal);
+        }
+        if (tombolAsal) tombolAsal.focus();
+        asal = null;
+        tombolAsal = null;
+      });
+    }
+
     perbaruiNomor();
   }
 

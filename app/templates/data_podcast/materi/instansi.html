@@ -28,7 +28,11 @@
   </div>
   <div class="grid gap-4 lg:grid-cols-2">
     <div class="min-w-0">
-      <label for="jawab-{{ kunci }}" class="label">Jawaban</label>
+      <div class="mb-1.5 flex items-center justify-between gap-2">
+        <label for="jawab-{{ kunci }}" class="label mb-0">Jawaban</label>
+        <button type="button" class="tombol tombol-teks -my-1 min-h-8 px-2 text-xs" data-buka-editor="jawab-{{ kunci }}">
+          {{ ikon("perluas", "size-4") }}<span>Buka editor</span></button>
+      </div>
       <textarea id="jawab-{{ kunci }}" name="jawaban" rows="10" class="input font-mono text-sm" maxlength="{{ panjang.jawaban }}"
                 data-pratinjau-sumber="pratinjau-{{ kunci }}"
                 aria-describedby="bantuan-format{% if galat_jawaban %} g-jawab-{{ kunci }}{% endif %}"
@@ -129,6 +133,48 @@
   {{ csrf_field() }}
   <button type="submit" class="tombol tombol-teks text-bahaya-teks">{{ ikon("hapus", "size-4") }}<span>Hapus instansi</span></button>
 </form>
+
+{# ===== Editor fokus (layar penuh) untuk satu jawaban; dibuka tombol "Buka editor" (app.js, bagian 19) =====
+   Isi disalin langsung ke kolom jawaban di formulir, jadi tetap tersimpan lewat tombol Simpan. #}
+<dialog id="editor-fokus" aria-labelledby="ef-judul" data-editor-fokus
+        class="m-0 h-dvh max-h-none w-full max-w-none bg-latar p-0 text-teks backdrop:bg-tirai">
+  <div class="flex h-full flex-col">
+    <header class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-garis bg-permukaan px-4 py-3 sm:px-6">
+      <div class="min-w-0 flex-1">
+        <h2 id="ef-judul" class="text-base">Jawaban <span data-ef-nomor></span></h2>
+        <p class="truncate text-sm text-redup" data-ef-pertanyaan></p>
+      </div>
+      <button type="button" class="tombol tombol-sekunder" data-ef-pratinjau-tombol aria-pressed="true" aria-controls="ef-pratinjau">
+        {{ ikon("buku", "size-4") }}<span>Pratinjau</span></button>
+      <button type="button" class="tombol tombol-primer" data-ef-tutup>Selesai</button>
+    </header>
+    <div role="toolbar" aria-label="Format jawaban" aria-controls="ef-teks"
+         class="flex gap-1 overflow-x-auto border-b border-garis bg-permukaan px-4 py-1.5 sm:px-6">
+      {% for kode, label, isi in (("tebal", "Tebal (Ctrl+B)", "<strong>B</strong>"), ("miring", "Miring (Ctrl+I)", "<em class='font-serif'>I</em>"),
+                                  ("judul", "Judul kecil", "Judul"), ("nomor", "Daftar bernomor", "1."), ("poin", "Daftar poin", "•"),
+                                  ("tabel", "Sisipkan tabel", "Tabel"), ("keluar", "Kurangi indentasi (Shift+Tab)", "⇤"),
+                                  ("masuk", "Tambah indentasi / butir bersarang (Tab)", "⇥")) %}
+      <button type="button" class="tombol tombol-teks min-h-9 min-w-9 shrink-0 px-2.5" data-format="{{ kode }}" title="{{ label }}" aria-label="{{ label }}">
+        <span aria-hidden="true">{{ isi|safe }}</span></button>
+      {% endfor %}
+    </div>
+    <div class="flex min-h-0 flex-1 flex-col md:flex-row" data-ef-badan>
+      <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+        <label for="ef-teks" class="sr-only">Teks jawaban</label>
+        <textarea id="ef-teks" class="editor-fokus-teks min-h-0 w-full flex-1 resize-none bg-permukaan px-4 py-6 focus-visible:outline-none sm:px-10"
+                  spellcheck="true" maxlength="{{ panjang.jawaban }}" aria-describedby="ef-info bantuan-format" data-ef-teks></textarea>
+        <p id="ef-info" class="border-t border-garis bg-permukaan px-4 py-1.5 text-xs text-redup sm:px-10" aria-live="off" data-ef-info></p>
+      </div>
+      <div role="separator" tabindex="0" aria-orientation="vertical" aria-controls="ef-pratinjau" aria-label="Lebar pratinjau"
+           aria-valuemin="20" aria-valuemax="50" aria-valuenow="50" title="Seret untuk mengubah lebar pratinjau"
+           class="editor-fokus-pemisah hidden w-2 shrink-0 cursor-col-resize border-x border-garis bg-permukaan-2 hover:bg-aksen-lembut md:block" data-ef-pemisah></div>
+      <section id="ef-pratinjau" aria-label="Pratinjau jawaban" data-ef-pratinjau
+               class="editor-fokus-pratinjau min-h-0 shrink-0 overflow-y-auto border-t border-garis bg-latar px-4 py-6 md:border-t-0 sm:px-8">
+        <div class="isi-jawaban mx-auto max-w-2xl wrap-break-word" id="ef-hasil"></div>
+      </section>
+    </div>
+  </div>
+</dialog>
 
 {# Cetakan pertanyaan baru (dipakai app.js); __KUNCI__ diganti kunci unik #}
 <template id="cetakan-pertanyaan">{{ baris_pertanyaan("__KUNCI__", "", {}) }}</template>
