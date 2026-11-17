@@ -296,6 +296,22 @@ class UjiPembuatan(DasarCadangan):
         catatan = audit.baca(self.folder_cadangan)
         self.assertIn(("Buat cadangan", "web:budi", "sukses"), [(c["aksi"], c["pelaku"], c["hasil"]) for c in catatan])
 
+    @unittest.skipIf(os.name == "nt", "pemeriksaan mode berkas memakai fcntl (POSIX)")
+    def test_fsync_selalu_pada_berkas_yang_dibuka_untuk_ditulis(self):
+        """Regresi: di Windows os.fsync pada berkas yang dibuka "rb" gagal dengan Errno 9 (Bad file descriptor)."""
+        import fcntl
+        asli = os.fsync
+
+        def fsync_ketat(fd):
+            if fcntl.fcntl(fd, fcntl.F_GETFL) & os.O_ACCMODE == os.O_RDONLY:
+                raise OSError(9, "Bad file descriptor (berkas baca-saja, seperti di Windows)")
+            return asli(fd)
+        with mock.patch("os.fsync", side_effect=fsync_ketat):
+            hasil = self.buat_cadangan()
+            tujuan, templat_b, _, _ = self.instance_lain()
+            pulihkan.pulihkan(jalur_zip=hasil["jalur"], instance=tujuan, folder_templat=templat_b, sandi=SANDI,
+                              konfirmasi=lambda: "PULIHKAN", tampil=lambda b: None)
+
     def test_jenis_database_saja(self):
         hasil = self.buat_cadangan("database")
         with zipfile.ZipFile(hasil["jalur"]) as zf:

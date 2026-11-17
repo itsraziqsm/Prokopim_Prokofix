@@ -122,17 +122,12 @@ def rekaman_tanpa_berkas(db, instance):
 
 
 # ---------- Langkah 8: pemasangan (masing-masing mengembalikan fungsi pembatal) ----------
-def _fsync(jalur):
-    with open(jalur, "rb") as f:
-        os.fsync(f.fileno())
-
-
 def _pasang_database(staging_db, instance, stempel):
     db_hidup = instance / "superapp.db"
     baru = instance / "superapp.db.baru"
     shutil.copyfile(staging_db, baru)
     basisdata.siapkan_untuk_pasang(baru, str(instance))        # jalur absolut + token sesi baru (langkah 9)
-    _fsync(baru)
+    arsip.fsync_berkas(baru)
     dipindah = []
     for akhiran in ("", "-wal", "-shm", "-journal"):
         lama = Path(f"{db_hidup}{akhiran}")

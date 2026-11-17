@@ -225,6 +225,14 @@ def kunci_berkas(jalur, pesan, kedaluwarsa=3 * 3600):
 
 
 # ---------- Pembuatan ----------
+def fsync_berkas(jalur):
+    """Paksa isi berkas benar-benar tertulis ke disk sebelum dipindah/dipasang.
+    Berkas WAJIB dibuka dengan izin tulis: di Windows os.fsync pada berkas baca-saja gagal (Errno 9)."""
+    with open(jalur, "r+b") as f:
+        os.fsync(f.fileno())
+
+
+
 def _tulis_entri(zf, nama, sumber, kompres=True):
     """Salin berkas ke ZIP sedikit demi sedikit sambil menghitung SHA-256 & ukuran.
     Database disimpan TANPA kompresi: database SQLite yang hampir kosong bisa terkompresi ratusan kali dan
@@ -298,8 +306,7 @@ def buat_cadangan(*, instance, folder_templat, folder_tujuan, folder_kerja, jeni
                 }
                 manifest["tanda"] = hitung_tanda(manifest, sandi)
                 zf.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=1))
-            with open(sementara, "rb") as f:
-                os.fsync(f.fileno())
+            fsync_berkas(sementara)
             jalur_zip = folder_tujuan / nama
             os.replace(sementara, jalur_zip)
         except BaseException:
