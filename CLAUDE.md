@@ -23,7 +23,8 @@ Setiap fitur = satu **modul** yang terdaftar di registry dan tampil sebagai kart
 - Python 3.10+, Jinja2, SQLite (`sqlite3` bawaan). Dependensi Python yang **disetujui**: `flask`,
   `python-docx` (membawa `lxml`), `Pillow`, `pypdf` (Python murni; HANYA untuk membaca/menggabung PDF di
   Gabungkan PDF — tanpa paket tambahan seperti `cryptography`, jadi PDF terenkripsi AES/bersandi ditolak sebagai
-  "terkunci kata sandi"). Tidak ada yang lain (lihat `requirements.txt`).
+  "terkunci kata sandi"). Tidak ada yang lain (lihat `requirements.txt`). KHUSUS SERVER: `gunicorn` lewat
+  `requirements-server.txt` (= requirements.txt + gunicorn; tidak dipakai di Windows).
 - PDF dibuat **tanpa paket Python**: Windows → Microsoft Word lewat PowerShell/COM; Linux/Windows tanpa Word →
   LibreOffice `soffice --headless`. Bila keduanya tidak ada, hasil tetap Word dan batch berstatus "sebagian".
 - **Tailwind CSS v4 lewat paket npm** (`@tailwindcss/cli` 4.3.2) — BUKAN CDN.
@@ -53,10 +54,20 @@ flask --app run cadangan reset-sandi              # lupa kata sandi cadangan
 Sandi cadangan dibaca dengan `getpass`, atau dari variabel lingkungan `SUPERAPP_SANDI_CADANGAN` (untuk penjadwalan
 buat/periksa/pulihkan; tidak dipakai reset-sandi). Jangan menaruh variabel itu di berkas yang ikut git.
 `run.py` menangani error Windows 10013 (port dicadangkan Hyper-V/WSL) dengan mencoba port lain.
+Server Ubuntu: BUKAN `python run.py`, melainkan systemd + gunicorn (`run:app`) + nginx — panduan lengkap di
+`deploy/README.md`. Variabel lingkungan (diisi di `deploy/superapp.service`, bawaan kosong = perilaku lokal Windows):
+`SUPERAPP_SERVER=1` → ProxyFix (membaca X-Forwarded-* dari nginx) + `IZINKAN_BUKA_FOLDER=False` (tombol & rute
+"Buka folder"/"Salin lokasi" disembunyikan/404); `SUPERAPP_HTTPS=1` → `SESSION_COOKIE_SECURE` (isi HANYA setelah HTTPS
+jalan). Perintah `flask --app run ...` di server: `sudo -u superapp env SUPERAPP_SERVER=1 .venv/bin/flask ...`.
 
 ## Struktur
 ```
-run.py                         titik masuk; pemilihan port
+run.py                         titik masuk; pemilihan port; `app` = objek WSGI untuk gunicorn (run:app)
+requirements-server.txt        requirements.txt + gunicorn (server saja)
+deploy/                        server Ubuntu: README.md (panduan langkah demi langkah), gunicorn.conf.py (WAJIB workers=1,
+                               gthread 8 thread, bind 127.0.0.1:8000), superapp.service (systemd + pengerasan; tulis hanya
+                               instance/ & app/templat_docx), nginx-superapp.conf (client_max_body_size ≥ batas unggahan
+                               terbesar, header keamanan + CSP), superapp-cadangan.service/.timer (cadangan harian)
 package.json                   skrip build Tailwind
 app/__init__.py                create_app(): config, secret key di instance/, blueprint, halaman galat
 app/modules_registry.py        DAFTAR MODUL (sumber tunggal) + STATUS_LABEL; field `induk` (None = tingkat atas). Modul yang
@@ -385,13 +396,13 @@ tests/test_gabung_dokumen.py   uji Gabungkan PDF (rentang, nama, pypdf, alur web
      `flask --app run cadangan pulihkan <zip>` (jalur Windows di database otomatis diubah ke jalur server).
   4. Jalankan aplikasi (lihat catatan di bawah); semua pengguna masuk ulang. Berkas *.lama-* bisa dihapus setelah yakin.
 
-## Catatan pindah ke server (perlu ditinjau)
-Keputusan "hanya 127.0.0.1, satu pengguna" belum cocok untuk server Ubuntu. Sebelum pindah, tinjau:
-host/port & reverse proxy (nginx) + HTTPS, server WSGI (mis. gunicorn) menggantikan `python run.py` (debug=True),
-`SESSION_COOKIE_SECURE`, multi-pengguna (saat ini hanya /siapkan untuk akun pertama), pembatas percobaan login,
-tombol "Buka folder" (membuka folder di mesin SERVER, bukan di komputer pengguna — sembunyikan atau ganti dengan unduhan),
-proses latar memakai thread di dalam proses web (dengan gunicorn: worker harus tetap hidup selama proses,
-pertimbangkan antrean bila batch besar/banyak pengguna), dan LibreOffice terpasang di server.
+## Catatan server
+SUDAH ditangani (`deploy/`, diuji `UjiModeServer`): nginx reverse proxy + HTTPS (certbot), gunicorn menggantikan
+`python run.py`, `SESSION_COOKIE_SECURE` (SUPERAPP_HTTPS), tombol "Buka folder" disembunyikan (SUPERAPP_SERVER),
+LibreOffice + fon Carlito/Caladea, cadangan harian via systemd timer. Proses latar = thread di proses web → gunicorn
+WAJIB `workers = 1` (thread banyak) dan tanpa `max_requests`; ubah ke antrean hanya bila batch besar/banyak pengguna.
+BELUM: multi-pengguna (hanya /siapkan untuk akun pertama → buat akun segera setelah layanan menyala), pembatas
+percobaan login. Saat menambah batas unggahan baru, pastikan `client_max_body_size` nginx tetap ≥ (diuji).
 
 ## Verifikasi sebelum selesai
 1. `npm run build:css` bila ada kelas Tailwind baru.

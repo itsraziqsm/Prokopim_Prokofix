@@ -1,0 +1,52 @@
+# Layanan systemd Super App Prokopim (gunicorn). Pasang:
+#   sudo cp deploy/superapp.service /etc/systemd/system/superapp.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now superapp
+# Jalur di bawah mengasumsikan aplikasi di /opt/superapp dan pengguna sistem "superapp" (lihat deploy/README.md).
+
+[Unit]
+Description=Super App Prokopim (gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=superapp
+Group=superapp
+WorkingDirectory=/opt/superapp
+ExecStart=/opt/superapp/.venv/bin/gunicorn --config deploy/gunicorn.conf.py run:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=60
+Restart=on-failure
+RestartSec=5
+
+# Mode server: di belakang nginx, tombol "Buka folder" dimatikan
+Environment=SUPERAPP_SERVER=1
+# Ubah ke 1 SETELAH HTTPS aktif (certbot). Bila 1 tetapi situs masih http://, login tidak akan bertahan.
+Environment=SUPERAPP_HTTPS=0
+Environment=PYTHONUNBUFFERED=1
+# LibreOffice (konversi PDF) butuh folder rumah yang bisa ditulis
+Environment=HOME=/opt/superapp/instance/rumah-layanan
+UMask=0027
+
+# Pengerasan: layanan hanya bisa menulis ke instance/ (data, database) dan templat Word
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/superapp/instance /opt/superapp/app/templat_docx
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

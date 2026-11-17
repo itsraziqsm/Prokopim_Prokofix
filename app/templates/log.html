@@ -43,10 +43,12 @@
                 {% if terakhir %}<p class="text-xs font-semibold text-aksen">Terakhir</p>{% endif %}
                 <p class="font-mono wrap-anywhere">{{ log.lokasi|jalur }}</p>
               </div>
+              {% if izinkan_buka_folder %}
               <form method="post" action="{{ url_for('utama.buka_lokasi', log_id=log.id) }}">
                 {{ csrf_field() }}<input type="hidden" name="hal" value="{{ halaman }}">
                 <button type="submit" class="tombol tombol-teks min-h-9 px-2" title="Buka folder" aria-label="Buka folder: {{ log.lokasi }}">{{ ikon("folder", "size-4") }}</button>
               </form>
+              {% endif %}
               <button type="button" class="tombol tombol-teks min-h-9 px-2" data-salin="{{ log.lokasi }}"
                       title="Salin lokasi" aria-label="Salin lokasi: {{ log.lokasi }}">{{ ikon("salin", "size-4") }}</button>
             </div>

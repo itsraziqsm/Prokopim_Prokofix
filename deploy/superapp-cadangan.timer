@@ -1,0 +1,15 @@
+# Jadwal cadangan otomatis: setiap hari pukul 01.30 (waktu server). Persistent=true: bila server mati saat
+# jadwal, cadangan dibuat begitu server menyala lagi.
+#   sudo cp deploy/superapp-cadangan.service deploy/superapp-cadangan.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now superapp-cadangan.timer
+
+[Unit]
+Description=Jadwal cadangan harian Super App Prokopim
+
+[Timer]
+OnCalendar=*-*-* 01:30:00
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

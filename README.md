@@ -64,6 +64,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 Setelah itu jalankan `python run.py` / `flask --app run ...` dalam keadaan venv aktif (`source .venv/bin/activate`).
+Untuk server yang dipakai bersama (layanan systemd + gunicorn + nginx + HTTPS), ikuti **[deploy/README.md](deploy/README.md)**.
 
 Butuh Python 3.10+.
 

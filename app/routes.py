@@ -5,7 +5,7 @@ Blueprint = kumpulan route yang dikelompokkan, lalu didaftarkan di create_app().
 import math
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, url_for
 from markupsafe import Markup, escape
 
 from . import log_proses
@@ -91,6 +91,8 @@ def log():
 def buka_lokasi(log_id):
     """Membuka lokasi simpan sebuah log di penjelajah file komputer ini.
     Lokasi diambil dari database milik pengguna (bukan isian bebas), jadi aman."""
+    if not current_app.config["IZINKAN_BUKA_FOLDER"]:   # mode server: folder ada di mesin server
+        abort(404)
     baris = log_proses.ambil(g.pengguna["id"], log_id)
     if baris is None or not baris["lokasi"]:
         abort(404)

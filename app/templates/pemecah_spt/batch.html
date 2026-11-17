@@ -25,11 +25,14 @@
 
 <div class="mb-6 flex flex-wrap items-center gap-3">
   <a href="{{ url_for('pemecah_spt.unduh_zip', batch_id=batch.id) }}" class="tombol tombol-primer">{{ ikon("unduh", "size-4") }}<span>Unduh semua (ZIP)</span></a>
+  {# Di server (SUPERAPP_SERVER=1) folder berada di mesin server, jadi Buka/Salin lokasi tidak berguna: hasil diunduh #}
+  {% if izinkan_buka_folder %}
   <form method="post" action="{{ url_for('pemecah_spt.buka_folder', batch_id=batch.id) }}">
     {{ csrf_field() }}
     <button type="submit" class="tombol tombol-sekunder">{{ ikon("folder", "size-4") }}<span>Buka folder</span></button>
   </form>
   <button type="button" class="tombol tombol-teks" data-salin="{{ batch.folder }}" title="Salin lokasi folder">{{ ikon("salin", "size-4") }}<span>Salin lokasi</span></button>
+  {% endif %}
   <form method="post" action="{{ url_for('pemecah_spt.hapus') }}" class="sm:ml-auto"
         data-konfirmasi="Hapus riwayat ini beserta {{ jumlah_berkas }} berkas hasilnya? Tindakan ini tidak dapat dibatalkan."
         data-konfirmasi-judul="Hapus riwayat" data-konfirmasi-tombol="Hapus">
