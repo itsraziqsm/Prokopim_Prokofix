@@ -13,6 +13,7 @@ Berkas di folder ini:
 | `superapp.service` | layanan systemd aplikasi |
 | `nginx-superapp.conf` | reverse proxy nginx (batas unggahan, header keamanan) |
 | `superapp-cadangan.service` + `.timer` | cadangan otomatis harian (opsional) |
+| `BERSIHKAN.md` | menghapus semua yang dipasang panduan ini dari server |
 
 Panduan ini mengasumsikan aplikasi di **`/opt/superapp`** dan pengguna sistem **`superapp`**. Bila memakai jalur
 lain, sesuaikan jalur di `superapp.service` dan `superapp-cadangan.service`.
