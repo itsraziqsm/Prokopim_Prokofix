@@ -5,14 +5,12 @@ Jalankan dari folder proyek:
 
 Setiap uji memakai folder data sementara, jadi database asli di instance/ tidak tersentuh.
 """
-import os
 import re
 import shutil
 import sqlite3
 import tempfile
 import unittest
 from contextlib import closing
-from pathlib import Path
 
 from app import create_app
 from app import log_proses
@@ -231,85 +229,3 @@ class UjiFilter(DasarUji):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-class UjiModeServer(unittest.TestCase):
-    """SUPERAPP_SERVER / SUPERAPP_HTTPS (deploy/superapp.service) dan konsistensi berkas deploy/."""
-
-    def setUp(self):
-        self.folder = tempfile.mkdtemp()
-        self.lama = {k: os.environ.pop(k, None) for k in ("SUPERAPP_SERVER", "SUPERAPP_HTTPS")}
-
-    def tearDown(self):
-        for k, v in self.lama.items():
-            os.environ.pop(k, None)
-            if v is not None:
-                os.environ[k] = v
-        shutil.rmtree(self.folder, ignore_errors=True)
-
-    def _app_masuk(self):
-        app = create_app({"TESTING": True}, instance_path=self.folder)
-        klien = app.test_client()
-        html = klien.get("/siapkan").get_data(as_text=True)
-        token = re.search(r'name="csrf_token" value="([^"]+)"', html).group(1)
-        klien.post("/siapkan", data={"csrf_token": token, "nama_lengkap": "Budi", "nama_pengguna": "budi",
-                                     "sandi": SANDI, "konfirmasi": SANDI})
-        with app.test_request_context():
-            log_proses.catat("pemecah_spt", "Memecah 3 SPT", lokasi=self.folder, pengguna_id=1)
-        return app, klien
-
-    def test_bawaan_lokal_tidak_berubah(self):
-        app, klien = self._app_masuk()
-        self.assertFalse(app.config["MODE_SERVER"])
-        self.assertTrue(app.config["IZINKAN_BUKA_FOLDER"])
-        self.assertFalse(app.config.get("SESSION_COOKIE_SECURE"))
-        self.assertRegex(klien.get("/log").get_data(as_text=True), r'action="/log/\d+/buka"')
-
-    def test_mode_server_menyembunyikan_buka_folder(self):
-        os.environ["SUPERAPP_SERVER"] = "1"
-        app, klien = self._app_masuk()
-        self.assertFalse(app.config["IZINKAN_BUKA_FOLDER"])
-        self.assertNotRegex(klien.get("/log").get_data(as_text=True), r'/log/\d+/buka')
-        token = re.search(r'name="csrf_token" value="([^"]+)"', klien.get("/akun").get_data(as_text=True)).group(1)
-        with closing(sqlite3.connect(f"{self.folder}/superapp.db")) as db:
-            log_id = db.execute("SELECT MAX(id) FROM log_proses WHERE lokasi IS NOT NULL").fetchone()[0]
-        self.assertEqual(klien.post(f"/log/{log_id}/buka", data={"csrf_token": token}).status_code, 404)
-
-    def test_mode_server_membaca_header_proxy(self):
-        os.environ["SUPERAPP_SERVER"] = "1"
-        app = create_app({"TESTING": True}, instance_path=self.folder)
-        terlihat = {}
-
-        @app.before_request
-        def rekam():
-            from flask import request
-            terlihat.update(url=request.url, alamat=request.remote_addr)
-
-        app.test_client().get("/masuk", headers={"X-Forwarded-Proto": "https", "X-Forwarded-Host": "contoh.go.id",
-                                                 "X-Forwarded-For": "10.1.2.3"})
-        self.assertEqual(terlihat["url"], "https://contoh.go.id/masuk")
-        self.assertEqual(terlihat["alamat"], "10.1.2.3")
-
-    def test_https_mengamankan_cookie(self):
-        os.environ["SUPERAPP_HTTPS"] = "1"
-        app = create_app({"TESTING": True}, instance_path=self.folder)
-        self.assertTrue(app.config["SESSION_COOKIE_SECURE"])
-
-    def test_berkas_deploy_konsisten(self):
-        akar = Path(__file__).resolve().parent.parent
-        ruang = {}
-        exec((akar / "deploy" / "gunicorn.conf.py").read_text(encoding="utf-8"), ruang)
-        # thread latar Pemecah SPT hidup di dalam proses web -> wajib satu worker
-        self.assertEqual(ruang["workers"], 1)
-        self.assertTrue(ruang["bind"].startswith("127.0.0.1:"))
-        nginx = (akar / "deploy" / "nginx-superapp.conf").read_text(encoding="utf-8")
-        self.assertIn(f"server {ruang['bind']};", nginx)   # upstream nginx = alamat gunicorn
-        mb = int(re.search(r"client_max_body_size\s+(\d+)m;", nginx).group(1))
-        from app.modul import arsip_liputan, utilitas
-        terbesar = max(arsip_liputan.routes.BATAS_UNGGAH_FOTO, utilitas.gabung_dokumen.routes.BATAS_UNGGAH,
-                       create_app({"TESTING": True}, instance_path=self.folder).config["MAX_CONTENT_LENGTH"])
-        self.assertGreaterEqual(mb * 1024 * 1024, terbesar)
-        layanan = (akar / "deploy" / "superapp.service").read_text(encoding="utf-8")
-        self.assertIn("SUPERAPP_SERVER=1", layanan)
-        self.assertIn("--config deploy/gunicorn.conf.py run:app", layanan)
-        self.assertIn("gunicorn", (akar / "requirements-server.txt").read_text(encoding="utf-8"))

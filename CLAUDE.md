@@ -5,7 +5,7 @@ Konteks untuk asisten AI yang bekerja di repo ini. Baca seluruhnya sebelum mengu
 ## Tentang proyek
 "Super App Prokopim": kumpulan tools kerja pribadi untuk pegawai instansi pemerintah (Bagian Prokopim),
 berjalan **lokal** di komputer pengguna (Windows), dibuka lewat browser di `http://127.0.0.1:<port>`.
-Rencana: aplikasi akan dipindah ke **server Ubuntu** — lihat "Catatan pindah ke server".
+Rencana: aplikasi akan dipindah ke **server Ubuntu** — urusan deploy ada di branch `Deploy` (lihat "Deploy").
 Setiap fitur = satu **modul** yang terdaftar di registry dan tampil sebagai kartu di halaman Alat.
 
 ## Pengguna & gaya kerja
@@ -13,7 +13,8 @@ Setiap fitur = satu **modul** yang terdaftar di registry dan tampil sebagai kart
   jelaskan konsep Python/Flask bila perlu.
 - Antarmuka & teks UI **sepenuhnya Bahasa Indonesia**. Nama variabel/fungsi juga Bahasa Indonesia
   (`ambil_db`, `catat`, `tombol`, `lencana`, ...).
-- Bekerja **langsung di branch `main`** (sudah diizinkan). Branch `claude/happy-pascal-l5d8dh` = arsip
+- Bekerja **langsung di branch `main`** (sudah diizinkan) — fokus DEVELOPMENT; `main` tidak berisi berkas deploy.
+  Branch `Deploy` = main + berkas server (lihat "Deploy"). Branch `claude/happy-pascal-l5d8dh` = arsip
   placeholder lama, jangan disentuh.
 - Komunikasi dengan pengguna dalam Bahasa Indonesia, ringkas. Perintah terminal dalam blok `bash` terpisah.
 - Pengguna sering mengirim daftar perubahan bernomor; kerjakan semua, laporkan per nomor.
@@ -23,8 +24,7 @@ Setiap fitur = satu **modul** yang terdaftar di registry dan tampil sebagai kart
 - Python 3.10+, Jinja2, SQLite (`sqlite3` bawaan). Dependensi Python yang **disetujui**: `flask`,
   `python-docx` (membawa `lxml`), `Pillow`, `pypdf` (Python murni; HANYA untuk membaca/menggabung PDF di
   Gabungkan PDF — tanpa paket tambahan seperti `cryptography`, jadi PDF terenkripsi AES/bersandi ditolak sebagai
-  "terkunci kata sandi"). Tidak ada yang lain (lihat `requirements.txt`). KHUSUS SERVER: `gunicorn` lewat
-  `requirements-server.txt` (= requirements.txt + gunicorn; tidak dipakai di Windows).
+  "terkunci kata sandi"). Tidak ada yang lain (lihat `requirements.txt`).
 - PDF dibuat **tanpa paket Python**: Windows → Microsoft Word lewat PowerShell/COM; Linux/Windows tanpa Word →
   LibreOffice `soffice --headless`. Bila keduanya tidak ada, hasil tetap Word dan batch berstatus "sebagian".
 - **Tailwind CSS v4 lewat paket npm** (`@tailwindcss/cli` 4.3.2) — BUKAN CDN.
@@ -54,20 +54,10 @@ flask --app run cadangan reset-sandi              # lupa kata sandi cadangan
 Sandi cadangan dibaca dengan `getpass`, atau dari variabel lingkungan `SUPERAPP_SANDI_CADANGAN` (untuk penjadwalan
 buat/periksa/pulihkan; tidak dipakai reset-sandi). Jangan menaruh variabel itu di berkas yang ikut git.
 `run.py` menangani error Windows 10013 (port dicadangkan Hyper-V/WSL) dengan mencoba port lain.
-Server Ubuntu: BUKAN `python run.py`, melainkan systemd + gunicorn (`run:app`) + nginx — panduan lengkap di
-`deploy/README.md`. Variabel lingkungan (diisi di `deploy/superapp.service`, bawaan kosong = perilaku lokal Windows):
-`SUPERAPP_SERVER=1` → ProxyFix (membaca X-Forwarded-* dari nginx) + `IZINKAN_BUKA_FOLDER=False` (tombol & rute
-"Buka folder"/"Salin lokasi" disembunyikan/404); `SUPERAPP_HTTPS=1` → `SESSION_COOKIE_SECURE` (isi HANYA setelah HTTPS
-jalan). Perintah `flask --app run ...` di server: `sudo -u superapp env SUPERAPP_SERVER=1 .venv/bin/flask ...`.
 
 ## Struktur
 ```
-run.py                         titik masuk; pemilihan port; `app` = objek WSGI untuk gunicorn (run:app)
-requirements-server.txt        requirements.txt + gunicorn (server saja)
-deploy/                        server Ubuntu: README.md (panduan langkah demi langkah), gunicorn.conf.py (WAJIB workers=1,
-                               gthread 8 thread, bind 127.0.0.1:8000), superapp.service (systemd + pengerasan; tulis hanya
-                               instance/ & app/templat_docx), nginx-superapp.conf (client_max_body_size ≥ batas unggahan
-                               terbesar, header keamanan + CSP), superapp-cadangan.service/.timer (cadangan harian)
+run.py                         titik masuk; pemilihan port
 package.json                   skrip build Tailwind
 app/__init__.py                create_app(): config, secret key di instance/, blueprint, halaman galat
 app/modules_registry.py        DAFTAR MODUL (sumber tunggal) + STATUS_LABEL; field `induk` (None = tingkat atas). Modul yang
@@ -383,26 +373,14 @@ tests/test_gabung_dokumen.py   uji Gabungkan PDF (rentang, nama, pypdf, alur web
   instance/cadangan/berkas/ (Cache-Control: no-store). Dashboard memberi peringatan bila cadangan terakhir > 7 hari.
 - **ZIP cadangan berisi data rahasia** (hash kata sandi pengguna, data kegiatan, foto). Simpan di tempat aman (bukan
   folder bersama/publik); sandi cadangan tanpa catatan = cadangan tidak bisa dipulihkan.
-- **Pindah ke server Ubuntu**:
-  1. Di Windows: halaman Cadangan -> Buat cadangan "Semua data dan hasil" (atau `flask --app run cadangan buat` bila
-     > 300 MB), lalu Uji dan Unduh ZIP-nya.
-  2. Di server: clone repo, buat virtual environment (Ubuntu 23.04+ menolak `pip install` ke Python sistem —
-     "externally-managed-environment", PEP 668; JANGAN pakai --break-system-packages):
-     `sudo apt install python3-venv python3-full`, lalu di folder proyek `python3 -m venv .venv`,
-     `source .venv/bin/activate`, `pip install -r requirements.txt`. Semua perintah `flask --app run ...` dan
-     `python run.py` dijalankan SETELAH `source .venv/bin/activate` (atau pakai `.venv/bin/flask`, `.venv/bin/python`).
-     Salin ZIP cadangan lewat jalur aman (mis. scp).
-  3. Pastikan aplikasi belum/tidak berjalan, lalu `flask --app run cadangan periksa <zip>` dan
-     `flask --app run cadangan pulihkan <zip>` (jalur Windows di database otomatis diubah ke jalur server).
-  4. Jalankan aplikasi (lihat catatan di bawah); semua pengguna masuk ulang. Berkas *.lama-* bisa dihapus setelah yakin.
+- Pemulihan bisa lintas OS: jalur Windows di database otomatis diubah ke jalur instance tujuan.
 
-## Catatan server
-SUDAH ditangani (`deploy/`, diuji `UjiModeServer`): nginx reverse proxy + HTTPS (certbot), gunicorn menggantikan
-`python run.py`, `SESSION_COOKIE_SECURE` (SUPERAPP_HTTPS), tombol "Buka folder" disembunyikan (SUPERAPP_SERVER),
-LibreOffice + fon Carlito/Caladea, cadangan harian via systemd timer. Proses latar = thread di proses web → gunicorn
-WAJIB `workers = 1` (thread banyak) dan tanpa `max_requests`; ubah ke antrean hanya bila batch besar/banyak pengguna.
-BELUM: multi-pengguna (hanya /siapkan untuk akun pertama → buat akun segera setelah layanan menyala), pembatas
-percobaan login. Saat menambah batas unggahan baru, pastikan `client_max_body_size` nginx tetap ≥ (diuji).
+## Deploy
+Semua urusan server (systemd + gunicorn + nginx, `requirements-server.txt`, mode `SUPERAPP_SERVER`/`SUPERAPP_HTTPS`,
+panduan `deploy/README.md`, pembersihan server `deploy/BERSIHKAN.md`) HANYA di branch `Deploy`. Jangan menambah berkas
+deploy ke `main`. Saat deploy dilanjutkan: gabungkan `main` terbaru ke `Deploy` (bukan sebaliknya) kecuali pengguna
+meminta lain. Catatan yang belum ditangani di sana: multi-pengguna (hanya /siapkan untuk akun pertama), pembatas
+percobaan login.
 
 ## Verifikasi sebelum selesai
 1. `npm run build:css` bila ada kelas Tailwind baru.

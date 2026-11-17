@@ -55,17 +55,6 @@ PDF memakai Microsoft Word (Windows) atau LibreOffice; tanpa keduanya hasil teta
 Di Ubuntu: `sudo apt install libreoffice-writer`.
 
 ## Menjalankan
-Di **Ubuntu/Linux server**, pasang paket di virtual environment (pip ke Python sistem ditolak dengan
-"externally-managed-environment"):
-```bash
-sudo apt install python3-venv python3-full
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-Setelah itu jalankan `python run.py` / `flask --app run ...` dalam keadaan venv aktif (`source .venv/bin/activate`).
-Untuk server yang dipakai bersama (layanan systemd + gunicorn + nginx + HTTPS), ikuti **[deploy/README.md](deploy/README.md)**.
-
 Butuh Python 3.10+.
 
 ```bash

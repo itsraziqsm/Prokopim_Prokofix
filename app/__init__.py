@@ -9,7 +9,6 @@ from datetime import timedelta
 
 from flask import Flask, render_template, request
 from werkzeug.exceptions import HTTPException
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .modules_registry import NAMA_APLIKASI
 
@@ -22,11 +21,6 @@ def _kunci_rahasia(folder):
             f.write(secrets.token_hex(32))
     with open(lokasi, encoding="utf-8") as f:
         return f.read().strip()
-
-
-def _bendera(nama):
-    """True bila variabel lingkungan bernilai 1/true/ya (dipakai untuk mode server)."""
-    return os.environ.get(nama, "").strip().lower() in ("1", "true", "ya", "yes")
 
 
 def create_app(konfigurasi=None, instance_path=None):
@@ -45,22 +39,8 @@ def create_app(konfigurasi=None, instance_path=None):
     )
     # Folder templat Word (ikut dicadangkan); bisa diganti lewat konfigurasi (dipakai uji)
     app.config["FOLDER_TEMPLAT"] = os.path.join(app.root_path, "templat_docx")
-
-    # Mode server (Ubuntu + gunicorn + nginx; lihat deploy/README.md). Diatur lewat variabel lingkungan di
-    # berkas layanan systemd, sehingga di komputer Windows (python run.py) perilakunya tidak berubah:
-    #   SUPERAPP_SERVER=1  -> aplikasi di belakang reverse proxy (ProxyFix) & tombol "Buka folder" dimatikan
-    #                         (di server tombol itu akan membuka folder di mesin SERVER, bukan di komputer pengguna)
-    #   SUPERAPP_HTTPS=1   -> cookie sesi hanya dikirim lewat HTTPS (aktifkan SETELAH sertifikat terpasang)
-    app.config["MODE_SERVER"] = _bendera("SUPERAPP_SERVER")
-    app.config["IZINKAN_BUKA_FOLDER"] = not app.config["MODE_SERVER"]
-    if _bendera("SUPERAPP_HTTPS"):
-        app.config.update(SESSION_COOKIE_SECURE=True, PREFERRED_URL_SCHEME="https")
     if konfigurasi:
         app.config.update(konfigurasi)
-    if app.config["MODE_SERVER"]:
-        # nginx meneruskan alamat, skema (http/https), dan host asli lewat header X-Forwarded-*
-        # (tepat satu proxy di depan aplikasi; gunicorn hanya mendengar 127.0.0.1)
-        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     from . import db
     db.siapkan_db(app)
@@ -94,8 +74,7 @@ def create_app(konfigurasi=None, instance_path=None):
 
     @app.context_processor
     def variabel_global():
-        return {"nama_aplikasi": NAMA_APLIKASI, "csrf_field": csrf_field,
-                "izinkan_buka_folder": app.config["IZINKAN_BUKA_FOLDER"]}
+        return {"nama_aplikasi": NAMA_APLIKASI, "csrf_field": csrf_field}
 
     # Halaman galat (400, 404, dst.) yang senada dengan desain, bukan error mentah
     @app.errorhandler(HTTPException)

@@ -213,8 +213,6 @@ def hapus():
 
 @bp.route("/batch/<int:batch_id>/buka", methods=["POST"])
 def buka_folder(batch_id):
-    if not current_app.config["IZINKAN_BUKA_FOLDER"]:   # mode server: folder ada di mesin server
-        abort(404)
     data = _batch_milik_pengguna(batch_id)
     if not layanan.di_dalam_folder_data(data["folder"]):
         abort(404)

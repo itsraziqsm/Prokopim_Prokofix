@@ -1,4 +1,0 @@
-# Dependensi tambahan KHUSUS server Ubuntu (tidak dibutuhkan di Windows).
-#   pip install -r requirements-server.txt
--r requirements.txt
-gunicorn>=22.0
