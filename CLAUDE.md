@@ -375,7 +375,12 @@ tests/test_gabung_dokumen.py   uji Gabungkan PDF (rentang, nama, pypdf, alur web
 - **Pindah ke server Ubuntu**:
   1. Di Windows: halaman Cadangan -> Buat cadangan "Semua data dan hasil" (atau `flask --app run cadangan buat` bila
      > 300 MB), lalu Uji dan Unduh ZIP-nya.
-  2. Di server: clone repo, `pip install -r requirements.txt`, salin ZIP lewat jalur aman (mis. scp).
+  2. Di server: clone repo, buat virtual environment (Ubuntu 23.04+ menolak `pip install` ke Python sistem —
+     "externally-managed-environment", PEP 668; JANGAN pakai --break-system-packages):
+     `sudo apt install python3-venv python3-full`, lalu di folder proyek `python3 -m venv .venv`,
+     `source .venv/bin/activate`, `pip install -r requirements.txt`. Semua perintah `flask --app run ...` dan
+     `python run.py` dijalankan SETELAH `source .venv/bin/activate` (atau pakai `.venv/bin/flask`, `.venv/bin/python`).
+     Salin ZIP cadangan lewat jalur aman (mis. scp).
   3. Pastikan aplikasi belum/tidak berjalan, lalu `flask --app run cadangan periksa <zip>` dan
      `flask --app run cadangan pulihkan <zip>` (jalur Windows di database otomatis diubah ke jalur server).
   4. Jalankan aplikasi (lihat catatan di bawah); semua pengguna masuk ulang. Berkas *.lama-* bisa dihapus setelah yakin.
