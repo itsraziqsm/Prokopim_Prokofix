@@ -2,7 +2,21 @@
 
 Dipisah dari routes.py agar kueri mudah dibaca & diuji.
 """
+from datetime import timedelta
+from pathlib import Path
+
+from flask import current_app
+
+from .cadangan.arsip import cadangan_terakhir
 from .db import ambil_db
+
+BATAS_UMUR_CADANGAN = timedelta(days=7)
+
+
+def perlu_cadangan(sekarang):
+    """True bila belum ada cadangan atau cadangan terakhir lebih dari 7 hari (untuk peringatan di Dashboard)."""
+    terakhir = cadangan_terakhir(Path(current_app.instance_path) / "cadangan" / "berkas")
+    return terakhir is None or sekarang - terakhir > BATAS_UMUR_CADANGAN
 
 
 def ringkasan(pengguna_id, sekarang):

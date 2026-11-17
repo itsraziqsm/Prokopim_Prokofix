@@ -10,13 +10,13 @@ from markupsafe import Markup, escape
 
 from . import log_proses
 from .modules_registry import STATUS_LABEL, cari_modul, kelompok_alat
-from .ringkasan import ringkasan
+from .ringkasan import perlu_cadangan, ringkasan
 from .waktu import BULAN, sapaan, tanggal_indonesia, waktu_singkat
 
 bp = Blueprint("utama", __name__)
 
 # Nama tampilan untuk sumber log yang bukan modul
-NAMA_SUMBER_LOG = {"akun": "Akun", "sistem": "Sistem"}
+NAMA_SUMBER_LOG = {"akun": "Akun", "sistem": "Sistem", "cadangan": "Cadangan"}
 
 
 def nama_sumber(modul_id):
@@ -47,6 +47,7 @@ def dashboard():
         tanggal=tanggal_indonesia(sekarang),
         nama_bulan=BULAN[sekarang.month - 1],
         data=ringkasan(g.pengguna["id"], sekarang),
+        perlu_cadangan=perlu_cadangan(sekarang),
         nama_sumber=nama_sumber,
     )
 

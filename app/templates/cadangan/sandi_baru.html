@@ -1,0 +1,15 @@
+{#- Pembuatan kata sandi cadangan pertama (terpisah dari kata sandi masuk). -#}
+{% extends "base.html" %}
+{% from "komponen/ui.html" import field %}
+{% block judul %}Buat kata sandi cadangan · {{ nama_aplikasi }}{% endblock %}
+
+{% block konten %}
+<h1 class="mb-6">Buat kata sandi cadangan</h1>
+<form method="post" action="{{ url_for('cadangan.sandi_baru') }}" class="panel grid max-w-md gap-5" novalidate data-kirim-sekali>
+  {{ csrf_field() }}
+  {{ field("sandi", "Kata sandi cadangan", tipe="password", galat=galat.sandi, autocomplete="new-password", autofocus=true,
+           petunjuk="Minimal 12 karakter dan berbeda dari kata sandi masuk.") }}
+  {{ field("konfirmasi", "Ulangi kata sandi cadangan", tipe="password", autocomplete="new-password") }}
+  <div><button type="submit" class="tombol tombol-primer">Buat kata sandi</button></div>
+</form>
+{% endblock %}

@@ -6,6 +6,15 @@ Python + Flask + python-docx + Pillow + Jinja2, tampilan dengan **Tailwind CSS v
 > Status: **Fitur 1 Pemecah SPT**, **Fitur 2 Arsip Liputan**, **Fitur 3 Podcast › Materi Podcast**, dan
 > **Fitur 4 Utilitas › Gabungkan PDF** siap.
 
+## Cadangan
+Menu **Cadangan** di sidebar (dilindungi kata sandi cadangan tersendiri): buat cadangan "Semua data dan hasil" atau
+"Database saja", unduh, dan uji keutuhannya. Pemulihan hanya lewat terminal saat aplikasi dimatikan:
+```bash
+flask --app run cadangan periksa instance/cadangan/berkas/<berkas>.zip
+flask --app run cadangan pulihkan instance/cadangan/berkas/<berkas>.zip
+```
+ZIP cadangan berisi data rahasia; simpan di tempat aman. Lupa sandi cadangan: `flask --app run cadangan reset-sandi`.
+
 ## Utilitas › Gabungkan PDF
 Menggabungkan beberapa PDF menjadi satu, dengan urutan dan rentang halaman per file.
 1. **Alat → (kelompok Utilitas) Gabungkan PDF**: pilih atau seret beberapa PDF, klik **Unggah**.

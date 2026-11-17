@@ -34,7 +34,7 @@
     <ul role="list" class="grid gap-1">
       {{ item_nav("Alat", url_for('utama.alat'), "kotak-empat",
                   request.endpoint in ("utama.alat", "utama.modul")
-                  or request.blueprint not in (None, "utama", "auth")) }}
+                  or request.blueprint not in (None, "utama", "auth", "cadangan")) }}
       {{ item_nav("Log", url_for('utama.log'), "riwayat", request.endpoint == "utama.log") }}
     </ul>
 
@@ -49,6 +49,7 @@
 
     {# Bagian bawah, dipisah garis #}
     <ul role="list" class="mt-auto grid gap-1 border-t border-garis pt-2 md:mt-0 md:pt-3">
+      {{ item_nav("Cadangan", url_for('cadangan.index'), "cadangan", request.blueprint == "cadangan") }}
       {{ item_nav("Pengaturan", url_for('utama.pengaturan'), "pengaturan", request.endpoint == "utama.pengaturan") }}
       {{ item_nav("Akun", url_for('auth.akun'), "pengguna", request.endpoint == "auth.akun", g.pengguna.nama_lengkap) }}
     </ul>

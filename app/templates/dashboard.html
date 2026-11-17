@@ -1,6 +1,7 @@
 {#- Dashboard: sapaan, angka ringkas, liputan yang terakhir diubah, dan aktivitas terakhir.
     Dibuka lewat logo di sidebar. Semua angka diambil dari database (app/ringkasan.py). -#}
 {% extends "base.html" %}
+{% from "komponen/ui.html" import alert %}
 
 {% macro angka(nilai, label, url) -%}
 <a href="{{ url }}" class="flex flex-col gap-1 rounded-xl border border-garis bg-permukaan p-5 text-teks no-underline shadow-kartu transition hover:border-garis-kuat hover:shadow-angkat">
@@ -12,6 +13,10 @@
 {% block konten %}
 <h1 class="mb-1">{{ sapaan }}, {{ g.pengguna.nama_lengkap.split(' ')[0] }}</h1>
 <p class="mb-8 text-redup">{{ tanggal }}</p>
+
+{% if perlu_cadangan %}
+<div class="mb-8 max-w-3xl">{{ alert("Belum ada cadangan dalam 7 hari terakhir.", "peringatan", url_for('cadangan.index'), "Buat cadangan") }}</div>
+{% endif %}
 
 <section aria-label="Ringkasan" class="mb-8">
   <ul role="list" class="grid gap-4 sm:grid-cols-3">

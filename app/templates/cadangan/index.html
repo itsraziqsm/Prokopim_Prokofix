@@ -1,0 +1,121 @@
+{#- Halaman Cadangan (setelah dibuka dengan kata sandi cadangan): buat, daftar (unduh/uji/hapus), ganti sandi.
+    Pemulihan TIDAK tersedia di web; hanya lewat terminal: flask --app run cadangan pulihkan <berkas.zip> -#}
+{% extends "base.html" %}
+{% from "komponen/ui.html" import field, alert %}
+{% from "komponen/ikon.html" import ikon %}
+{% block judul %}Cadangan · {{ nama_aplikasi }}{% endblock %}
+
+{% macro pilihan_jenis(nilai, label, terpilih) -%}
+<label class="flex cursor-pointer items-center gap-2.5 rounded-lg border border-garis bg-permukaan px-3 py-2 transition-colors
+              hover:border-garis-kuat has-checked:border-aksen has-checked:bg-aksen-lembut
+              has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-aksen">
+  <input type="radio" name="jenis" value="{{ nilai }}" class="size-4 accent-aksen focus-visible:outline-none" {% if terpilih %}checked{% endif %}>
+  <span class="font-medium">{{ label }}</span>
+</label>
+{%- endmacro %}
+
+{% block konten %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <h1>Cadangan</h1>
+  <form method="post" action="{{ url_for('cadangan.kunci_kembali') }}" class="flex flex-wrap items-center gap-3">
+    {{ csrf_field() }}
+    <span class="text-sm text-redup">Terbuka {{ sisa_menit }} menit lagi</span>
+    <button type="submit" class="tombol tombol-sekunder">Kunci kembali</button>
+  </form>
+</div>
+
+{% if proses %}<div class="mb-6 max-w-3xl">{{ alert(proses, "peringatan") }}</div>{% endif %}
+
+{# ===== Buat cadangan ===== #}
+<section class="panel mb-10 max-w-3xl" aria-labelledby="judul-buat">
+  <h2 id="judul-buat" class="mb-4">Buat cadangan</h2>
+  <form method="post" action="{{ url_for('cadangan.buat') }}" class="grid gap-5" novalidate>
+    {{ csrf_field() }}
+    <fieldset>
+      <legend class="label">Isi cadangan</legend>
+      <div class="flex flex-wrap gap-2">
+        {{ pilihan_jenis("lengkap", jenis.lengkap, true) }}
+        {{ pilihan_jenis("database", jenis.database, false) }}
+      </div>
+    </fieldset>
+    <div class="max-w-md">{{ field("sandi", "Kata sandi cadangan", tipe="password", autocomplete="off") }}</div>
+    <div><button type="submit" class="tombol tombol-primer" data-tombol-progres="Membuat cadangan…" {% if proses %}disabled{% endif %}>
+      {{ ikon("cadangan", "size-4") }}<span>Buat cadangan</span></button></div>
+  </form>
+</section>
+
+{# ===== Daftar cadangan ===== #}
+<section class="mb-10" aria-labelledby="judul-daftar">
+  <h2 id="judul-daftar" class="mb-4">Daftar cadangan</h2>
+  {% if daftar %}
+  <div class="panel overflow-hidden p-0!">
+    <div class="relative overflow-x-auto" tabindex="0" role="region" aria-label="Daftar berkas cadangan">
+      <table class="w-full min-w-3xl border-collapse text-left text-sm">
+        <thead class="bg-permukaan-2 text-redup">
+          <tr>
+            <th scope="col" class="px-4 py-3 font-semibold">Berkas</th>
+            <th scope="col" class="px-4 py-3 font-semibold">Jenis</th>
+            <th scope="col" class="px-4 py-3 font-semibold">Waktu</th>
+            <th scope="col" class="px-4 py-3 font-semibold">Ukuran</th>
+            <th scope="col" class="px-4 py-3 font-semibold">Isi</th>
+            <th scope="col" class="px-4 py-3 font-semibold">Uji terakhir</th>
+            <th scope="col" class="px-4 py-3"><span class="sr-only">Tindakan</span></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-garis">
+          {% for c in daftar %}
+          {% set h = c.hitungan or {} %}
+          <tr class="align-top">
+            <td class="px-4 py-3 font-medium wrap-break-word">{{ c.nama|jalur }}</td>
+            <td class="px-4 py-3">{{ jenis.get(c.jenis, c.jenis) }}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-redup">{{ c.dibuat_lokal|waktu_singkat }}</td>
+            <td class="whitespace-nowrap px-4 py-3">{{ c.ukuran|ukuran_berkas }}</td>
+            <td class="px-4 py-3 text-redup">
+              {%- if h -%}{{ h.get("liputan", 0) }} liputan · {{ h.get("spt", 0) }} SPT · {{ h.get("materi_podcast", 0) }} materi{%- endif -%}
+            </td>
+            <td class="px-4 py-3">
+              {% if c.uji %}
+              <span class="lencana {{ 'lencana-siap' if c.uji.berhasil else 'lencana-gagal' }}" title="{{ c.uji.pesan }}">{{ "Utuh" if c.uji.berhasil else "Gagal" }}</span>
+              <span class="block text-xs text-redup">{{ c.uji.waktu|waktu_singkat }}</span>
+              {% else %}<span class="text-redup">Belum diuji</span>{% endif %}
+            </td>
+            <td class="px-2 py-2">
+              <div class="flex justify-end gap-1">
+                <a href="{{ url_for('cadangan.unduh', nama=c.nama) }}" class="tombol tombol-teks min-h-9 px-2" aria-label="Unduh {{ c.nama }}">{{ ikon("unduh", "size-4") }}<span>Unduh</span></a>
+                <form method="post" action="{{ url_for('cadangan.uji', nama=c.nama) }}">
+                  {{ csrf_field() }}
+                  <button type="submit" class="tombol tombol-teks min-h-9 px-2" data-tombol-progres="Menguji…" aria-label="Uji {{ c.nama }}">{{ ikon("centang", "size-4") }}<span>Uji</span></button>
+                </form>
+                <form method="post" action="{{ url_for('cadangan.hapus', nama=c.nama) }}"
+                      data-konfirmasi="Hapus {{ c.nama }}? Berkas cadangan ini tidak dapat dikembalikan."
+                      data-konfirmasi-judul="Hapus cadangan" data-konfirmasi-tombol="Hapus">
+                  {{ csrf_field() }}
+                  <button type="submit" class="tombol tombol-teks min-h-9 px-2 text-bahaya-teks" aria-label="Hapus {{ c.nama }}">{{ ikon("hapus", "size-4") }}<span>Hapus</span></button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-redup">Belum ada cadangan.</p>
+  {% endif %}
+</section>
+
+{# ===== Ganti kata sandi cadangan ===== #}
+<section id="ganti-sandi" class="panel max-w-3xl scroll-mt-6" aria-labelledby="judul-ganti">
+  <h2 id="judul-ganti" class="mb-4">Ganti kata sandi cadangan</h2>
+  <form method="post" action="{{ url_for('cadangan.ganti_sandi') }}" class="grid gap-5 sm:grid-cols-3 sm:items-start" novalidate
+        data-konfirmasi="Cadangan yang sudah ada tetap memakai kata sandi lama saat dipulihkan. Ganti kata sandi cadangan?"
+        data-konfirmasi-judul="Ganti kata sandi cadangan" data-konfirmasi-tombol="Ganti">
+    {{ csrf_field() }}
+    {{ field("sandi_lama", "Kata sandi saat ini", tipe="password", autocomplete="off") }}
+    {{ field("sandi_baru", "Kata sandi baru", tipe="password", autocomplete="new-password", placeholder="Minimal 12 karakter") }}
+    {{ field("konfirmasi", "Ulangi kata sandi baru", tipe="password", autocomplete="new-password") }}
+    <div class="sm:col-span-3"><button type="submit" class="tombol tombol-sekunder">Ganti kata sandi</button></div>
+  </form>
+</section>
+{% endblock %}

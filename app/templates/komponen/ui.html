@@ -60,11 +60,12 @@
 {%- endmacro %}
 
 {# Kotak pesan inline yang menetap di halaman (mis. peringatan pratinjau). jenis: info | peringatan | galat #}
-{% macro alert(pesan, jenis="info") -%}
+{# tautan/label_tautan opsional: satu tautan tindakan di akhir pesan #}
+{% macro alert(pesan, jenis="info", tautan=None, label_tautan=None) -%}
 {% set gaya = {"peringatan": "bg-dev-latar text-dev-teks", "galat": "bg-bahaya-latar text-bahaya-teks"}.get(jenis, "bg-info-latar text-info-teks") %}
 <div class="flex items-start gap-2.5 rounded-lg px-4 py-3 text-sm {{ gaya }}" {% if jenis == "galat" %}role="alert"{% endif %}>
   {{ ikon("info" if jenis == "info" else "peringatan", "mt-0.5 size-4") }}
-  <p>{{ pesan }}</p>
+  <p>{{ pesan }}{% if tautan %} <a href="{{ tautan }}" class="font-semibold text-current underline underline-offset-4">{{ label_tautan }}</a>{% endif %}</p>
 </div>
 {%- endmacro %}
 

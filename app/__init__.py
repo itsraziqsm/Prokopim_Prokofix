@@ -37,13 +37,15 @@ def create_app(konfigurasi=None, instance_path=None):
         PERMANENT_SESSION_LIFETIME=timedelta(days=30),  # berlaku bila "Ingat saya" dicentang
         MAX_CONTENT_LENGTH=30 * 1024 * 1024,   # batas unggahan (berkas SPT maks. 25 MB + formulir)
     )
+    # Folder templat Word (ikut dicadangkan); bisa diganti lewat konfigurasi (dipakai uji)
+    app.config["FOLDER_TEMPLAT"] = os.path.join(app.root_path, "templat_docx")
     if konfigurasi:
         app.config.update(konfigurasi)
 
     from . import db
     db.siapkan_db(app)
 
-    from . import auth, routes
+    from . import auth, cadangan, routes
     from .modul import arsip_liputan, data_podcast, pemecah_spt, utilitas
 
     # Batas unggahan khusus per rute. Harus dipasang SEBELUM penjaga login (yang membaca formulir untuk
@@ -61,6 +63,7 @@ def create_app(konfigurasi=None, instance_path=None):
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(routes.bp)
+    app.register_blueprint(cadangan.bp)          # halaman sistem (sidebar), bukan modul registry
     app.register_blueprint(pemecah_spt.bp)
     app.register_blueprint(arsip_liputan.bp)
     for bp in data_podcast.SEMUA_BLUEPRINT + utilitas.SEMUA_BLUEPRINT:   # induk + fitur anaknya

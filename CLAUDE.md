@@ -43,7 +43,15 @@ npm run watch:css        # build CSS otomatis saat mengedit template / input.css
 npm run build:css        # build minify — WAJIB dijalankan sebelum commit bila kelas Tailwind berubah
 flask --app run auth reset-sandi <nama_pengguna>   # lupa kata sandi
 python -m unittest -v    # uji otomatis (wajib lulus sebelum commit)
+
+# Cadangan (lihat bagian "Cadangan & pemulihan")
+flask --app run cadangan buat [--jenis lengkap|database] [--ke FOLDER]   # tanpa batas 300 MB
+flask --app run cadangan periksa <berkas.zip>     # validasi penuh (tanda, struktur, hash, database), tidak mengubah apa pun
+flask --app run cadangan pulihkan <berkas.zip>    # HANYA saat aplikasi mati; ketik PULIHKAN untuk lanjut
+flask --app run cadangan reset-sandi              # lupa kata sandi cadangan
 ```
+Sandi cadangan dibaca dengan `getpass`, atau dari variabel lingkungan `SUPERAPP_SANDI_CADANGAN` (untuk penjadwalan
+buat/periksa/pulihkan; tidak dipakai reset-sandi). Jangan menaruh variabel itu di berkas yang ikut git.
 `run.py` menangani error Windows 10013 (port dicadangkan Hyper-V/WSL) dengan mencoba port lain.
 
 ## Struktur
@@ -151,6 +159,23 @@ app/modul/utilitas/            Fitur 4 — INDUK "Utilitas" (id utilitas) = judu
 app/templates/utilitas/gabung/ index (zona seret [data-seret-berkas] + riwayat dengan pilih-semua & hapus), susun (SATU form
                                multipart, banyak tombol formaction; tombol sr-only pertama = Periksa rentang untuk Enter; rentang
                                per baris lewat field(label_tersembunyi=true) dengan galat inline), hasil (Unduh, Gabungkan lagi)
+app/cadangan/                  Fitur 5 — CADANGAN (halaman SISTEM di sidebar, bukan modul registry): blueprint "cadangan" di
+                               /cadangan + cli_group "cadangan"; didaftarkan di create_app. Logika murni dipakai web & terminal:
+  sandi.py                       kunci.json (hash scrypt n=2**14 r=8 p=1 + salt; tulis atomik, izin 0600), cocok(),
+                                 verifikasi() dengan pembatas 5x salah -> kunci 5 menit (percobaan.json, bertahan antar-restart)
+  basisdata.py                   salin_snapshot() (sqlite3 backup API) + jalur absolut -> "{instance}/..." HANYA di salinan;
+                                 KOLOM_JALUR = log_proses.lokasi, spt_batch.folder, gabung_hasil.folder (cek ulang dengan grep
+                                 bila menambah kolom jalur!); ke_relatif/ke_absolut (Windows & POSIX); validasi_db();
+                                 siapkan_untuk_pasang() (jalur absolut sesuai instance tujuan + putar ulang sesi_token)
+  arsip.py                       buat_cadangan() (ZIP bertahap -> .sementara -> os.replace; kunci buat.kunci; cek ruang disk
+                                 >= 1,2x; batas_byte), manifest + tanda HMAC, POLA_NAMA, daftar putih entri, periksa_struktur()/
+                                 periksa_isi() (tanpa extractall), uji_keutuhan() (tombol Uji, tanpa sandi), daftar_cadangan()
+  pulihkan.py                    prosedur 10 langkah dengan rollback; periksa() untuk perintah periksa
+  audit.py                       instance/cadangan/audit.log (JSON per baris, append-only)
+  routes.py                      /cadangan (buat + daftar + ganti sandi), /sandi-baru, /kunci, /kunci-kembali, POST /buat,
+                                 /unduh/<nama>, POST /uji/<nama>, POST /hapus/<nama>, POST /ganti-sandi
+  perintah.py                    flask --app run cadangan buat|periksa|pulihkan|reset-sandi
+app/templates/cadangan/        kunci, sandi_baru, index
 app/templates/data_podcast/    materi/ index, baru, detail (tabel instansi + naik/turun, Word, judul, duplikat,
                                hapus), instansi (editor pertanyaan + pratinjau + "Tandai selesai"), baca (mode baca)
 app/templates/arsip_liputan/   index (arsip dikelompokkan per bulan kegiatan, terbaru di atas, satu tabel per bulan), form
@@ -175,10 +200,17 @@ instance/data/liputan/<tahun>/<MM-Bulan>/<id>/  foto/ (nama acak, versi olahan) 
 instance/data/podcast/<id>/ekspor/             satu Word terbaru Materi Podcast (nama dari judul + keterangan)
 instance/tmp/gabung_dokumen/<token>/           sesi penyusunan Gabungkan PDF (PDF sumber bernama acak + sesi.json), > 24 jam dihapus
 instance/data/gabung_dokumen/<id>/             PDF hasil Gabungkan PDF (satu berkas, nama tersanitasi dari pengguna)
+instance/cadangan/kunci.json                   hash scrypt kata sandi cadangan (DI LUAR database; tidak ikut cadangan)
+instance/cadangan/percobaan.json               pembatas percobaan sandi cadangan
+instance/cadangan/audit.log                    catatan audit cadangan (append-only; tidak tertimpa saat pemulihan)
+instance/cadangan/berkas/                      cadangan-<lengkap|database|sebelum-pulihkan>-YYYY-MM-DD-HHMM[-n].zip + .json pendamping
+instance/pulihkan_tmp/<stempel>/               staging pemulihan (dihapus setelah selesai/gagal)
 tests/test_aplikasi.py         uji inti (create_app(instance_path=folder_sementara))
 tests/test_pemecah_spt.py      uji Pemecah SPT; tests/fixture_spt.py membangun .docx contoh (batch_contoh())
 tests/test_arsip_liputan.py    uji Arsip Liputan; tests/fixture_liputan.py membuat foto contoh (tujuh_foto())
 tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD, N+1, ekspor Word, keamanan, CLI)
+tests/test_cadangan.py         uji Cadangan (sandi & pembatas, gerbang, pembuatan, SERANGAN pada pemulihan, pemulihan
+                               end-to-end ke instance lain, rollback, terminal, Dashboard)
 tests/test_gabung_dokumen.py   uji Gabungkan PDF (rentang, nama, pypdf, alur web, batas, keamanan, kelompok Utilitas);
                                tests/fixture_pdf.py membuat PDF contoh (lebar halaman = "sidik" urutan, terkunci, rusak)
 ```
@@ -302,7 +334,7 @@ tests/test_gabung_dokumen.py   uji Gabungkan PDF (rentang, nama, pypdf, alur web
 - Kontras WCAG AA, fokus keyboard terlihat, elemen HTML semantik + ARIA seperlunya, hormati `prefers-reduced-motion`.
 - Responsif 1366×768 sampai monitor lebar; tetap rapi di tablet/ponsel (sidebar jadi ikon saja).
 - Navigasi **hanya sidebar**: logo di puncak = tautan ke Dashboard (disorot saat aktif); atas = Alat (ikon empat kotak), Log; tombol "Lebarkan/Ciutkan menu" (ikon caret, `#tombol-sidebar`,
-  hanya md ke atas) tepat di atas garis pemisah; bawah = Pengaturan, Akun. Bawaan menu **tertutup** (ringkas)
+  hanya md ke atas) tepat di atas garis pemisah; bawah = Cadangan (aktif untuk semua rute /cadangan), Pengaturan, Akun. Bawaan menu **tertutup** (ringkas)
   kecuali `localStorage["sidebar"] == "lebar"`.
 - Tanpa footer. Halaman auth: formulir 60% kiri, gambar 40% kanan, satu layar tanpa scroll.
 - Jangan membuat form/tombol palsu yang seolah berfungsi.
@@ -314,6 +346,39 @@ tests/test_gabung_dokumen.py   uji Gabungkan PDF (rentang, nama, pypdf, alur web
   satu jalan kembali saja.
 - Keamanan secukupnya untuk aplikasi lokal satu pengguna: hash sandi, CSRF, wajib login, rotasi token sesi
   saat ganti sandi. Tanpa pembatas percobaan login.
+
+## Cadangan & pemulihan (keamanan WAJIB dijaga)
+- Pembuatan: web (/cadangan) + terminal. PEMULIHAN HANYA TERMINAL — jangan pernah menambah rute web yang menerima
+  unggahan ZIP cadangan.
+- Halaman /cadangan butuh KATA SANDI CADANGAN terpisah (min. 12, bukan sandi masuk), disimpan sebagai hash scrypt di
+  instance/cadangan/kunci.json. Berhasil -> `session["cadangan_sampai"]` (10 menit). JANGAN menyimpan sandi/kunci HMAC
+  di session (cookie Flask hanya ditandatangani). Pesan galat sandi tidak membedakan "salah" dan "terkunci".
+  "Buat cadangan" & "Ganti sandi" meminta sandi diketik ulang (lewat pembatas yang sama).
+- Isi ZIP: manifest.json, database/superapp.db (snapshot konsisten, TANPA kompresi agar tidak tertolak cek rasio),
+  data/** (hanya ekstensi pdf/docx/jpg/jpeg/png/gif/bmp/webp/json; lain-lain, symlink & .lama* dilewati),
+  templat_docx/*.docx. TIDAK PERNAH: secret_key, tmp/, cadangan/, pulihkan_tmp/, .lama*.
+- Manifest: versi_format, dibuat (ISO+zona), jenis, skema, hitungan, berkas (jalur/ukuran/SHA-256), kdf (scrypt + salt),
+  tanda = HMAC-SHA256(JSON kanonik terurut tanpa "tanda"), kunci = scrypt(sandi, salt). Parameter KDF dari manifest
+  dibatasi (cegah DoS). Bandingkan dengan hmac.compare_digest.
+- Pemulihan (pulihkan.py) berurutan: aplikasi mati (BEGIN EXCLUSIVE) + kunci -> tanda -> struktur (daftar putih, tolak
+  jalur absolut/../huruf drive/backslash/NUL/symlink/terenkripsi/nama ganda case-insensitive/tidak di manifest/hilang;
+  batas MAKS_ENTRI, MAKS_TOTAL_BYTE, MAKS_RASIO) -> bongkar ke staging (jalur dihitung sendiri) sambil cek SHA-256 ->
+  validasi DB (trusted_schema=OFF, integrity, foreign_key_check, skema ⊆ SKEMA+KOLOM_SUSULAN, tanpa trigger/view/
+  virtual) -> pratinjau + ketik PULIHKAN -> cadangan otomatis "sebelum-pulihkan" -> pasang (db/data/templat; yang lama
+  jadi *.lama-<stempel>, rollback bila gagal) -> sesi_token semua pengguna diputar -> cek akhir + laporan berkas hilang.
+  secret_key tidak pernah diubah. Bila kunci.json belum ada (server baru), sandi cadangan yang dipakai memulihkan
+  dijadikan sandi cadangan di sana.
+- Aksi dicatat ke tabel Log (catat("cadangan", ...)) DAN audit.log. Unduh hanya nama yang cocok POLA_NAMA dan berada di
+  instance/cadangan/berkas/ (Cache-Control: no-store). Dashboard memberi peringatan bila cadangan terakhir > 7 hari.
+- **ZIP cadangan berisi data rahasia** (hash kata sandi pengguna, data kegiatan, foto). Simpan di tempat aman (bukan
+  folder bersama/publik); sandi cadangan tanpa catatan = cadangan tidak bisa dipulihkan.
+- **Pindah ke server Ubuntu**:
+  1. Di Windows: halaman Cadangan -> Buat cadangan "Semua data dan hasil" (atau `flask --app run cadangan buat` bila
+     > 300 MB), lalu Uji dan Unduh ZIP-nya.
+  2. Di server: clone repo, `pip install -r requirements.txt`, salin ZIP lewat jalur aman (mis. scp).
+  3. Pastikan aplikasi belum/tidak berjalan, lalu `flask --app run cadangan periksa <zip>` dan
+     `flask --app run cadangan pulihkan <zip>` (jalur Windows di database otomatis diubah ke jalur server).
+  4. Jalankan aplikasi (lihat catatan di bawah); semua pengguna masuk ulang. Berkas *.lama-* bisa dihapus setelah yakin.
 
 ## Catatan pindah ke server (perlu ditinjau)
 Keputusan "hanya 127.0.0.1, satu pengguna" belum cocok untuk server Ubuntu. Sebelum pindah, tinjau:
