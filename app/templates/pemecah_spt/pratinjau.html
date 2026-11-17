@@ -17,7 +17,7 @@
 </div>
 {% endif %}
 
-<form method="post" action="{{ url_for('pemecah_spt.proses') }}" data-kirim-sekali data-teks-proses="Memproses...">
+<form method="post" action="{{ url_for('pemecah_spt.proses') }}">
   {{ csrf_field() }}
   <input type="hidden" name="token" value="{{ token }}">
 
@@ -58,7 +58,7 @@
   </div>
 
   <div class="mt-5 flex flex-wrap items-center gap-3">
-    <button type="submit" class="tombol tombol-primer" data-tombol-proses data-perlu-pilihan>{{ ikon("dokumen-pecah", "size-4") }}<span>Proses SPT terpilih</span></button>
+    <button type="submit" class="tombol tombol-primer" data-tombol-proses data-perlu-pilihan data-tombol-progres="Memulai proses…">{{ ikon("dokumen-pecah", "size-4") }}<span>Proses SPT terpilih</span></button>
     <a href="{{ url_for('pemecah_spt.index') }}" class="tombol tombol-teks">Batal</a>
     <p class="text-sm text-redup" aria-live="polite"><span data-jumlah-dipilih>{{ hasil.daftar|length }}</span> dari {{ hasil.daftar|length }} dipilih</p>
   </div>

@@ -93,9 +93,9 @@
       <p class="text-sm text-redup"><span class="wrap-anywhere">{{ materi.berkas_ekspor }}</span><br>dibuat {{ materi.diekspor|waktu_singkat }}</p>
       {% endif %}
       {% if perlu_ekspor_ulang %}{{ alert("Ada perubahan setelah Word terakhir dibuat. Ekspor ulang agar Word memuat perubahan terbaru.", "peringatan") }}{% endif %}
-      <form method="post" action="{{ url_for('materi_podcast.ekspor', materi_id=materi.id) }}" data-kirim-sekali data-teks-proses="Membuat Word...">
+      <form method="post" action="{{ url_for('materi_podcast.ekspor', materi_id=materi.id) }}">
         {{ csrf_field() }}
-        <button type="submit" class="tombol w-full {{ 'tombol-primer' if not ada_ekspor or perlu_ekspor_ulang else 'tombol-sekunder' }}">
+        <button type="submit" data-tombol-progres="{{ 'Membuat ulang Word…' if ada_ekspor else 'Membuat Word…' }}" class="tombol w-full {{ 'tombol-primer' if not ada_ekspor or perlu_ekspor_ulang else 'tombol-sekunder' }}">
           {{ ikon("dokumen-pecah", "size-4") }}<span>{{ "Ekspor ulang Word" if ada_ekspor else "Ekspor Word" }}</span></button>
       </form>
       {% if ada_ekspor %}

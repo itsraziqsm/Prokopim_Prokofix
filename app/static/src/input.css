@@ -167,6 +167,24 @@
 .toast { animation: toast-masuk .22s ease-out; }
 .toast.toast-keluar { opacity: 0; transform: translateX(1.5rem); transition: opacity .2s ease, transform .2s ease; }
 
+/* Tombol yang sedang memproses (data-tombol-progres, app.js bagian 5): tombol menjadi bilah progres berjalan.
+   Ukuran tombol tidak berubah; tidak memudar seperti tombol nonaktif biasa. */
+.tombol.tombol-progres {
+  position: relative; overflow: hidden; isolation: isolate; cursor: progress; opacity: 1;
+  background: var(--permukaan-2); color: var(--teks); border-color: var(--garis-kuat);
+}
+.tombol-progres-bilah { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
+.tombol-progres-bilah::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 45%;
+  background: var(--warna-aksen-lembut); border-bottom: 3px solid var(--warna-aksen);
+  animation: tombol-progres-jalan 1.3s ease-in-out infinite;
+}
+@keyframes tombol-progres-jalan { from { transform: translateX(-100%); } to { transform: translateX(225%); } }
+/* Tanpa animasi: bilah penuh diam, teks tetap memberi tahu bahwa proses berjalan */
+@media (prefers-reduced-motion: reduce) {
+  .tombol-progres-bilah::before { width: 100%; transform: none; }
+}
+
 /* Saat tema berganti (app.js), matikan transisi agar warna berubah serentak */
 .ganti-tema *, .ganti-tema *::before, .ganti-tema *::after { transition: none !important; }
 

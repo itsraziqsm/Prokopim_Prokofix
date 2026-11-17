@@ -232,7 +232,15 @@ tests/test_materi_podcast.py   uji Materi Podcast (pengurai + XSS, status, CRUD,
   `relative` WAJIB: tanpa itu teks `sr-only` (absolute) di dalam tabel lolos dan melebarkan halaman di ponsel.
   Teks panjang berisi garis miring (nomor surat, jalur) pakai filter `|jalur` + `wrap-break-word`.
   Tabel di dalam `grid`: pakai `grid-cols-1` (atau `min-w-0` pada item) agar lebar minimum tabel tidak melebarkan halaman.
-- **Perilaku JS siap pakai** (app.js): `<form data-kirim-sekali data-teks-proses="Memproses...">` (cegah kirim ganda),
+- **Tombol ekspor/proses WAJIB `data-tombol-progres="Membuat Word…"`** (pada `<button type="submit">`, juga yang memakai
+  `formaction`): saat diklik tombol itu sendiri berubah menjadi bilah progres berjalan (`.tombol-progres`, tak tentu karena
+  server memproses dalam satu permintaan; ukuran tombol tetap; tanpa animasi bila reduced-motion) dan formulirnya
+  terkunci — kiriman berikutnya (klik ganda, Enter, tombol lain) ditolak sampai halaman berganti. Berlaku untuk Word
+  liputan, Word materi, Analisis & Proses SPT, dan SEMUA ekspor baru; dijaga uji `UjiTombolProgres` (memindai templat:
+  form/formaction ke rute berisi "ekspor", "proses", "analisis"). Proses yang punya progres nyata (thread latar) tetap
+  memakai makro `progres` di halaman berikutnya.
+- **Perilaku JS siap pakai** (app.js): `<form data-kirim-sekali data-teks-proses="Memproses...">` (cegah kirim ganda untuk
+  formulir biasa; untuk ekspor pakai `data-tombol-progres`),
   `data-pilih-semua` + `data-pilih-item` + `data-jumlah-dipilih` (centang semua), `data-pilih-berkas` +
   `data-nama-berkas` (input berkas bergaya tombol), `data-salin="teks"` (salin ke clipboard),
   `data-pantau-progres="url"` (dipasang makro `progres`), `data-konfirmasi` (dialog konfirmasi),

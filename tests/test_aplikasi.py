@@ -198,6 +198,27 @@ class UjiHalaman(DasarUji):
         self.assertRegex(html, r'tabular-nums">1</span>\s*<span class="text-redup">Liputan ')   # hanya bulan ini
 
 
+class UjiTombolProgres(unittest.TestCase):
+    """Setiap tombol ekspor/proses (sekarang & yang akan datang) wajib data-tombol-progres:
+    tombol berubah menjadi bilah progres dan kiriman ganda ditolak (app.js bagian 5)."""
+    POLA_RUTE = r"url_for\('[\w.]*(ekspor|proses|analisis)[\w]*'"
+
+    def test_semua_tombol_ekspor_memakai_tombol_progres(self):
+        from pathlib import Path
+        diperiksa = 0
+        for berkas in Path("app/templates").rglob("*.html"):
+            html = berkas.read_text(encoding="utf-8")
+            # a) formulir yang mengirim ke rute ekspor/proses: tombol kirimnya wajib bertombol progres
+            for m in re.finditer(r'<form[^>]*action="\{\{ ' + self.POLA_RUTE + r'.*?</form>', html, re.S):
+                diperiksa += 1
+                self.assertIn("data-tombol-progres", m.group(0), f"{berkas}: {m.group(0)[:120]}")
+            # b) tombol dengan formaction ke rute ekspor/proses
+            for m in re.finditer(r'<button[^>]*formaction="\{\{ ' + self.POLA_RUTE + r'[^>]*>', html, re.S):
+                diperiksa += 1
+                self.assertIn("data-tombol-progres", m.group(0), f"{berkas}: {m.group(0)[:120]}")
+        self.assertGreaterEqual(diperiksa, 4)   # SPT analisis & proses, Word liputan, Word materi
+
+
 class UjiFilter(DasarUji):
     def test_jalur_aman_dan_bisa_dipatah(self):
         f = self.app.jinja_env.filters["jalur"]

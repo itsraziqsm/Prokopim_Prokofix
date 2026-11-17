@@ -34,6 +34,7 @@
     {% if perlu_ekspor_ulang %}{{ alert("Ada perubahan setelah Word terakhir dibuat. Buat ulang agar Word memuat perubahan terbaru.", "peringatan") }}{% endif %}
     {# Nonaktif selama butir wajib belum lengkap (diperbarui langsung oleh app.js; server juga memeriksa) #}
     <button type="submit" form="form-kegiatan" formaction="{{ url_for('arsip_liputan.ekspor', liputan_id=liputan.id) }}"
+            data-tombol-progres="{{ 'Membuat ulang Word…' if ada_ekspor else 'Membuat Word…' }}"
             data-butuh-wajib aria-describedby="syarat-word" {% if wajib_kurang %}disabled{% endif %}
             class="tombol w-full {{ 'tombol-primer' if not ada_ekspor or perlu_ekspor_ulang else 'tombol-sekunder' }}">{{ ikon("dokumen-pecah", "size-4") }}<span>{{ "Buat ulang Word" if ada_ekspor else "Buat Word" }}</span></button>
     {% if ada_ekspor %}

@@ -19,7 +19,7 @@
 <section class="panel mb-10 max-w-3xl" aria-labelledby="judul-unggah">
   <h2 id="judul-unggah" class="sr-only">Unggah berkas</h2>
   <form method="post" action="{{ url_for('pemecah_spt.analisis_berkas') }}" enctype="multipart/form-data"
-        class="grid gap-6" data-kirim-sekali data-teks-proses="Menganalisis...">
+        class="grid gap-6">
     {{ csrf_field() }}
     <div>
       <p class="label" id="l-berkas">Berkas Word berisi banyak SPT</p>
@@ -48,7 +48,7 @@
       {% endif %}
     </fieldset>
 
-    <div><button type="submit" class="tombol tombol-primer">{{ ikon("unggah", "size-4") }}<span>Analisis berkas</span></button></div>
+    <div><button type="submit" class="tombol tombol-primer" data-tombol-progres="Mengunggah & menganalisis…">{{ ikon("unggah", "size-4") }}<span>Analisis berkas</span></button></div>
   </form>
 </section>
 

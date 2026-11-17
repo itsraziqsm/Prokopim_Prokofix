@@ -147,29 +147,61 @@
     if (tombol) salin(tombol.getAttribute("data-salin"));
   });
 
-  /* ---------- 5. Formulir kirim sekali ----------
-     <form data-kirim-sekali data-teks-proses="Memproses...">: tombol kirim dinonaktifkan setelah diklik
-     agar tidak terkirim ganda saat proses berjalan. */
+  /* ---------- 5. Kirim sekali + tombol progres ----------
+     a) <button type="submit" data-tombol-progres="Membuat Word…">: WAJIB untuk setiap tombol ekspor/proses.
+        Saat diklik, tombol itu sendiri berubah menjadi bilah progres berjalan (tak tentu, karena server memproses
+        dalam satu permintaan) dan terkunci; kiriman berikutnya dari formulir yang sama (klik ganda, Enter,
+        tombol lain) ditolak sampai halaman berganti, sehingga ekspor tidak berjalan dua kali.
+     b) <form data-kirim-sekali data-teks-proses="Memproses...">: versi lama untuk formulir biasa; semua tombol
+        kirim dinonaktifkan dan labelnya diganti. */
+  var jadikanProgres = function (tombol) {
+    if (!tombol._asli) tombol._asli = tombol.innerHTML;
+    var teks = tombol.dataset.tombolProgres || "Memproses…";
+    tombol.classList.add("tombol-progres");
+    tombol.setAttribute("aria-busy", "true");
+    tombol.innerHTML = "";
+    var bilah = document.createElement("span");
+    bilah.className = "tombol-progres-bilah";
+    bilah.setAttribute("aria-hidden", "true");
+    var label = document.createElement("span");
+    label.className = "relative";
+    label.setAttribute("role", "status");
+    label.textContent = teks;
+    tombol.appendChild(bilah);
+    tombol.appendChild(label);
+    // Dinonaktifkan setelah formulir mulai terkirim (bila langsung, sebagian browser membatalkan kirimannya)
+    setTimeout(function () { tombol.disabled = true; }, 0);
+  };
   document.addEventListener("submit", function (e) {
     var form = e.target;
-    if (e.defaultPrevented || !form.matches || !form.matches("[data-kirim-sekali]")) return;
-    if (form.dataset.terkirim) { e.preventDefault(); return; }
+    if (e.defaultPrevented || !form.matches) return;
+    var tombol = e.submitter && e.submitter.hasAttribute("data-tombol-progres") ? e.submitter : null;
+    if (form.dataset.terkirim) { e.preventDefault(); return; }    // sudah terkirim: tolak kiriman ganda
+    if (tombol) {
+      form.dataset.terkirim = "1";
+      jadikanProgres(tombol);
+      return;
+    }
+    if (!form.matches("[data-kirim-sekali]")) return;
     form.dataset.terkirim = "1";
-    Array.prototype.forEach.call(form.querySelectorAll("button[type=submit]"), function (tombol) {
-      tombol.disabled = true;
-      tombol.setAttribute("aria-busy", "true");
-      var label = tombol.querySelector("span") || tombol;
+    Array.prototype.forEach.call(form.querySelectorAll("button[type=submit]"), function (t) {
+      t.disabled = true;
+      t.setAttribute("aria-busy", "true");
+      var label = t.querySelector("span") || t;
       label.textContent = form.dataset.teksProses || "Memproses...";
     });
   });
-  // Bila halaman dibuka lagi lewat tombol Kembali browser, aktifkan ulang tombolnya
+  // Bila halaman dibuka lagi lewat tombol Kembali browser, kembalikan tombol & formulir seperti semula
   window.addEventListener("pageshow", function (e) {
     if (!e.persisted) return;
-    Array.prototype.forEach.call(document.querySelectorAll("[data-kirim-sekali]"), function (form) {
+    Array.prototype.forEach.call(document.querySelectorAll("form[data-terkirim]"), function (form) {
       delete form.dataset.terkirim;
-      Array.prototype.forEach.call(form.querySelectorAll("button[type=submit]"), function (t) {
-        t.disabled = false; t.removeAttribute("aria-busy");
-      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-kirim-sekali] button[type=submit], [data-tombol-progres]"), function (t) {
+      t.disabled = false;
+      t.removeAttribute("aria-busy");
+      t.classList.remove("tombol-progres");
+      if (t._asli) { t.innerHTML = t._asli; delete t._asli; }
     });
   });
 
