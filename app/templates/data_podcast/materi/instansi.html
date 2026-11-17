@@ -33,7 +33,7 @@
         <button type="button" class="tombol tombol-teks -my-1 min-h-8 px-2 text-xs" data-buka-editor="jawab-{{ kunci }}">
           {{ ikon("perluas", "size-4") }}<span>Buka editor</span></button>
       </div>
-      <textarea id="jawab-{{ kunci }}" name="jawaban" rows="10" class="input font-mono text-sm" maxlength="{{ panjang.jawaban }}"
+      <textarea id="jawab-{{ kunci }}" name="jawaban" rows="10" class="input h-64 resize-none font-mono text-sm" maxlength="{{ panjang.jawaban }}"
                 data-pratinjau-sumber="pratinjau-{{ kunci }}"
                 aria-describedby="bantuan-format{% if galat_jawaban %} g-jawab-{{ kunci }}{% endif %}"
                 {% if galat_jawaban %}aria-invalid="true"{% endif %}>{{ p.jawaban or "" }}</textarea>
@@ -41,8 +41,9 @@
     </div>
     <div class="min-w-0">
       <p id="label-pratinjau-{{ kunci }}" class="label">Pratinjau</p>
-      <div id="pratinjau-{{ kunci }}" role="region" aria-labelledby="label-pratinjau-{{ kunci }}"
-           class="isi-jawaban min-h-24 rounded-lg border border-garis bg-latar px-4 py-3 text-sm wrap-break-word">
+      {# Tinggi sama dengan kolom jawaban (h-64 ≈ 4x kolom pertanyaan); isi panjang digulir #}
+      <div id="pratinjau-{{ kunci }}" role="region" tabindex="0" aria-labelledby="label-pratinjau-{{ kunci }}"
+           class="isi-jawaban h-64 overflow-y-auto rounded-lg border border-garis bg-latar px-4 py-3 text-sm wrap-break-word">
         {%- if p.jawaban and p.jawaban.strip() %}{{ p.jawaban|jawaban_html }}{% else %}<p class="text-redup" data-pratinjau-kosong>Belum ada jawaban.</p>{% endif -%}
       </div>
     </div>
